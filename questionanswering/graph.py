@@ -37,9 +37,9 @@ def construct_graphs(tokens, entities):
     entity_powerset = itertools.chain.from_iterable(itertools.combinations(entities, n) for n in range(1, len(entities)+1))
     graphs = []
     for entity_set in entity_powerset:
-        g = {'edgeSet': []}
+        g = {'edgeSet': [], 'tokens': tokens}
         for entity in entity_set:
-            g['edgeSet'].append(([0], entity))
+            g['edgeSet'].append({'left':[0], 'right':entity})
         graphs.append(g)
     return graphs
 
