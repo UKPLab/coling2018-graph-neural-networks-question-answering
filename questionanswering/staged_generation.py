@@ -48,3 +48,5 @@ def expand(g):
     return_graphs = [f(g) for f in available_expansions]
     return return_graphs
 
+def restrict(g):
+    pass
