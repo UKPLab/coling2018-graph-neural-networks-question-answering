@@ -2,10 +2,24 @@ import staged_generation
 
 def ground_with_gold(g, question_obj):
     silver_graphs = []
-    states = []
-    queque = []
+    pool = [] # pool of possible parses
 
-    queque.extend(staged_generation.restrict(g))
+    pool.append(g)
+    while len(pool) > 0:
+        g = pool.pop()
+        uncertain_graphs = staged_generation.add_entity_and_relation(g)
+        chosen_graphs = evaluate(uncertain_graphs)
+        while len(chosen_graphs) == 0:
+            uncertain_graphs = expand(uncertain_graphs)
+            chosen_graphs = evaluate(uncertain_graphs)
+        pool.extend(chosen_graphs)
+
+
+
+
+    pool.extend(staged_generation.restrict(g))
+
+
 
     # select at least one relation to one entity without type
     # search for filling relations
@@ -30,6 +44,27 @@ def ground_with_gold(g, question_obj):
     #     grounded_graph['f1'] = f1
     #     silver_graphs.append(grounded_graph)
     return silver_graphs
+
+def stage_next(g, entities_left):
+    g = staged_generation.add_entity_and_relations(g, entities_left)
+    possible_groundings = query_wikidata(g)
+    results = [(p,) + evaluate(possible_grounding, gold_answers) for p in possible_groundings]
+    positive_resulst = results > 0.0
+    if positive_resulst:
+        for result in positive_resulst:
+            stage_next()
+    else:
+        for result in results:
+            expanded_g = expand(result)
+            possible_groundings = query_wikidata(g)
+            expanded_results = [(p,) + evaluate(possible_grounding, gold_answers) for p in possible_groundings]
+
+
+
+
+
+
+
 
 
 def to_graph(tokens, entities):

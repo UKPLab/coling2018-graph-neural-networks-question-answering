@@ -27,17 +27,18 @@ def hop_up(g):
     return new_g
 
 
-def add_entity_and_relations(g):
-    new_g = {"tokens": g['tokens'], 'edgeSet': []}
-    if len(g.get('entities', [])) > 0:
-        entity = g['entities'][0]
+def add_entity_and_relation(g, entities_left):
+    new_g = {"tokens": g['tokens'], 'edgeSet': g['edgeSet'][:]}
+
+    if len(entities_left) > 0:
+        entity = entities_left[0]
         new_edge = {'left': [0], 'right': entity}
         new_g['edgeSet'].append(new_edge)
-    return new_g
+    return new_g, (entities_left[1:] if len(entities_left) > 1 else [])
 
 
 EXPAND_ACTIONS = [hop_up]
-RESTRICT_ACTIONS = [add_entity_and_relations]
+RESTRICT_ACTIONS = [add_entity_and_relation]
 
 
 def expand(g):
