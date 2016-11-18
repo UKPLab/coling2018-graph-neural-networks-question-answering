@@ -6,6 +6,16 @@ def ground_with_gold(g, question_obj):
     queque = []
 
     queque.extend(staged_generation.restrict(g))
+
+    # select at least one relation to one entity without type
+    # search for filling relations
+        # if any of them results in recall more than 0.0 take them
+            # for each of them continue with further restrict
+                # select at least one relation to one entity without type and search for filling relations
+        # else take the structure
+            # Atempt expand
+                # Search for filling relations
+
     # while len(queque) > 0:
 
     # possible_groundings = query_wikidata(graph_to_query(g))
@@ -20,3 +30,8 @@ def ground_with_gold(g, question_obj):
     #     grounded_graph['f1'] = f1
     #     silver_graphs.append(grounded_graph)
     return silver_graphs
+
+
+def to_graph(tokens, entities):
+    pass
+
