@@ -61,3 +61,26 @@ def restrict(g):
     return_graphs = [f(g) for f in available_restrictions]
     return return_graphs
 
+
+def ground_with_gold(g, question_obj):
+    pool = [] # pool of possible parses
+
+    pool.append(g)
+    while len(pool) > 0:
+        g = pool.pop()
+        suggested_graphs = restrict(g)
+        suggested_graphs = [apply_grounding(p, s_g) for s_g in suggested_graphs for p in query_wikidata(graph_to_query(s_g))]
+        chosen_graphs = [(s_g, ) + evaluate(query_wikidata(graph_to_query(s_g)), question_obj) for s_g in suggested_graphs]
+        chosen_graphs = [(s_g, f1, answers) for s_g, f1, answers in chosen_graphs if f1 > 0.0]
+        while len(chosen_graphs) == 0:
+            suggested_graphs = [e_g for s_g in suggested_graphs for e_g in expand(s_g)]
+            chosen_graphs = [(s_g, ) + evaluate(query_wikidata(graph_to_query(s_g)), question_obj) for s_g in suggested_graphs]
+            chosen_graphs = [(s_g, f1, answers) for s_g, f1, answers in chosen_graphs if f1 > 0.0]
+        pool.extend(chosen_graphs)
+
+    return pool
+
+if __name__ == "__main__":
+    import doctest
+    print(doctest.testmod())
+

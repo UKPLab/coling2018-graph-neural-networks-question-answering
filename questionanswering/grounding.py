@@ -9,7 +9,7 @@ def ground_with_gold(g, question_obj):
         g = pool.pop()
         uncertain_graphs = staged_generation.add_entity_and_relation(g)
         chosen_graphs = evaluate(uncertain_graphs)
-        while len(chosen_graphs) == 0:
+        while len(chosen_graphs) == 0 :
             uncertain_graphs = expand(uncertain_graphs)
             chosen_graphs = evaluate(uncertain_graphs)
         pool.extend(chosen_graphs)
