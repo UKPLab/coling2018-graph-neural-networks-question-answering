@@ -1,6 +1,7 @@
 import copy
 from wikidata_access import *
 from evaluation import *
+from webquestions_io import *
 
 
 def get_available_expansions(g):
@@ -92,7 +93,7 @@ def ground_with_gold(suggested_graphs, question_obj):
     suggested_graphs = [apply_grounding(p, s_g) for s_g in suggested_graphs for p in
                         query_wikidata(graph_to_query(s_g))]
     retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in suggested_graphs]
-    evaluation_results = [retrieval_prec_rec_f1(retrieved_answers[i], question_obj) for i in
+    evaluation_results = [retrieval_prec_rec_f1(retrieved_answers[i],  get_answers_from_question(question_obj)) for i in
                           range(len(suggested_graphs))]
     chosen_graphs = [(suggested_graphs[i], evaluation_results[i], retrieved_answers[i])
                      for i in range(len(suggested_graphs)) if evaluation_results[i][2] > 0.0]
