@@ -1,12 +1,18 @@
 import copy
+from wikidata_access import *
+from evaluation import *
 
 
 def get_available_expansions(g):
-    return EXPAND_ACTIONS
+    if len(g['edgeSet']) > 0 and 'hopUp' not in g['edgeSet'][-1]:
+        return [hop_up]
+    return []
 
 
 def get_available_restrictions(g):
-    return RESTRICT_ACTIONS
+    if len(g['entities']) > 0:
+        return [add_entity_and_relation]
+    return []
 
 
 def remove_token_from_entity(g):
@@ -19,22 +25,23 @@ def remove_token_from_entity(g):
 
 
 def hop_up(g):
-    new_g = {"tokens": g['tokens'], 'edgeSet': []}
-    for edge in g.get('edgeSet', []):
-        new_edge = copy.copy(edge)
-        new_edge['hopUp'] = 1
-        new_g['edgeSet'].append(new_edge)
+    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet'])}
+    if len(new_g['edgeSet']) > 0:
+        new_g['edgeSet'][-1]['hopUp'] = 1
     return new_g
 
 
-def add_entity_and_relation(g, entities_left):
-    new_g = {"tokens": g['tokens'], 'edgeSet': g['edgeSet'][:]}
+def add_entity_and_relation(g):
+    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet'])}
+    entities_left = g['entities']
 
     if len(entities_left) > 0:
         entity = entities_left[0]
         new_edge = {'left': [0], 'right': entity}
         new_g['edgeSet'].append(new_edge)
-    return new_g, (entities_left[1:] if len(entities_left) > 1 else [])
+
+    new_g['entities'] = entities_left[1:] if len(entities_left) > 1 else []
+    return new_g
 
 
 EXPAND_ACTIONS = [hop_up]
@@ -62,23 +69,53 @@ def restrict(g):
     return return_graphs
 
 
-def ground_with_gold(g, question_obj):
-    pool = [] # pool of possible parses
+def generate_with_gold(ungrounded_graph, question_obj):
+    pool = [ungrounded_graph]  # pool of possible parses
+    generated_graphs = []
 
-    pool.append(g)
     while len(pool) > 0:
         g = pool.pop()
-        suggested_graphs = restrict(g)
-        suggested_graphs = [apply_grounding(p, s_g) for s_g in suggested_graphs for p in query_wikidata(graph_to_query(s_g))]
-        chosen_graphs = [(s_g, ) + evaluate(query_wikidata(graph_to_query(s_g)), question_obj) for s_g in suggested_graphs]
-        chosen_graphs = [(s_g, f1, answers) for s_g, f1, answers in chosen_graphs if f1 > 0.0]
-        while len(chosen_graphs) == 0:
+        suggested_graphs = restrict(g[0])
+        chosen_graphs = ground_with_gold(question_obj, suggested_graphs)
+        if len(chosen_graphs) == 0:
             suggested_graphs = [e_g for s_g in suggested_graphs for e_g in expand(s_g)]
-            chosen_graphs = [(s_g, ) + evaluate(query_wikidata(graph_to_query(s_g)), question_obj) for s_g in suggested_graphs]
-            chosen_graphs = [(s_g, f1, answers) for s_g, f1, answers in chosen_graphs if f1 > 0.0]
-        pool.extend(chosen_graphs)
+            chosen_graphs = ground_with_gold(question_obj, suggested_graphs)
+        if len(chosen_graphs) > 0:
+            pool.extend(chosen_graphs)
+        else:
+            generated_graphs.append(g)
 
     return pool
+
+
+def ground_with_gold(suggested_graphs, question_obj):
+    suggested_graphs = [apply_grounding(p, s_g) for s_g in suggested_graphs for p in
+                        query_wikidata(graph_to_query(s_g))]
+    retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in suggested_graphs]
+    evaluation_results = [retrieval_prec_rec_f1(retrieved_answers[i], question_obj) for i in
+                          range(len(suggested_graphs))]
+    chosen_graphs = [(suggested_graphs[i], evaluation_results[i], retrieved_answers[i])
+                     for i in range(len(suggested_graphs)) if evaluation_results[i][2] > 0.0]
+    return chosen_graphs
+
+
+def apply_grounding(g, grounding):
+    grounded = copy.deepcopy(g)
+    for i, edge in enumerate(grounded.get('edgeSet', [])):
+        if "e2" + str(i) in grounding:
+            edge['rightkbID'] = grounding["e2" + str(i)]
+        if "r{}d".format(i) in grounding:
+            edge['kbID'] = grounding["r" + str(i)]
+            edge['type'] = 'direct'
+        elif "r{}r".format(i) in grounding:
+            edge['kbID'] = grounding["r{}r".format(i)]
+            edge['type'] = 'reverse'
+        elif "r{}v".format(i) in grounding:
+            edge['kbID'] = grounding["r{}v".format(i)]
+            edge['type'] = 'v-structure'
+
+    return grounded
+
 
 if __name__ == "__main__":
     import doctest
