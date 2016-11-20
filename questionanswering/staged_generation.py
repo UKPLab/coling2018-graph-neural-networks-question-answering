@@ -93,8 +93,8 @@ def ground_with_gold(suggested_graphs, question_obj):
     suggested_graphs = [apply_grounding(p, s_g) for s_g in suggested_graphs for p in
                         query_wikidata(graph_to_query(s_g))]
     retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in suggested_graphs]
-    retrieved_answers = [r['e1'] for r in retrieved_answers]
-    retrieved_answers = [e.lower() for a in retrieved_answers for e in entity_map.get(a, [a])]
+    retrieved_answers = [[r['e1'] for r in answer_set] for answer_set in retrieved_answers]
+    retrieved_answers = [[e.lower() for a in answer_set for e in entity_map.get(a, [a]) ] for answer_set in retrieved_answers]
 
     evaluation_results = [retrieval_prec_rec_f1(get_answers_from_question(question_obj), retrieved_answers[i]) for i in
                           range(len(suggested_graphs))]
