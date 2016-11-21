@@ -1,4 +1,3 @@
-import networkx as nx
 import itertools
 
 
@@ -12,10 +11,10 @@ def extract_entities(annotated_tokens):
     Tests:
     >>> extract_entities([('what', 'O'), ('character', 'O'), ('did', 'O'), ('natalie', 'PERSON'), ('portman', 'PERSON'), ('play', 'O'), ('in', 'O'), ('star', 'O'), ('wars', 'O'), ('?', 'O')])
     [[3, 4]]
-
     >>> extract_entities([('Who', 'O'), ('was', 'O'), ('john', 'PERSON'), ('noble', 'PERSON')])
     [[2, 3]]
-
+    >>> extract_entities([('Who', 'O'), ('played', 'O'), ('Aragorn', 'PERSON'), ('in', 'O'), ('the', 'ORG'), ('Hobbit', 'ORG'), ('?', 'O')])
+    [[2], [4, 5]]
     """
     vertices = []
     current_vertex = []
@@ -30,9 +29,6 @@ def extract_entities(annotated_tokens):
     return vertices
 
 
-actions = ['add_entity']
-
-
 def construct_graphs(tokens, entities):
     entity_powerset = itertools.chain.from_iterable(itertools.combinations(entities, n) for n in range(1, len(entities)+1))
     graphs = []
@@ -42,17 +38,6 @@ def construct_graphs(tokens, entities):
             g['edgeSet'].append({'left':[0], 'right':entity})
         graphs.append(g)
     return graphs
-
-
-class SGraph:
-    """
-
-    """
-
-    def __init__(self):
-        self._tokens = []
-        self._vertices = []
-        self._edges = []
 
 
 if __name__ == "__main__":
