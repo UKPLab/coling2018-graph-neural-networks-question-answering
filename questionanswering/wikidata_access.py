@@ -1,6 +1,7 @@
 import nltk
 from SPARQLWrapper import SPARQLWrapper, JSON
 import logging
+import re
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -18,11 +19,11 @@ sparql_select = """
         SELECT DISTINCT %queryvariables% WHERE
         """
 sparql_relation = {
-    "direct":"{GRAPH <http://wikidata.org/statements> { ?e1 ?p [ ?rd ?e2 ] }}",
+    "direct": "{GRAPH <http://wikidata.org/statements> { ?e1 ?p [ ?rd ?e2 ] }}",
 
-    "reverse":"{GRAPH <http://wikidata.org/statements> { ?e2 ?p [ ?rr ?e1 ] }}",
+    "reverse": "{GRAPH <http://wikidata.org/statements> { ?e2 ?p [ ?rr ?e1 ] }}",
 
-    "v-structure":"{GRAPH <http://wikidata.org/statements> { _:m ?p ?e2. _:m ?rv ?e1. }}",
+    "v-structure": "{GRAPH <http://wikidata.org/statements> { _:m ?p ?e2. _:m ?rv ?e1. }}",
 }
 sparql_relation_complex = """
         {
@@ -97,7 +98,7 @@ def query_wikidata(query):
     if len(results["results"]["bindings"]) > 0:
         results = results["results"]["bindings"]
         results = [r for r in results if all(r[b]['value'].startswith("http://www.wikidata.org/entity/") for b in r)]
-        results = [{b:r[b]['value'].replace("http://www.wikidata.org/entity/","") for b in r} for r in results  ]
+        results = [{b: r[b]['value'].replace("http://www.wikidata.org/entity/", "") for b in r} for r in results]
         return results
     else:
         logging.debug(results)
