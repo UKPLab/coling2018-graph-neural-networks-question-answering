@@ -1,13 +1,15 @@
 def retrieval_precision(gold, predicted):
     """
+    Compute retrieval precision on the given gold set and predicted set.
+    Note that it doesn't take into account the order or repeating elements.
 
-    :param gold:
-    :param predicted:
-    :return:
+    :param gold: the set of gold retrieved elements
+    :param predicted: the set of predicted elements
+    :return: precision value
     >>> retrieval_precision({1,2,3},{2})
     1.0
-    >>> "{:2d}".format(retrieval_precision({2}, {1,2,3}))
-    0.33333
+    >>> retrieval_precision({2}, {1,2,3})
+    0.3333333333333333
     """
     gold = set(gold)
     predicted = set(predicted)
@@ -17,6 +19,16 @@ def retrieval_precision(gold, predicted):
 
 
 def retrieval_prec_rec_f1(gold, predicted):
+    """
+    Compute retrieval precision, recall and f-score. Note that it doesn't take into accounte the order
+    and repeating elements.
+
+    :param gold: the set of gold retrieved elements.
+    :param predicted: the set of predicted elements.
+    :return: a triple of precision, recall and f-score
+    >>> retrieval_prec_rec_f1(['Star Wars', 'Black Swan', 'Thor', 'Leon'], ['Thor', 'Avengers', 'Iron Man'])
+    (0.3333333333333333, 0.25, 0.28571428571428575)
+    """
     prec = retrieval_precision(gold, predicted)
     rec = retrieval_precision(predicted, gold)
     f1 = 0
