@@ -50,7 +50,7 @@ def remove_token_from_entity(g):
 
 
 def hop_up(g):
-    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet'])}
+    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g['entities']}
     if len(new_g['edgeSet']) > 0:
         new_g['edgeSet'][-1]['hopUp'] = 1
     return new_g
@@ -118,7 +118,7 @@ def generate_with_gold(ungrounded_graph, question_obj):
     :param question_obj: a WebQuestions question encoded as a dictionary
     :return: a list of generated grounded graphs
     """
-    pool = [ungrounded_graph]  # pool of possible parses
+    pool = [(ungrounded_graph,)]  # pool of possible parses
     generated_graphs = []
     gold_answers = [e.lower() for e in get_answers_from_question(question_obj)]
 
