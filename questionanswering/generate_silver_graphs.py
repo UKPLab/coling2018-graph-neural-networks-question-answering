@@ -41,3 +41,7 @@ if __name__ == "__main__":
         silver_dataset.extend(generated_graphs)
 
     logger.debug("Silver dataset size: {}".format(len(silver_dataset)))
+
+    with open(data_folder + "webquestions.examples.train.silvergraphs.json") as out:
+        json.dump(silver_dataset, out)
+
