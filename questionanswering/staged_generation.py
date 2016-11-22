@@ -4,7 +4,8 @@ from evaluation import *
 from webquestions_io import *
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def get_available_expansions(g):
@@ -119,42 +120,52 @@ def generate_with_gold(ungrounded_graph, question_obj):
     """
     pool = [ungrounded_graph]  # pool of possible parses
     generated_graphs = []
+    gold_answers = [e.lower() for e in get_answers_from_question(question_obj)]
 
     while len(pool) > 0:
         g = pool.pop()
+        logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
+        logger.debug("Restricting")
         suggested_graphs = restrict(g[0])
-        chosen_graphs = ground_with_gold(question_obj, suggested_graphs)
+        logger.debug("Suggested graphs: {}".format(suggested_graphs))
+        chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
         if len(chosen_graphs) == 0:
+            logger.debug("Expanding")
             suggested_graphs = [e_g for s_g in suggested_graphs for e_g in expand(s_g)]
-            chosen_graphs = ground_with_gold(question_obj, suggested_graphs)
+            chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
         if len(chosen_graphs) > 0:
+            logger.debug("Extending the pool.")
             pool.extend(chosen_graphs)
         else:
-            generated_graphs.append(g)
+            logger.debug("Extending the generated graph set.")
+            generated_graphs.extend(g)
 
     return generated_graphs
 
 
-def ground_with_gold(suggested_graphs, question_obj):
+def ground_with_gold(input_graphs, gold_answers):
     """
     For each graph among the suggested_graphs find its groundings in the WikiData, then evaluate each suggested graph
     with each of its possible groundings and compare the denotations with the answers embedded in the question_obj.
     Return all groundings that produce an f-score > 0.0
 
-    :param suggested_graphs: a list of ungrounded graphs
-    :param question_obj: a WebQuestions question encoded as a dictionary
+    :param input_graphs: a list of ungrounded graphs
+    :param gold_answers: a set of gold answers
     :return: a list of graph groundings
     """
-    suggested_graphs = [apply_grounding(p, s_g) for s_g in suggested_graphs for p in
-                        query_wikidata(graph_to_query(s_g))]
-    retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in suggested_graphs]
-    retrieved_answers = [[r['e1'] for r in answer_set] for answer_set in retrieved_answers]
-    retrieved_answers = [[e.lower() for a in answer_set for e in entity_map.get(a, [a]) ] for answer_set in retrieved_answers]
+    grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in
+                       query_wikidata(graph_to_query(s_g))]
+    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
+    logger.debug("First one: {}".format(grounded_graphs[:1]))
+    retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in grounded_graphs]
+    logger.debug("Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
+    retrieved_answers = [map_query_results(answer_set) for answer_set in retrieved_answers]
 
-    evaluation_results = [retrieval_prec_rec_f1(get_answers_from_question(question_obj), retrieved_answers[i]) for i in
-                          range(len(suggested_graphs))]
-    chosen_graphs = [(suggested_graphs[i], evaluation_results[i], retrieved_answers[i])
-                     for i in range(len(suggested_graphs)) if evaluation_results[i][2] > 0.0]
+    evaluation_results = [retrieval_prec_rec_f1(gold_answers, retrieved_answers[i]) for i in
+                          range(len(grounded_graphs))]
+    logger.debug(evaluation_results)
+    chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
+                     for i in range(len(grounded_graphs)) if evaluation_results[i][2] > 0.0]
     return chosen_graphs
 
 

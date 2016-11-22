@@ -28,10 +28,13 @@ def retrieval_prec_rec_f1(gold, predicted):
     :return: a triple of precision, recall and f-score
     >>> retrieval_prec_rec_f1(['Star Wars', 'Black Swan', 'Thor', 'Leon'], ['Thor', 'Avengers', 'Iron Man'])
     (0.3333333333333333, 0.25, 0.28571428571428575)
+    >>> retrieval_prec_rec_f1(['Star Wars', 'Black Swan', 'Thor', 'Leon'], [])
+    (0.0, 0.0, 0.0)
     """
-    prec = retrieval_precision(gold, predicted)
-    rec = retrieval_precision(predicted, gold)
-    f1 = 0
+
+    prec = retrieval_precision(gold, predicted) if len(predicted) > 0 else 0.0
+    rec = retrieval_precision(predicted, gold) if len(gold) > 0 else 0.0
+    f1 = 0.0
     if (rec+prec) > 0:
         f1 = 2.0 * prec * rec / (prec + rec)
 

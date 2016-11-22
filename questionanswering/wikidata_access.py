@@ -4,7 +4,9 @@ import logging
 import re
 
 
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
+
 sparql = SPARQLWrapper("http://knowledgebase:8890/sparql")
 sparql.setReturnFormat(JSON)
 sparql.setMethod("GET")
@@ -85,6 +87,7 @@ def graph_to_query(g, return_var_values = False):
         variables.append("?e1")
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
+    logger.debug("Querying with variables: {}".format(variables))
     return query
 
 
@@ -93,15 +96,16 @@ def query_wikidata(query):
     try:
         results = sparql.query().convert()
     except Exception as inst:
-        logging.debug(inst)
+        logger.debug(inst)
         return []
     if len(results["results"]["bindings"]) > 0:
         results = results["results"]["bindings"]
+        logger.debug("Results bindings: {}".format(results[0].keys()))
         results = [r for r in results if all(r[b]['value'].startswith("http://www.wikidata.org/entity/") for b in r)]
         results = [{b: r[b]['value'].replace("http://www.wikidata.org/entity/", "") for b in r} for r in results]
         return results
     else:
-        logging.debug(results)
+        logger.debug(results)
         return []
 
 
