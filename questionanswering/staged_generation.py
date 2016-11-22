@@ -2,15 +2,38 @@ import copy
 from wikidata_access import *
 from evaluation import *
 from webquestions_io import *
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 def get_available_expansions(g):
+    """
+    Get a list of methods that can be applied on the given graph to expand its denotation.
+
+    :param g: a graph object
+    :return: list of methods that take graph as an only argument
+    >>> get_available_expansions({'edgeSet':[]})
+    []
+    >>> hop_up in get_available_expansions({'edgeSet':[{'left':[0], 'right':[2,3]}]})
+    True
+    """
     if len(g['edgeSet']) > 0 and 'hopUp' not in g['edgeSet'][-1]:
         return [hop_up]
     return []
 
 
 def get_available_restrictions(g):
+    """
+    Get a list of methods that can be applied on the given graph to expand restrict denotation.
+
+    :param g: a graph object
+    :return: list of methods that take graph as an only argument
+    >>> get_available_restrictions({'entities':[], 'edgeSet':[{},{}]})
+    []
+    >>> add_entity_and_relation in get_available_restrictions({'entities':[[2,3]]})
+    True
+    """
     if len(g['entities']) > 0:
         return [add_entity_and_relation]
     return []
@@ -33,7 +56,7 @@ def hop_up(g):
 
 
 def add_entity_and_relation(g):
-    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet'])}
+    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g.get('edgeSet', []))}
     entities_left = g['entities']
 
     if len(entities_left) > 0:
@@ -57,10 +80,10 @@ def expand(g):
     :return: a list of new graphs that are modified copies
     >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[[2, 3]]})
     []
-    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]})
-    [{"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3], "hopUp": 1}]}]
+    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]}) == [{'tokens': ['Who', 'is', 'Barack', 'Obama', '?'], 'edgeSet': [{'left': [0], 'hopUp': 1, 'right': [2, 3]}]}]
+    True
     """
-    if "edgeSet" not in g or "entities" not in g:
+    if "edgeSet" not in g:
         return []
     available_expansions = get_available_expansions(g)
     return_graphs = [f(g) for f in available_expansions]
@@ -73,12 +96,12 @@ def restrict(g):
 
     :param g: dict object representing the graph with "edgeSet" and "entities"
     :return: a list of new graphs that are modified copies
-    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[[2, 3]]})
-    [{"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}], "entities":[]}]
-    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]})
+    >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[[2, 3]]}) == [{'edgeSet': [{'left': [0], 'right': [2, 3]}], 'entities': [], 'tokens': ['Who', 'is', 'Barack', 'Obama', '?']}]
+    True
+    >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]})
     []
     """
-    if "edgeSet" not in g or "entities" not in g:
+    if "entities" not in g:
         return []
     available_restrictions = get_available_restrictions(g)
     return_graphs = [f(g) for f in available_restrictions]
@@ -113,6 +136,7 @@ def generate_with_gold(ungrounded_graph, question_obj):
 def ground_with_gold(suggested_graphs, question_obj):
     """
 
+
     :param suggested_graphs:
     :param question_obj:
     :return:
@@ -138,15 +162,21 @@ def apply_grounding(g, grounding):
     :param g: a single ungrounded graph
     :param grounding: a dictionary representing the grounding of relations and variables
     :return: a grounded graph
-    >>> apply_grounding({'edgeSet':[{}]}, {'r0d':'P31v'})
-    {'edgeSet': [{'kbID':'P31v', 'type':'direct'}]}
+    >>> apply_grounding({'edgeSet':[{}]}, {'r0d':'P31v'}) == {'edgeSet': [{'type': 'direct', 'kbID': 'P31v'}]}
+    True
+    >>> apply_grounding({'edgeSet':[{}]}, {'r0v':'P31v'}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v'}]}
+    True
+    >>> apply_grounding({'edgeSet':[{}, {}]}, {'r1d':'P39v', 'r0v':'P31v', 'e20': 'Q18'}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v', 'rightkbID': 'Q18'}, {'type': 'direct', 'kbID': 'P39v'}]}
+    True
+    >>> apply_grounding({'edgeSet':[]}, {})
+    {'edgeSet': []}
     """
     grounded = copy.deepcopy(g)
     for i, edge in enumerate(grounded.get('edgeSet', [])):
         if "e2" + str(i) in grounding:
             edge['rightkbID'] = grounding["e2" + str(i)]
         if "r{}d".format(i) in grounding:
-            edge['kbID'] = grounding["r" + str(i)]
+            edge['kbID'] = grounding["r{}d".format(i)]
             edge['type'] = 'direct'
         elif "r{}r".format(i) in grounding:
             edge['kbID'] = grounding["r{}r".format(i)]

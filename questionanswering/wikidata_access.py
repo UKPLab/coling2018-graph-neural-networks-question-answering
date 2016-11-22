@@ -121,8 +121,8 @@ def map_query_results(query_results, question_variable='e1'):
     :param query_results: list of dictionaries returned by the sparql endpoint
     :param question_variable: the variable to extract
     :return: list of answers as entity labels or an original id if no canonical label was found.
-    >>> map_query_results(['Q76', 'Q235234'])
-    ['Barack Obama', 'Q235234']
+    >>> map_query_results([{'e1':'Q76'}, {'e1':'Q235234'}])
+    ['barack obama', 'q235234']
     """
     answers = [r[question_variable] for r in query_results]
     answers = [e.lower() for a in answers for e in entity_map.get(a, [a])]
