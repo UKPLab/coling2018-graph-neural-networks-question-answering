@@ -163,7 +163,6 @@ def ground_with_gold(input_graphs, gold_answers):
 
     evaluation_results = [retrieval_prec_rec_f1(gold_answers, retrieved_answers[i]) for i in
                           range(len(grounded_graphs))]
-    logger.debug(evaluation_results)
     chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
                      for i in range(len(grounded_graphs)) if evaluation_results[i][2] > 0.0]
     return chosen_graphs
