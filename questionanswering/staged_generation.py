@@ -51,26 +51,47 @@ RESTRICT_ACTIONS = [add_entity_and_relation]
 
 def expand(g):
     """
+    Expand the coverage of the given graph by constructing version that has more possible/other denotations.
 
-    :param g:
-    :return:
+    :param g: dict object representing the graph with "edgeSet" and "entities"
+    :return: a list of new graphs that are modified copies
     >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[[2, 3]]})
-
+    []
     >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]})
+    [{"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3], "hopUp": 1}]}]
     """
-
+    if "edgeSet" not in g or "entities" not in g:
+        return []
     available_expansions = get_available_expansions(g)
     return_graphs = [f(g) for f in available_expansions]
     return return_graphs
 
 
 def restrict(g):
+    """
+    Restrict the set of possible graph denotations by adding new constraints that should be fullfilled by the linking.
+
+    :param g: dict object representing the graph with "edgeSet" and "entities"
+    :return: a list of new graphs that are modified copies
+    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[[2, 3]]})
+    [{"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}], "entities":[]}]
+    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]})
+    []
+    """
+    if "edgeSet" not in g or "entities" not in g:
+        return []
     available_restrictions = get_available_restrictions(g)
     return_graphs = [f(g) for f in available_restrictions]
     return return_graphs
 
 
 def generate_with_gold(ungrounded_graph, question_obj):
+    """
+
+    :param ungrounded_graph:
+    :param question_obj:
+    :return:
+    """
     pool = [ungrounded_graph]  # pool of possible parses
     generated_graphs = []
 
@@ -86,10 +107,16 @@ def generate_with_gold(ungrounded_graph, question_obj):
         else:
             generated_graphs.append(g)
 
-    return pool
+    return generated_graphs
 
 
 def ground_with_gold(suggested_graphs, question_obj):
+    """
+
+    :param suggested_graphs:
+    :param question_obj:
+    :return:
+    """
     suggested_graphs = [apply_grounding(p, s_g) for s_g in suggested_graphs for p in
                         query_wikidata(graph_to_query(s_g))]
     retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in suggested_graphs]
@@ -104,6 +131,16 @@ def ground_with_gold(suggested_graphs, question_obj):
 
 
 def apply_grounding(g, grounding):
+    """
+    Given a grounding obtained from WikiData apply it to the graph.
+    Note: that the variable names returned by WikiData are important as they encode some grounding features.
+
+    :param g: a single ungrounded graph
+    :param grounding: a dictionary representing the grounding of relations and variables
+    :return: a grounded graph
+    >>> apply_grounding({'edgeSet':[{}]}, {'r0d':'P31v'})
+    {'edgeSet': [{'kbID':'P31v', 'type':'direct'}]}
+    """
     grounded = copy.deepcopy(g)
     for i, edge in enumerate(grounded.get('edgeSet', [])):
         if "e2" + str(i) in grounding:
