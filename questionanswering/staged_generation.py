@@ -110,10 +110,12 @@ def restrict(g):
 
 def generate_with_gold(ungrounded_graph, question_obj):
     """
+    Generate all possible groundings that produce positive f-score starting with the given ungrounded graph and
+    using expand and restrict operations on its denotation.
 
-    :param ungrounded_graph:
-    :param question_obj:
-    :return:
+    :param ungrounded_graph: the starting graph that should contain a list of tokens and a list of entities
+    :param question_obj: a WebQuestions question encoded as a dictionary
+    :return: a list of generated grounded graphs
     """
     pool = [ungrounded_graph]  # pool of possible parses
     generated_graphs = []
@@ -135,11 +137,13 @@ def generate_with_gold(ungrounded_graph, question_obj):
 
 def ground_with_gold(suggested_graphs, question_obj):
     """
+    For each graph among the suggested_graphs find its groundings in the WikiData, then evaluate each suggested graph
+    with each of its possible groundings and compare the denotations with the answers embedded in the question_obj.
+    Return all groundings that produce an f-score > 0.0
 
-
-    :param suggested_graphs:
-    :param question_obj:
-    :return:
+    :param suggested_graphs: a list of ungrounded graphs
+    :param question_obj: a WebQuestions question encoded as a dictionary
+    :return: a list of graph groundings
     """
     suggested_graphs = [apply_grounding(p, s_g) for s_g in suggested_graphs for p in
                         query_wikidata(graph_to_query(s_g))]
