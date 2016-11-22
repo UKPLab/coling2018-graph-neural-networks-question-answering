@@ -9,4 +9,4 @@ setup(name='UKPWikiDataQA',
       author='Daniil Sorokin',
       author_email='sorokin@ukp.informatik.tu-darmstadt.de',
       url='ukp.tu-darmstadt.de/ukp-home/',
-      packages=find_packages(), requires=['numpy', 'nltk'])
+      packages=find_packages(), requires=['numpy', 'nltk', 'tqdm'])
