@@ -42,7 +42,7 @@ sparql_entity_label = """
         {GRAPH <http://wikidata.org/terms> { ?e2 skos:altLabel "%labelright%"@en  }}
         }
         """
-
+# TODO: other hopup relations: subclass, instance of, part of, country
 sparql_entity_abstract = "[ _:s [ e:P131v ?e2]]"
 
 

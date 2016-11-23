@@ -68,7 +68,7 @@ def add_entity_and_relation(g):
     new_g['entities'] = entities_left[1:] if len(entities_left) > 1 else []
     return new_g
 
-
+# TODO: Add argmax and argmin
 EXPAND_ACTIONS = [hop_up]
 RESTRICT_ACTIONS = [add_entity_and_relation]
 
@@ -122,6 +122,7 @@ def generate_with_gold(ungrounded_graph, question_obj):
     generated_graphs = []
     gold_answers = [e.lower() for e in get_answers_from_question(question_obj)]
 
+    # TODO: stop if the f-score is ideal or close
     while len(pool) > 0:
         g = pool.pop()
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
@@ -158,7 +159,8 @@ def ground_with_gold(input_graphs, gold_answers):
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     logger.debug("First one: {}".format(grounded_graphs[:1]))
     retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in grounded_graphs]
-    logger.debug("Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
+    logger.debug(
+        "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
     retrieved_answers = [map_query_results(answer_set) for answer_set in retrieved_answers]
 
     evaluation_results = [retrieval_prec_rec_f1(gold_answers, retrieved_answers[i]) for i in
@@ -204,5 +206,5 @@ def apply_grounding(g, grounding):
 
 if __name__ == "__main__":
     import doctest
-    print(doctest.testmod())
 
+    print(doctest.testmod())
