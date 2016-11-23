@@ -14,6 +14,7 @@ logging.basicConfig(level=logging.DEBUG)
 if __name__ == "__main__":
     import argparse
     logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
 
     data_folder = "../data/"
 

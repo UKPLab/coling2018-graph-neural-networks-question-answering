@@ -5,7 +5,7 @@ from webquestions_io import *
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 
 
 def get_available_expansions(g):
