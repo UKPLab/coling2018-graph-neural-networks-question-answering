@@ -118,7 +118,7 @@ def generate_with_gold(ungrounded_graph, question_obj):
     :param question_obj: a WebQuestions question encoded as a dictionary
     :return: a list of generated grounded graphs
     """
-    pool = [(ungrounded_graph,)]  # pool of possible parses
+    pool = [(ungrounded_graph, (0.0,0.0,0.0), [])]  # pool of possible parses
     generated_graphs = []
     gold_answers = [e.lower() for e in get_answers_from_question(question_obj)]
 
@@ -133,13 +133,14 @@ def generate_with_gold(ungrounded_graph, question_obj):
         if len(chosen_graphs) == 0:
             logger.debug("Expanding")
             suggested_graphs = [e_g for s_g in suggested_graphs for e_g in expand(s_g)]
+            logger.debug("Graph: {}".format(suggested_graphs))
             chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
         if len(chosen_graphs) > 0:
             logger.debug("Extending the pool.")
             pool.extend(chosen_graphs)
         else:
             logger.debug("Extending the generated graph set.")
-            generated_graphs.extend(g)
+            generated_graphs.append(g)
 
     return generated_graphs
 
@@ -167,6 +168,7 @@ def ground_with_gold(input_graphs, gold_answers):
                           range(len(grounded_graphs))]
     chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
                      for i in range(len(grounded_graphs)) if evaluation_results[i][2] > 0.0]
+    logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
     return chosen_graphs
 
 
