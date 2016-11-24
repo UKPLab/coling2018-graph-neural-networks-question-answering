@@ -35,7 +35,7 @@ if __name__ == "__main__":
     silver_dataset = []
     for i in tqdm.trange(len(webquestions)):
         logger.info(graph.construct_graphs(webquestions[i]['utterance'], webquestions_entities[i]))
-        ungrounded_graph = {'tokens': [t for t,_ in webquestions_utterances_tagged[i]],
+        ungrounded_graph = {'tokens': [t for t, _ in webquestions_utterances_tagged[i]],
                             'edgeSet': [],
                             'entities': webquestions_entities[i]}
         logger.info("Generating from: {}".format(ungrounded_graph))

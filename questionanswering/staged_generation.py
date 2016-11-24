@@ -1,4 +1,5 @@
 import copy
+import nltk
 from wikidata_access import *
 from evaluation import *
 from webquestions_io import *
@@ -41,35 +42,51 @@ def get_available_restrictions(g):
 
 
 def remove_token_from_entity(g):
-    new_g = {"tokens": g['tokens'], 'edgeSet': []}
-    for edge in g.get('edgeSet', []):
-        new_edge = copy.copy(edge)
-        new_edge['right'] = new_edge['right'][:-1]
-        new_g['edgeSet'].append(new_edge)
-    return new_g
+    """
+
+    :param g:
+    :return:
+    >>> remove_token_from_entity({'edgeSet': [], 'entities': [[4, 5, 6]], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']})
+    []
+    >>> len(remove_token_from_entity({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
+    5
+    """
+    if len(g.get('edgeSet',[])) == 0 or len(g['edgeSet'][0]['right']) < 2:
+        return []
+    new_graphs = []
+    right_entity = g['edgeSet'][0]['right']
+    for i in range(1, len(right_entity)):
+        for new_entity in list(nltk.ngrams(right_entity, i)):
+            new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
+            new_g['edgeSet'][0]['right'] = list(new_entity)
+            new_graphs.append(new_g)
+    return new_graphs
 
 
 def hop_up(g):
-    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g['entities']}
-    if len(new_g['edgeSet']) > 0:
-        new_g['edgeSet'][-1]['hopUp'] = 1
-    return new_g
+    if len(g['edgeSet']) == 0:
+        return []
+    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
+    new_g['edgeSet'][-1]['hopUp'] = 1
+    return [new_g]
 
 
 def add_entity_and_relation(g):
-    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g.get('edgeSet', []))}
+    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': g.get('entities', [])}
     entities_left = g['entities']
 
-    if len(entities_left) > 0:
-        entity = entities_left[0]
-        new_edge = {'left': [0], 'right': entity}
-        new_g['edgeSet'].append(new_edge)
+    if len(entities_left) == 0:
+        return []
+
+    entity = entities_left[0]
+    new_edge = {'left': [0], 'right': entity}
+    new_g['edgeSet'].append(new_edge)
 
     new_g['entities'] = entities_left[1:] if len(entities_left) > 1 else []
-    return new_g
+    return [new_g]
 
 # TODO: Add argmax and argmin
-EXPAND_ACTIONS = [hop_up]
+EXPAND_ACTIONS = [hop_up, remove_token_from_entity]
 RESTRICT_ACTIONS = [add_entity_and_relation]
 
 
@@ -81,13 +98,13 @@ def expand(g):
     :return: a list of new graphs that are modified copies
     >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[[2, 3]]})
     []
-    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]}) == [{'tokens': ['Who', 'is', 'Barack', 'Obama', '?'], 'edgeSet': [{'left': [0], 'hopUp': 1, 'right': [2, 3]}]}]
+    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]}) == [{'tokens': ['Who', 'is', 'Barack', 'Obama', '?'], 'entities':[], 'edgeSet': [{'left': [0], 'hopUp': 1, 'right': [2, 3]}]}]
     True
     """
     if "edgeSet" not in g:
         return []
     available_expansions = get_available_expansions(g)
-    return_graphs = [f(g) for f in available_expansions]
+    return_graphs = [el for f in available_expansions for el in f(g)]
     return return_graphs
 
 
@@ -105,7 +122,7 @@ def restrict(g):
     if "entities" not in g:
         return []
     available_restrictions = get_available_restrictions(g)
-    return_graphs = [f(g) for f in available_restrictions]
+    return_graphs = [el for f in available_restrictions for el in f(g)]
     return return_graphs
 
 
@@ -118,26 +135,29 @@ def generate_with_gold(ungrounded_graph, question_obj):
     :param question_obj: a WebQuestions question encoded as a dictionary
     :return: a list of generated grounded graphs
     """
-    pool = [(ungrounded_graph, (0.0,0.0,0.0), [])]  # pool of possible parses
+    pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
     generated_graphs = []
     gold_answers = [e.lower() for e in get_answers_from_question(question_obj)]
 
-    # TODO: stop if the f-score is ideal or close
     while len(pool) > 0:
         g = pool.pop()
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
-        logger.debug("Restricting")
-        suggested_graphs = restrict(g[0])
-        logger.debug("Suggested graphs: {}".format(suggested_graphs))
-        chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
-        if len(chosen_graphs) == 0:
-            logger.debug("Expanding")
-            suggested_graphs = [e_g for s_g in suggested_graphs for e_g in expand(s_g)]
-            logger.debug("Graph: {}".format(suggested_graphs))
+        if g[2] < 0.5:
+            logger.debug("Restricting")
+            suggested_graphs = restrict(g[0])
+            logger.debug("Suggested graphs: {}".format(suggested_graphs))
             chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
-        if len(chosen_graphs) > 0:
-            logger.debug("Extending the pool.")
-            pool.extend(chosen_graphs)
+            if len(chosen_graphs) == 0:
+                logger.debug("Expanding")
+                suggested_graphs = [e_g for s_g in suggested_graphs for e_g in expand(s_g)]
+                logger.debug("Graph: {}".format(suggested_graphs))
+                chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
+            if len(chosen_graphs) > 0:
+                logger.debug("Extending the pool.")
+                pool.extend(chosen_graphs)
+            else:
+                logger.debug("Extending the generated graph set.")
+                generated_graphs.append(g)
         else:
             logger.debug("Extending the generated graph set.")
             generated_graphs.append(g)
