@@ -146,7 +146,7 @@ def generate_with_gold(ungrounded_graph, question_obj):
     while len(pool) > 0:
         g = pool.pop()
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
-        if g[2] < 0.5:
+        if g[1][2] < 0.5:
             logger.debug("Restricting")
             suggested_graphs = restrict(g[0])
             logger.debug("Suggested graphs: {}".format(suggested_graphs))

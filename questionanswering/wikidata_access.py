@@ -42,9 +42,10 @@ sparql_entity_label = """
         {GRAPH <http://wikidata.org/terms> { ?e2 skos:altLabel "%labelright%"@en  }}
         }
         """
-# TODO: other hopup relations: subclass, instance of, part of, country
-sparql_entity_abstract = "[ _:s [ e:P131v ?e2]]"
-# sparql_entity_abstract = "[ _:s [ e:P131v|e:P31v|e:P279v|e:P17v|e:P361v ?e2]]"
+
+HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
+
+sparql_entity_abstract = "[ _:s [ {} ?e2]]".format("|".join(["e:{}v".format(r) for r in HOP_UP_RELATIONS]))
 
 
 def graph_to_query(g, return_var_values = False):
