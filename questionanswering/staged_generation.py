@@ -6,7 +6,7 @@ from webquestions_io import *
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 
 
 def last_relation_subentities(g):
@@ -77,16 +77,20 @@ def add_entity_and_relation(g):
 
 
 def last_relation_argmax(g):
-    if len(g.get('entities', [])) == 0:
+    """
+    Adds a temporal argmax to the last relation in the graph, that is only the latest entity is returned as the answer.
+
+    :param g: a graph with a non-empty edgeSet
+    :return: a list of suggested graphs
+    >>> last_relation_argmax({'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8]}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmax': 'time'}], 'entities': [], 'tokens':[]}]
+    True
+
+    """
+    if len(g.get('edgeSet', [])) == 0 or 'argmax' in g['edgeSet'][-1]:
         return []
 
-    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': g.get('entities', [])}
-    entities_left = g['entities']
-    entity = entities_left[0]
-    new_edge = {'left': [0], 'right': entity}
-    new_g['edgeSet'].append(new_edge)
-
-    new_g['entities'] = entities_left[1:] if len(entities_left) > 1 else []
+    new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
+    new_g['edgeSet'][-1]['argmax'] = "time"
     return [new_g]
 
 # TODO: Add argmax and argmin
@@ -179,8 +183,13 @@ def ground_with_gold(input_graphs, gold_answers):
     :param gold_answers: a set of gold answers
     :return: a list of graph groundings
     """
-    grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in
-                       query_wikidata(graph_to_query(s_g))]
+    grounded_graphs = []
+    for s_g in input_graphs:
+        if get_free_variables(s_g):
+            grounded_graphs.extend([apply_grounding(s_g, p) for p in query_wikidata(graph_to_query(s_g))])
+        else:
+            grounded_graphs.append(s_g)
+
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     logger.debug("First one: {}".format(grounded_graphs[:1]))
     retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in grounded_graphs]

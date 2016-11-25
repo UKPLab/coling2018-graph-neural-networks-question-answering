@@ -16,24 +16,25 @@ sparql_prefix = """
         PREFIX e:<http://www.wikidata.org/entity/>
         PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
         PREFIX skos:<http://www.w3.org/2004/02/skos/core#>
+        PREFIX base:<http://www.wikidata.org/ontology#>
         """
 sparql_select = """
         SELECT DISTINCT %queryvariables% WHERE
         """
 sparql_relation = {
-    "direct": "{GRAPH <http://wikidata.org/statements> { ?e1 ?p [ ?rd ?e2 ] }}",
+    "direct": "{GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . %restriction% }}",
 
-    "reverse": "{GRAPH <http://wikidata.org/statements> { ?e2 ?p [ ?rr ?e1 ] }}",
+    "reverse": "{GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . %restriction% }}",
 
-    "v-structure": "{GRAPH <http://wikidata.org/statements> { _:m ?p ?e2. _:m ?rv ?e1. }}",
+    "v-structure": "{GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}",
 }
 sparql_relation_complex = """
         {
-        {GRAPH <http://wikidata.org/statements> { ?e1 ?p [ ?rd ?e2 ] }}
+        {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . }}
         UNION
-        {GRAPH <http://wikidata.org/statements> { ?e2 ?p [ ?rr ?e1 ] }}
+        {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . }}
         UNION
-        {GRAPH <http://wikidata.org/statements> { _:m ?p ?e2. _:m ?rv ?e1. }}}
+        {GRAPH <http://wikidata.org/statements> { ?m ?p ?e2. ?m ?rv ?e1. }}}
         """
 
 sparql_entity_label = """
@@ -43,14 +44,34 @@ sparql_entity_label = """
         }
         """
 
+sparql_relation_time_argmax = "?m ?a [base:time ?n]."
+
+sparql_close_order = " ORDER BY {} LIMIT 1"
+
 HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
 
 sparql_entity_abstract = "[ _:s [ {} ?e2]]".format("|".join(["e:{}v".format(r) for r in HOP_UP_RELATIONS]))
 
 
 def graph_to_query(g, return_var_values = False):
+    """
+    Convert graph to a sparql query.
+    :param g: a graph as a dictionary with non-empty edgeSet
+    :param return_var_values: if True the denotations for free variables will be returned
+    :return: a sparql query
+    >>> g = {'edgeSet': [{'left': [0], 'kbID': 'P35v', 'type': 'reverse', 'rightkbID': 'Q155', 'right': [5], 'argmax':'time'}], 'entities': []}
+    >>> len(query_wikidata(graph_to_query(g, return_var_values = True)))
+    1
+    >>> g = {'edgeSet': [{'left': [0], 'kbID': 'P35v', 'type': 'reverse', 'rightkbID': 'Q155', 'right': [5]}], 'entities': []}
+    >>> len(query_wikidata(graph_to_query(g, return_var_values = True)))
+    5
+    >>> g = {'edgeSet': [{'left': [0], 'right': [6]}], 'entities': [[4]], 'tokens': ['who', 'are', 'the', 'current', 'senator', 'from', 'missouri', '?']}
+    >>> len(query_wikidata(graph_to_query(g, return_var_values = False)))
+    160
+    """
     query = sparql_prefix
     variables = []
+    order_by = []
     query += sparql_select
     query += "{"
     for i, edge in enumerate(g.get('edgeSet', [])):
@@ -66,10 +87,20 @@ def graph_to_query(g, return_var_values = False):
             #             variables.extend(["?r{}".format(i), "?r{}r".format(i), "?r{}v".format(i) ])
             variables.extend(["?r{}{}".format(i, t[0]) for t in sparql_relation] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
 
-        sparql_relation_inst = sparql_relation_inst.replace("?p", "?p" + str(i))
-
         if 'hopUp' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", sparql_entity_abstract)
+
+        if 'argmax' in edge:
+            sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_relation_time_argmax)
+            sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
+            sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
+            order_by.append("?n" + str(i))
+        else:
+            sparql_relation_inst = sparql_relation_inst.replace("%restriction%", "")
+
+
+        sparql_relation_inst = sparql_relation_inst.replace("?p", "?p" + str(i))
+        sparql_relation_inst = sparql_relation_inst.replace("?m", "?m" + str(i))
 
         if 'rightkbID' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", "e:" + edge['rightkbID'])
@@ -89,8 +120,25 @@ def graph_to_query(g, return_var_values = False):
         variables.append("?e1")
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
+    if order_by:
+        order_by_pattern = sparql_close_order.format(" ".join(["DESC({})".format(v) for v in order_by]))
+        query += order_by_pattern
+
     logger.debug("Querying with variables: {}".format(variables))
     return query
+
+
+def get_free_variables(g, include_question_variable=False):
+    free_variables = []
+    for i, edge in enumerate(g.get('edgeSet', [])):
+        if 'kbID' not in edge:
+            free_variables.extend(["?r{}{}".format(i, t[0]) for t in sparql_relation] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
+        if 'rightkbID' not in edge:
+            free_variables.append("?e2" + str(i))
+    if include_question_variable:
+        free_variables.append("?e1")
+    return free_variables
+
 
 def link_entity():
     pass
