@@ -31,7 +31,7 @@ def last_relation_subentities(g):
     return new_graphs
 
 
-def hop_up(g):
+def last_relation_hop_up(g):
     if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1]:
         return []
     new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
@@ -40,6 +40,29 @@ def hop_up(g):
 
 
 def add_entity_and_relation(g):
+    """
+
+    :param g:
+    :return:
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': []})
+    []
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [[4, 5, 6]]}) == {'edgeSet': [{'left':[0], 'right':[4, 5, 6]}], 'entities': []}
+    True
+    """
+    if len(g.get('entities', [])) == 0:
+        return []
+
+    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': g.get('entities', [])}
+    entities_left = g['entities']
+    entity = entities_left[0]
+    new_edge = {'left': [0], 'right': entity}
+    new_g['edgeSet'].append(new_edge)
+
+    new_g['entities'] = entities_left[1:] if len(entities_left) > 1 else []
+    return [new_g]
+
+
+def last_relation_argmax(g):
     if len(g.get('entities', [])) == 0:
         return []
 
@@ -53,8 +76,8 @@ def add_entity_and_relation(g):
     return [new_g]
 
 # TODO: Add argmax and argmin
-EXPAND_ACTIONS = [hop_up, last_relation_subentities]
-RESTRICT_ACTIONS = [add_entity_and_relation]
+EXPAND_ACTIONS = [last_relation_hop_up, last_relation_subentities]
+RESTRICT_ACTIONS = [add_entity_and_relation, last_relation_argmax]
 
 
 def expand(g):
