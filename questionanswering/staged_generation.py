@@ -11,9 +11,11 @@ logger.setLevel(logging.ERROR)
 
 def last_relation_subentities(g):
     """
+    Takes a graph with an existing relation and suggests a set of graphs with the same relation but one of the entities
+     is a sub-span of the original entity.
 
-    :param g:
-    :return:
+    :param g: a graph with an non-empty edgeSet
+    :return: a list of suggested graphs
     >>> last_relation_subentities({'edgeSet': [], 'entities': [[4, 5, 6]], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']})
     []
     >>> len(last_relation_subentities({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
@@ -25,40 +27,52 @@ def last_relation_subentities(g):
     right_entity = g['edgeSet'][0]['right']
     for i in range(1, len(right_entity)):
         for new_entity in list(nltk.ngrams(right_entity, i)):
-            new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
+            new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
             new_g['edgeSet'][0]['right'] = list(new_entity)
             new_graphs.append(new_g)
     return new_graphs
 
 
 def last_relation_hop_up(g):
+    """
+    Takes a graph with an existing relation and an intermediate variable by performing a hop-up for the second entity.
+
+    :param g: a graph with an non-empty edgeSet
+    :return: a list of suggested graphs
+    >>> last_relation_hop_up({'edgeSet': [], 'entities': [[4, 5, 6]]})
+    []
+    >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':[4,5,6], 'hopUp': 1}], 'entities': [], 'tokens':[]}]
+    True
+    >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':[4,5,6], 'hopUp': 1}], 'entities': []})
+    []
+    """
     if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1]:
         return []
-    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
+    new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
     new_g['edgeSet'][-1]['hopUp'] = 1
     return [new_g]
 
 
 def add_entity_and_relation(g):
     """
+    Takes a graph with a non-empty list of free entities and adds a new relations with the one of the free entities, thus
+    removing it from the list.
 
-    :param g:
-    :return:
+    :param g: a graph with a non-empty 'entities' list
+    :return: a list of suggested graphs
     >>> add_entity_and_relation({'edgeSet': [], 'entities': []})
     []
-    >>> add_entity_and_relation({'edgeSet': [], 'entities': [[4, 5, 6]]}) == {'edgeSet': [{'left':[0], 'right':[4, 5, 6]}], 'entities': []}
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [[4, 5, 6]]})  == [{'tokens':[], 'edgeSet': [{'left':[0], 'right':[4, 5, 6]}], 'entities': []}]
     True
     """
     if len(g.get('entities', [])) == 0:
         return []
 
-    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': g.get('entities', [])}
-    entities_left = g['entities']
-    entity = entities_left[0]
+    new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': g.get('entities', [])}
+    entity = new_g['entities'].pop()
     new_edge = {'left': [0], 'right': entity}
     new_g['edgeSet'].append(new_edge)
 
-    new_g['entities'] = entities_left[1:] if len(entities_left) > 1 else []
     return [new_g]
 
 
