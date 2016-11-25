@@ -9,46 +9,14 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
 
-def get_available_expansions(g):
-    """
-    Get a list of methods that can be applied on the given graph to expand its denotation.
-
-    :param g: a graph object
-    :return: list of methods that take graph as an only argument
-    >>> get_available_expansions({'edgeSet':[]})
-    []
-    >>> hop_up in get_available_expansions({'edgeSet':[{'left':[0], 'right':[2,3]}]})
-    True
-    """
-    if len(g['edgeSet']) > 0 and 'hopUp' not in g['edgeSet'][-1]:
-        return [hop_up]
-    return []
-
-
-def get_available_restrictions(g):
-    """
-    Get a list of methods that can be applied on the given graph to expand restrict denotation.
-
-    :param g: a graph object
-    :return: list of methods that take graph as an only argument
-    >>> get_available_restrictions({'entities':[], 'edgeSet':[{},{}]})
-    []
-    >>> add_entity_and_relation in get_available_restrictions({'entities':[[2,3]]})
-    True
-    """
-    if len(g['entities']) > 0:
-        return [add_entity_and_relation]
-    return []
-
-
-def remove_token_from_entity(g):
+def last_relation_subentities(g):
     """
 
     :param g:
     :return:
-    >>> remove_token_from_entity({'edgeSet': [], 'entities': [[4, 5, 6]], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']})
+    >>> last_relation_subentities({'edgeSet': [], 'entities': [[4, 5, 6]], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']})
     []
-    >>> len(remove_token_from_entity({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
+    >>> len(last_relation_subentities({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
     5
     """
     if len(g.get('edgeSet',[])) == 0 or len(g['edgeSet'][0]['right']) < 2:
@@ -64,7 +32,7 @@ def remove_token_from_entity(g):
 
 
 def hop_up(g):
-    if len(g['edgeSet']) == 0:
+    if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1]:
         return []
     new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
     new_g['edgeSet'][-1]['hopUp'] = 1
@@ -72,12 +40,11 @@ def hop_up(g):
 
 
 def add_entity_and_relation(g):
-    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': g.get('entities', [])}
-    entities_left = g['entities']
-
-    if len(entities_left) == 0:
+    if len(g.get('entities', [])) == 0:
         return []
 
+    new_g = {"tokens": g['tokens'], 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': g.get('entities', [])}
+    entities_left = g['entities']
     entity = entities_left[0]
     new_edge = {'left': [0], 'right': entity}
     new_g['edgeSet'].append(new_edge)
@@ -86,7 +53,7 @@ def add_entity_and_relation(g):
     return [new_g]
 
 # TODO: Add argmax and argmin
-EXPAND_ACTIONS = [hop_up, remove_token_from_entity]
+EXPAND_ACTIONS = [hop_up, last_relation_subentities]
 RESTRICT_ACTIONS = [add_entity_and_relation]
 
 
@@ -103,7 +70,7 @@ def expand(g):
     """
     if "edgeSet" not in g:
         return []
-    available_expansions = get_available_expansions(g)
+    available_expansions = EXPAND_ACTIONS
     return_graphs = [el for f in available_expansions for el in f(g)]
     return return_graphs
 
@@ -121,7 +88,7 @@ def restrict(g):
     """
     if "entities" not in g:
         return []
-    available_restrictions = get_available_restrictions(g)
+    available_restrictions = RESTRICT_ACTIONS
     return_graphs = [el for f in available_restrictions for el in f(g)]
     return return_graphs
 
