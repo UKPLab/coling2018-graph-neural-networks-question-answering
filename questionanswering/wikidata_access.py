@@ -163,10 +163,13 @@ def query_wikidata(query):
 
 
 def load_entity_map(path_to_map):
-    with open(path_to_map) as f:
-        return_map = [l.strip().split("\t") for l in f.readlines()]
-    return_map = nltk.Index({(t[1], t[0]) for t in return_map})
-    return return_map
+    try:
+        with open(path_to_map) as f:
+            return_map = [l.strip().split("\t") for l in f.readlines()]
+        return nltk.Index({(t[1], t[0]) for t in return_map})
+    except Exception as ex:
+        logger.error("No entity map found. {}".format(ex))
+        return {}
 
 entity_map = load_entity_map("../data/" + "entity_map.tsv")
 
