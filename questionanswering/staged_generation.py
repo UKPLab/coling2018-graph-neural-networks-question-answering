@@ -84,7 +84,7 @@ def last_relation_temporal(g):
     :return: a list of suggested graphs
     >>> last_relation_temporal({'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8]}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmax': 'time'}], 'entities': [], 'tokens':[]}, {'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmin': 'time'}], 'entities': [], 'tokens':[]}]
     True
-    >>> last_relation_temporal({'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmin':'time'}], 'entities': []})\
+    >>> last_relation_temporal({'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmin':'time'}], 'entities': []})
     []
     """
     if len(g.get('edgeSet', [])) == 0 or any(t in g['edgeSet'][-1] for t in ARG_TYPES):
@@ -94,7 +94,7 @@ def last_relation_temporal(g):
         new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
         new_g['edgeSet'][-1][t] = "time"
         new_graphs.append(new_g)
-    return
+    return new_graphs
 
 EXPAND_ACTIONS = [last_relation_hop_up, last_relation_subentities]
 RESTRICT_ACTIONS = [add_entity_and_relation, last_relation_temporal]
