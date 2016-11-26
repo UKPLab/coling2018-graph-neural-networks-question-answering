@@ -1,7 +1,8 @@
 import itertools
+import nltk
 
 
-def extract_entities(annotated_tokens):
+def extract_entities_from_tagged(annotated_tokens, tags):
     """
     The method takes a list of tokens annotated with the Stanford NE annotation scheme and produces a list of entites.
 
@@ -9,23 +10,53 @@ def extract_entities(annotated_tokens):
     :return: list of entities each represented by the corresponding token ids
 
     Tests:
-    >>> extract_entities([('what', 'O'), ('character', 'O'), ('did', 'O'), ('natalie', 'PERSON'), ('portman', 'PERSON'), ('play', 'O'), ('in', 'O'), ('star', 'O'), ('wars', 'O'), ('?', 'O')])
-    [[3, 4]]
-    >>> extract_entities([('Who', 'O'), ('was', 'O'), ('john', 'PERSON'), ('noble', 'PERSON')])
-    [[2, 3]]
-    >>> extract_entities([('Who', 'O'), ('played', 'O'), ('Aragorn', 'PERSON'), ('in', 'O'), ('the', 'ORG'), ('Hobbit', 'ORG'), ('?', 'O')])
-    [[2], [4, 5]]
+    >>> extract_entities_from_tagged([('what', 'O'), ('character', 'O'), ('did', 'O'), ('natalie', 'PERSON'), ('portman', 'PERSON'), ('play', 'O'), ('in', 'O'), ('star', 'O'), ('wars', 'O'), ('?', 'O')], tags={'PERSON'})
+    [['natalie', 'portman']]
+    >>> extract_entities_from_tagged([('Who', 'O'), ('was', 'O'), ('john', 'PERSON'), ('noble', 'PERSON')], tags={'PERSON'})
+    [['john', 'noble']]
+    >>> extract_entities_from_tagged([(w, 'NE' if t != 'O' else 'O') for w, t in [('Who', 'O'), ('played', 'O'), ('Aragorn', 'PERSON'), ('in', 'O'), ('the', 'ORG'), ('Hobbit', 'ORG'), ('?', 'O')]], tags={'NE'})
+    [['Aragorn'], ['the', 'Hobbit']]
     """
     vertices = []
     current_vertex = []
     for i, (w, t) in enumerate(annotated_tokens):
-        if t != 'O':
-            current_vertex.append(i)
+        if t in tags:
+            current_vertex.append(w)
         elif len(current_vertex) > 0:
             vertices.append(current_vertex)
             current_vertex = []
     if len(current_vertex) > 0:
         vertices.append(current_vertex)
+    return vertices
+
+lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
+
+
+def extract_entities(tokens_ne, tokens_pos):
+    """
+    Extract entities from the NE tags and POS tags of a sentence. Regular nouns are lemmatized to get rid of plurals.
+
+    :param tokens_ne: list of NE tags.
+    :param tokens_pos: list of POS tags.
+    :return: list of entities in the order: NE>NNP>NN
+    >>> extract_entities([('who', 'O'), ('are', 'O'), ('the', 'O'), ('current', 'O'), ('senators', 'O'), ('from', 'O'), ('missouri', 'LOCATION'), ('?', 'O')], [('who', 'WP'), ('are', 'VBP'), ('the', 'DT'), ('current', 'JJ'), ('senators', 'NNS'), ('from', 'IN'), ('missouri', 'NNP'), ('?', '.')])
+    [['missouri'], ['senator']]
+    >>> extract_entities([('what', 'O'), ('awards', 'O'), ('has', 'O'), ('louis', 'PERSON'), ('sachar', 'PERSON'), ('won', 'O'), ('?', 'O')], [('what', 'WDT'), ('awards', 'NNS'), ('has', 'VBZ'), ('louis', 'NNP'), ('sachar', 'NNP'), ('won', 'NNP'), ('?', '.')])
+    [['louis', 'sachar'], ['award']]
+    >>> extract_entities([('who', 'O'), ('was', 'O'), ('the', 'O'), ('president', 'O'), ('after', 'O'), ('jfk', 'O'), ('died', 'O'), ('?', 'O')], [('who', 'WP'), ('was', 'VBD'), ('the', 'DT'), ('president', 'NN'), ('after', 'IN'), ('jfk', 'NNP'), ('died', 'VBD'), ('?', '.')])
+    [['jfk'], ['president']]
+    """
+    nes = extract_entities_from_tagged([(w, 'NE' if t != 'O' else 'O') for w, t in tokens_ne], ['NE'])
+    nns = extract_entities_from_tagged(tokens_pos, ['NN', 'NNS'])
+    nnps = extract_entities_from_tagged(tokens_pos, ['NNP', 'NNPS'])
+    vertices = nes
+    for nn in nnps:
+        if not any(n in v for n in nn for v in vertices):
+            vertices.append(nn)
+    for nn in nns:
+        if not any(n in v for n in nn for v in vertices):
+            nn = [lemmatizer.lemmatize(n) for n in nn]
+            vertices.append(nn)
     return vertices
 
 
