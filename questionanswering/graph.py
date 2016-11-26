@@ -40,24 +40,26 @@ def extract_entities(tokens_ne, tokens_pos):
     :param tokens_pos: list of POS tags.
     :return: list of entities in the order: NE>NNP>NN
     >>> extract_entities([('who', 'O'), ('are', 'O'), ('the', 'O'), ('current', 'O'), ('senators', 'O'), ('from', 'O'), ('missouri', 'LOCATION'), ('?', 'O')], [('who', 'WP'), ('are', 'VBP'), ('the', 'DT'), ('current', 'JJ'), ('senators', 'NNS'), ('from', 'IN'), ('missouri', 'NNP'), ('?', '.')])
-    [['missouri'], ['senator']]
+    [['Missouri'], ['senator']]
     >>> extract_entities([('what', 'O'), ('awards', 'O'), ('has', 'O'), ('louis', 'PERSON'), ('sachar', 'PERSON'), ('won', 'O'), ('?', 'O')], [('what', 'WDT'), ('awards', 'NNS'), ('has', 'VBZ'), ('louis', 'NNP'), ('sachar', 'NNP'), ('won', 'NNP'), ('?', '.')])
-    [['louis', 'sachar'], ['award']]
+    [['Louis', 'Sachar'], ['award']]
     >>> extract_entities([('who', 'O'), ('was', 'O'), ('the', 'O'), ('president', 'O'), ('after', 'O'), ('jfk', 'O'), ('died', 'O'), ('?', 'O')], [('who', 'WP'), ('was', 'VBD'), ('the', 'DT'), ('president', 'NN'), ('after', 'IN'), ('jfk', 'NNP'), ('died', 'VBD'), ('?', '.')])
-    [['jfk'], ['president']]
+    [['Jfk'], ['president']]
     """
     nes = extract_entities_from_tagged([(w, 'NE' if t != 'O' else 'O') for w, t in tokens_ne], ['NE'])
     nns = extract_entities_from_tagged(tokens_pos, ['NN', 'NNS'])
     nnps = extract_entities_from_tagged(tokens_pos, ['NNP', 'NNPS'])
-    vertices = nes
+    ne_vertices = nes
+    vertices = []
     for nn in nnps:
-        if not any(n in v for n in nn for v in vertices):
-            vertices.append(nn)
+        if not any(n in v for n in nn for v in vertices + ne_vertices):
+            ne_vertices.append(nn)
     for nn in nns:
-        if not any(n in v for n in nn for v in vertices):
+        if not any(n.title() in v for n in nn for v in vertices + ne_vertices):
             nn = [lemmatizer.lemmatize(n) for n in nn]
             vertices.append(nn)
-    return vertices
+    ne_vertices = [[w.title() for w in ne] for ne in ne_vertices]
+    return ne_vertices + vertices
 
 
 def construct_graphs(tokens, entities):

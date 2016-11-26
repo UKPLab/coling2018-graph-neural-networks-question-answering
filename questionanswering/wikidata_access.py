@@ -105,7 +105,7 @@ def graph_to_query(g, return_var_values = False):
             sparql_relation_inst = sparql_relation_inst.replace("?e2", "e:" + edge['rightkbID'])
         else:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", "?e2" + str(i))
-            right_label = " ".join([g['tokens'][i] for i in edge['right']]).title()
+            right_label = " ".join(edge['right'])
             sparql_entity_label_inst = sparql_entity_label.replace("?e2", "?e2" + str(i))
             sparql_entity_label_inst = sparql_entity_label_inst.replace("%labelright%", right_label)
             variables.append("?e2" + str(i))
