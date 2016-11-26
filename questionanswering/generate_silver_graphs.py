@@ -9,12 +9,12 @@ import staged_generation
 
 np.random.seed(1)
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.ERROR)
 
 if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.ERROR)
 
     data_folder = "../data/"
 

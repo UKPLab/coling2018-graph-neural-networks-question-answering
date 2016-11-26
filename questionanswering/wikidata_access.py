@@ -48,7 +48,8 @@ sparql_relation_time_argmax = "?m ?a [base:time ?n]."
 
 sparql_close_order = " ORDER BY {} LIMIT 1"
 
-HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
+#HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
+HOP_UP_RELATIONS = ["P131"]
 
 sparql_entity_abstract = "[ _:s [ {} ?e2]]".format("|".join(["e:{}v".format(r) for r in HOP_UP_RELATIONS]))
 
