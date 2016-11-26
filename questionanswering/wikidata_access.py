@@ -90,14 +90,13 @@ def graph_to_query(g, return_var_values = False):
         if 'hopUp' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", sparql_entity_abstract)
 
-        if 'argmax' in edge:
+        if 'argmax' in edge or 'argmin' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_relation_time_argmax)
             sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
             sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
-            order_by.append("?n" + str(i))
+            order_by.append("{}({})".format("DESC" if 'argmax' in edge else "ASC", "?n" + str(i)))
         else:
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", "")
-
 
         sparql_relation_inst = sparql_relation_inst.replace("?p", "?p" + str(i))
         sparql_relation_inst = sparql_relation_inst.replace("?m", "?m" + str(i))
@@ -121,7 +120,7 @@ def graph_to_query(g, return_var_values = False):
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
     if order_by:
-        order_by_pattern = sparql_close_order.format(" ".join(["DESC({})".format(v) for v in order_by]))
+        order_by_pattern = sparql_close_order.format(" ".join(order_by))
         query += order_by_pattern
 
     logger.debug("Querying with variables: {}".format(variables))

@@ -87,19 +87,18 @@ def last_relation_temporal(g):
     >>> last_relation_temporal({'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmin':'time'}], 'entities': []})\
     []
     """
-    types = ['argmax', 'argmin']
-    if len(g.get('edgeSet', [])) == 0 or any(t in g['edgeSet'][-1] for t in types):
+    if len(g.get('edgeSet', [])) == 0 or any(t in g['edgeSet'][-1] for t in ARG_TYPES):
         return []
     new_graphs = []
-    for t in types:
+    for t in ARG_TYPES:
         new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
         new_g['edgeSet'][-1][t] = "time"
         new_graphs.append(new_g)
     return
 
-# TODO: Add argmax and argmin
 EXPAND_ACTIONS = [last_relation_hop_up, last_relation_subentities]
 RESTRICT_ACTIONS = [add_entity_and_relation, last_relation_temporal]
+ARG_TYPES = ['argmax', 'argmin']
 
 
 def expand(g):
