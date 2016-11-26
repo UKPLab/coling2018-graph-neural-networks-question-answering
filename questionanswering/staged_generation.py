@@ -6,7 +6,7 @@ from webquestions_io import *
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 
 
 def last_relation_subentities(g):
@@ -69,7 +69,7 @@ def add_entity_and_relation(g):
         return []
 
     new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': g.get('entities', [])}
-    entity = new_g['entities'].pop()
+    entity = new_g['entities'].pop(0)
     new_edge = {'left': [0], 'right': entity}
     new_g['edgeSet'].append(new_edge)
 
