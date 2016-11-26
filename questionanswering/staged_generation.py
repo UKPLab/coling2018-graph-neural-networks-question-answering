@@ -6,7 +6,7 @@ from webquestions_io import *
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 
 
 def last_relation_subentities(g):
