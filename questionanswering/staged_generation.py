@@ -76,26 +76,30 @@ def add_entity_and_relation(g):
     return [new_g]
 
 
-def last_relation_argmax(g):
+def last_relation_temporal(g):
     """
     Adds a temporal argmax to the last relation in the graph, that is only the latest entity is returned as the answer.
 
     :param g: a graph with a non-empty edgeSet
     :return: a list of suggested graphs
-    >>> last_relation_argmax({'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8]}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmax': 'time'}], 'entities': [], 'tokens':[]}]
+    >>> last_relation_temporal({'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8]}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmax': 'time'}], 'entities': [], 'tokens':[]}, {'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmin': 'time'}], 'entities': [], 'tokens':[]}]
     True
-
+    >>> last_relation_temporal({'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmin':'time'}], 'entities': []})\
+    []
     """
-    if len(g.get('edgeSet', [])) == 0 or 'argmax' in g['edgeSet'][-1]:
+    types = ['argmax', 'argmin']
+    if len(g.get('edgeSet', [])) == 0 or any(t in g['edgeSet'][-1] for t in types):
         return []
-
-    new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
-    new_g['edgeSet'][-1]['argmax'] = "time"
-    return [new_g]
+    new_graphs = []
+    for t in types:
+        new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
+        new_g['edgeSet'][-1][t] = "time"
+        new_graphs.append(new_g)
+    return
 
 # TODO: Add argmax and argmin
 EXPAND_ACTIONS = [last_relation_hop_up, last_relation_subentities]
-RESTRICT_ACTIONS = [add_entity_and_relation, last_relation_argmax]
+RESTRICT_ACTIONS = [add_entity_and_relation, last_relation_temporal]
 
 
 def expand(g):
