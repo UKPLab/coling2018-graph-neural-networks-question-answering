@@ -21,11 +21,11 @@ def last_relation_subentities(g):
     >>> len(last_relation_subentities({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
     5
     """
-    if len(g.get('edgeSet',[])) == 0 or len(g['edgeSet'][0]['right']) < 2:
+    if len(g.get('edgeSet',[])) == 0 or len(g['edgeSet'][-1]['right']) < 2:
         return []
     new_graphs = []
-    right_entity = g['edgeSet'][0]['right']
-    # TODO: Move the upper variant of single word enbtities here
+    right_entity = g['edgeSet'][-1]['right']
+    # TODO: Move the upper variant of single word entities here
     # ne_vertices_upper = [[w.upper() for w in ne] for ne in ne_vertices if len(ne) == 1 and len(ne[0]) < 6]
     for i in range(1, len(right_entity)):
         for new_entity in list(nltk.ngrams(right_entity, i)):
