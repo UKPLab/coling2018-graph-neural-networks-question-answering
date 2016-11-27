@@ -27,15 +27,20 @@ if __name__ == "__main__":
     ne_tagger = nltk.tag.stanford.StanfordNERTagger("../resources/stanford-ner-2015-12-09/classifiers/english.nowiki.3class.caseless.distsim.crf.ser.gz",
                                                     path_to_jar = "../resources/stanford-ner-2015-12-09/stanford-ner-3.6.0.jar")
     logger.debug('Initialized StanfordNERTagger')
-    webquestions_utterances_tagged = ne_tagger.tag_sents(tokenizer.tokenize_sents([q_obj['utterance'] for q_obj in webquestions]))
+    pos_tagger = nltk.tag.stanford.StanfordPOSTagger("../resources/stanford-postagger-full-2015-12-09/models/english-caseless-left3words-distsim.tagger",
+                                                     path_to_jar = "../resources/stanford-postagger-full-2015-12-09/stanford-postagger-3.6.0.jar")
+    logger.debug('Initialized StanfordPOSTagger')
+    webquestions_utterances_tokens = tokenizer.tokenize_sents([q_obj['utterance'] for q_obj in webquestions])
+    webquestions_utterances_nes = ne_tagger.tag_sents(webquestions_utterances_tokens)
+    webquestions_utterances_poss = pos_tagger.tag_sents(webquestions_utterances_tokens)
 
-    webquestions_entities = [graph.extract_entities(utterance_t) for utterance_t in webquestions_utterances_tagged]
+    webquestions_entities = [graph.extract_entities(webquestions_utterances_nes[i], webquestions_utterances_poss[i]) for i in range(len(webquestions))]
     logger.debug('Extracted entities.')
 
     silver_dataset = []
     for i in tqdm.trange(len(webquestions)):
         logger.info(graph.construct_graphs(webquestions[i]['utterance'], webquestions_entities[i]))
-        ungrounded_graph = {'tokens': [t for t, _ in webquestions_utterances_tagged[i]],
+        ungrounded_graph = {'tokens': webquestions_utterances_tokens[i],
                             'edgeSet': [],
                             'entities': webquestions_entities[i]}
         logger.info("Generating from: {}".format(ungrounded_graph))
