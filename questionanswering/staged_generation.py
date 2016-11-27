@@ -25,10 +25,12 @@ def last_relation_subentities(g):
         return []
     new_graphs = []
     right_entity = g['edgeSet'][0]['right']
+    # TODO: Move the upper variant of single word enbtities here
+    # ne_vertices_upper = [[w.upper() for w in ne] for ne in ne_vertices if len(ne) == 1 and len(ne[0]) < 6]
     for i in range(1, len(right_entity)):
         for new_entity in list(nltk.ngrams(right_entity, i)):
             new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
-            new_g['edgeSet'][0]['right'] = list(new_entity)
+            new_g['edgeSet'][-1]['right'] = list(new_entity)
             new_graphs.append(new_g)
     return new_graphs
 
@@ -160,6 +162,7 @@ def generate_with_gold(ungrounded_graph, question_obj):
             chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
             if len(chosen_graphs) == 0:
                 logger.debug("Expanding")
+                # TODO: allow to explicitly throw out a relation
                 suggested_graphs = [e_g for s_g in suggested_graphs for e_g in expand(s_g)]
                 logger.debug("Graph: {}".format(suggested_graphs))
                 chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
