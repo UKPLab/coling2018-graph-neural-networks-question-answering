@@ -63,11 +63,11 @@ sparql_relation_time_argmax = "?m ?a [base:time ?n]."
 sparql_close_order = " ORDER BY {} LIMIT 1"
 sparql_close = "LIMIT {}".format(GLOBAL_RESULT_LIMIT)
 
-#HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
-HOP_UP_RELATIONS = ["P131"]
+HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
+# HOP_UP_RELATIONS = ["P131"]
 
-sparql_entity_abstract = "[ _:s [ {} ?e2]]".format("|".join(["e:{}v".format(r) for r in HOP_UP_RELATIONS]))
-
+sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
+sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
 
 def graph_to_query(g, return_var_values = False):
     """
@@ -100,11 +100,16 @@ def graph_to_query(g, return_var_values = False):
             sparql_relation_inst = re.sub(r"\?r[drv]", "e:" + edge['kbID'], sparql_relation_inst)
         else:
             sparql_relation_inst = sparql_relation_inst.replace("?r", "?r" + str(i))
-            #             variables.extend(["?r{}".format(i), "?r{}r".format(i), "?r{}v".format(i) ])
             variables.extend(["?r{}{}".format(i, t[0]) for t in sparql_relation] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
 
         if 'hopUp' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", sparql_entity_abstract)
+            if edge['hopUp']:
+                sparql_relation_inst = sparql_relation_inst.replace("?hopupv", edge['hopUp'])
+                sparql_relation_inst = sparql_relation_inst.replace("?hopups", edge['hopUp'][:-1] + "s")
+            else:
+                sparql_relation_inst = sparql_hopup_values + sparql_relation_inst
+                variables.append("?hopup{}s".format(i))
 
         if 'argmax' in edge or 'argmin' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_relation_time_argmax)
@@ -116,6 +121,7 @@ def graph_to_query(g, return_var_values = False):
 
         sparql_relation_inst = sparql_relation_inst.replace("?p", "?p" + str(i))
         sparql_relation_inst = sparql_relation_inst.replace("?m", "?m" + str(i))
+        sparql_relation_inst = sparql_relation_inst.replace("?hopup", "?hopup" + str(i))
 
         if 'rightkbID' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", "e:" + edge['rightkbID'])
