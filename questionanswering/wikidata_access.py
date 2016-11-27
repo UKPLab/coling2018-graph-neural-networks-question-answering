@@ -11,6 +11,20 @@ sparql = SPARQLWrapper("http://knowledgebase:8890/sparql")
 sparql.setReturnFormat(JSON)
 sparql.setMethod("GET")
 sparql.setTimeout(40)
+GLOBAL_RESULT_LIMIT = 1000
+
+
+# PREFIX e:<http://www.wikidata.org/entity/>
+# PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+# PREFIX skos:<http://www.w3.org/2004/02/skos/core#>
+# PREFIX base:<http://www.wikidata.org/ontology#>
+#
+# SELECT DISTINCT ?e1 WHERE
+# {{GRAPH <http://wikidata.org/statements> {
+# ?e1 e:P69s ?m0 . { SELECT DISTINCT ?d0 WHERE {
+# ?m0 e:P69v ?d0. ?d0 ?s0 [ e:P131v|e:P31v|e:P279v|e:P17v|e:P361v e:Q1581]
+# } }  }
+# }}
 
 sparql_prefix = """
         PREFIX e:<http://www.wikidata.org/entity/>
@@ -47,6 +61,7 @@ sparql_entity_label = """
 sparql_relation_time_argmax = "?m ?a [base:time ?n]."
 
 sparql_close_order = " ORDER BY {} LIMIT 1"
+sparql_close = "LIMIT {}".format(GLOBAL_RESULT_LIMIT)
 
 #HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
 HOP_UP_RELATIONS = ["P131"]
@@ -123,6 +138,8 @@ def graph_to_query(g, return_var_values = False):
     if order_by:
         order_by_pattern = sparql_close_order.format(" ".join(order_by))
         query += order_by_pattern
+    else:
+        query += sparql_close
 
     logger.debug("Querying with variables: {}".format(variables))
     return query
@@ -141,6 +158,7 @@ def get_free_variables(g, include_question_variable=False):
 
 
 def link_entity():
+
     pass
 
 
