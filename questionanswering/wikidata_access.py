@@ -105,8 +105,8 @@ def graph_to_query(g, return_var_values = False):
         if 'hopUp' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", sparql_entity_abstract)
             if edge['hopUp']:
-                sparql_relation_inst = sparql_relation_inst.replace("?hopupv", edge['hopUp'])
-                sparql_relation_inst = sparql_relation_inst.replace("?hopups", edge['hopUp'][:-1] + "s")
+                sparql_relation_inst = sparql_relation_inst.replace("?hopupv",  "e:" + edge['hopUp'])
+                sparql_relation_inst = sparql_relation_inst.replace("?hopups",  "e:" + edge['hopUp'][:-1] + "s")
             else:
                 sparql_relation_inst = sparql_hopup_values + sparql_relation_inst
                 variables.append("?hopup{}s".format(i))
