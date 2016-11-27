@@ -49,7 +49,7 @@ def last_relation_hop_up(g):
     if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1]:
         return []
     new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
-    new_g['edgeSet'][-1]['hopUp'] = 1
+    new_g['edgeSet'][-1]['hopUp'] = None
     return [new_g]
 
 

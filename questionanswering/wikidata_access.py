@@ -61,7 +61,7 @@ sparql_entity_label = """
 sparql_relation_time_argmax = "?m ?a [base:time ?n]."
 
 sparql_close_order = " ORDER BY {} LIMIT 1"
-sparql_close = "LIMIT {}".format(GLOBAL_RESULT_LIMIT)
+sparql_close = " LIMIT {}".format(GLOBAL_RESULT_LIMIT)
 
 HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
 # HOP_UP_RELATIONS = ["P131"]
@@ -81,7 +81,7 @@ def graph_to_query(g, return_var_values = False):
     >>> g = {'edgeSet': [{'left': [0], 'kbID': 'P35v', 'type': 'reverse', 'rightkbID': 'Q155', 'right': [5]}], 'entities': []}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = True)))
     5
-    >>> g = {'edgeSet': [{'left': [0], 'right': [6]}], 'entities': [[4]], 'tokens': ['who', 'are', 'the', 'current', 'senator', 'from', 'missouri', '?']}
+    >>> g = {'edgeSet': [{'left': [0], 'right': ["Missouri"]}], 'entities': [[4]], 'tokens': ['who', 'are', 'the', 'current', 'senator', 'from', 'missouri', '?']}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = False)))
     160
     """
