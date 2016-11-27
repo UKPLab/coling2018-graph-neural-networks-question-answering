@@ -59,7 +59,8 @@ def extract_entities(tokens_ne, tokens_pos):
             nn = [lemmatizer.lemmatize(n) for n in nn]
             vertices.append(nn)
     ne_vertices = [[w.title() for w in ne] for ne in ne_vertices]
-    return ne_vertices + vertices
+    ne_vertices_upper = [[w.upper() for w in ne] for ne in ne_vertices if len(ne) == 1 and len(ne[0]) < 6]
+    return ne_vertices + ne_vertices_upper + vertices
 
 
 def construct_graphs(tokens, entities):
