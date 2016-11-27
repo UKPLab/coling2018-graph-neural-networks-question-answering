@@ -16,17 +16,23 @@ def last_relation_subentities(g):
 
     :param g: a graph with an non-empty edgeSet
     :return: a list of suggested graphs
-    >>> last_relation_subentities({'edgeSet': [], 'entities': [[4, 5, 6]], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']})
+    >>> last_relation_subentities({'edgeSet': [], 'entities': [['grand', 'bahama', 'island']], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']})
     []
-    >>> len(last_relation_subentities({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
+    >>> len(last_relation_subentities({'edgeSet': [{'left':[0], 'right': ['grand', 'bahama', 'island']}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
     5
+    >>> last_relation_subentities({'edgeSet': [{'right':['Jfk']}], 'entities': []}) == [{'tokens': [], 'edgeSet': [{'right': ['JFK']}], 'entities': []}]
+    True
     """
-    if len(g.get('edgeSet',[])) == 0 or len(g['edgeSet'][-1]['right']) < 2:
+    if len(g.get('edgeSet',[])) == 0 or len(g['edgeSet'][-1]['right']) < 1:
         return []
     new_graphs = []
     right_entity = g['edgeSet'][-1]['right']
     # TODO: Move the upper variant of single word entities here
     # ne_vertices_upper = [[w.upper() for w in ne] for ne in ne_vertices if len(ne) == 1 and len(ne[0]) < 6]
+    for new_entity in [[ne.upper()] for ne in right_entity if len(ne) < 6 and ne.istitle()]:
+        new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
+        new_g['edgeSet'][-1]['right'] = list(new_entity)
+        new_graphs.append(new_g)
     for i in range(1, len(right_entity)):
         for new_entity in list(nltk.ngrams(right_entity, i)):
             new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
@@ -43,9 +49,9 @@ def last_relation_hop_up(g):
     :return: a list of suggested graphs
     >>> last_relation_hop_up({'edgeSet': [], 'entities': [[4, 5, 6]]})
     []
-    >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':[4,5,6], 'hopUp': 1}], 'entities': [], 'tokens':[]}]
+    >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':[4,5,6], 'hopUp': None}], 'entities': [], 'tokens':[]}]
     True
-    >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':[4,5,6], 'hopUp': 1}], 'entities': []})
+    >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':[4,5,6], 'hopUp': None}], 'entities': []})
     []
     """
     if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1]:
@@ -109,9 +115,9 @@ def expand(g):
 
     :param g: dict object representing the graph with "edgeSet" and "entities"
     :return: a list of new graphs that are modified copies
-    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[[2, 3]]})
+    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[["Barack", "Obama"]]})
     []
-    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]}) == [{'tokens': ['Who', 'is', 'Barack', 'Obama', '?'], 'entities':[], 'edgeSet': [{'left': [0], 'hopUp': 1, 'right': [2, 3]}]}]
+    >>> expand({"edgeSet":[{"left":[0], "right":["Barack", "Obama"]}]}) == [{'edgeSet': [{'left': [0], 'hopUp': None, 'right': ['Barack', 'Obama']}], 'tokens': [], 'entities': []}, {'edgeSet': [{'left': [0], 'right': ['OBAMA']}], 'tokens': [], 'entities': []}, {'edgeSet': [{'left': [0], 'right': ['Barack']}], 'tokens': [], 'entities': []}, {'edgeSet': [{'left': [0], 'right': ['Obama']}], 'tokens': [], 'entities': []}]
     True
     """
     if "edgeSet" not in g:

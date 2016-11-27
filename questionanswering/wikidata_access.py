@@ -63,6 +63,7 @@ sparql_relation_time_argmax = "?m ?a [base:time ?n]."
 sparql_close_order = " ORDER BY {} LIMIT 1"
 sparql_close = " LIMIT {}".format(GLOBAL_RESULT_LIMIT)
 
+# TODO: Additional?: given name
 HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
 # HOP_UP_RELATIONS = ["P131"]
 
