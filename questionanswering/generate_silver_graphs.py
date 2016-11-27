@@ -9,18 +9,18 @@ import staged_generation
 
 np.random.seed(1)
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.ERROR)
 
 if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.ERROR)
 
     data_folder = "../data/"
 
     with open(data_folder + "webquestions.examples.train.json") as f:
         webquestions = json.load(f)
-    webquestions = webquestions[:100]
+    # webquestions = webquestions[:100]
     logging.debug('Loaded WebQuestions, size: {}'.format(len(webquestions)))
 
     tokenizer = nltk.tokenize.stanford.StanfordTokenizer(path_to_jar = "../resources/stanford-ner-2015-12-09/stanford-ner-3.6.0.jar")
