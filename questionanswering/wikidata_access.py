@@ -109,7 +109,7 @@ def graph_to_query(g, return_var_values = False):
                 sparql_relation_inst = sparql_relation_inst.replace("?hopups",  "e:" + edge['hopUp'][:-1] + "s")
             else:
                 sparql_relation_inst = sparql_hopup_values + sparql_relation_inst
-                variables.append("?hopup{}s".format(i))
+                variables.append("?hopup{}v".format(i))
 
         if 'argmax' in edge or 'argmin' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_relation_time_argmax)
