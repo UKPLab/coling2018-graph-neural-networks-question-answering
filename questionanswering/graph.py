@@ -32,7 +32,7 @@ def extract_entities_from_tagged(annotated_tokens, tags):
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
 
 
-def extract_entities(tokens_ne, tokens_pos):
+def extract_entities(tokens_ne_pos):
     """
     Extract entities from the NE tags and POS tags of a sentence. Regular nouns are lemmatized to get rid of plurals.
 
@@ -46,9 +46,9 @@ def extract_entities(tokens_ne, tokens_pos):
     >>> extract_entities([('who', 'O'), ('was', 'O'), ('the', 'O'), ('president', 'O'), ('after', 'O'), ('jfk', 'O'), ('died', 'O'), ('?', 'O')], [('who', 'WP'), ('was', 'VBD'), ('the', 'DT'), ('president', 'NN'), ('after', 'IN'), ('jfk', 'NNP'), ('died', 'VBD'), ('?', '.')])
     [['Jfk'], ['president']]
     """
-    nes = extract_entities_from_tagged([(w, 'NE' if t != 'O' else 'O') for w, t in tokens_ne], ['NE'])
-    nns = extract_entities_from_tagged(tokens_pos, ['NN', 'NNS'])
-    nnps = extract_entities_from_tagged(tokens_pos, ['NNP', 'NNPS'])
+    nes = extract_entities_from_tagged([(w, 'NE' if t != 'O' else 'O') for w, t, _ in tokens_ne_pos], ['NE'])
+    nns = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NN', 'NNS'])
+    nnps = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NNP', 'NNPS'])
     ne_vertices = nes
     vertices = []
     for nn in nnps:
