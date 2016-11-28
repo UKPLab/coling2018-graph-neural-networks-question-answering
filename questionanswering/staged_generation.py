@@ -30,12 +30,12 @@ def last_relation_subentities(g):
     # TODO: Move the upper variant of single word entities here
     # ne_vertices_upper = [[w.upper() for w in ne] for ne in ne_vertices if len(ne) == 1 and len(ne[0]) < 6]
     for new_entity in [[ne.upper()] for ne in right_entity if len(ne) < 6 and ne.istitle()]:
-        new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
+        new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': copy.copy(g.get('entities', []))}
         new_g['edgeSet'][-1]['right'] = list(new_entity)
         new_graphs.append(new_g)
     for i in range(1, len(right_entity)):
         for new_entity in list(nltk.ngrams(right_entity, i)):
-            new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
+            new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': copy.copy(g.get('entities', []))}
             new_g['edgeSet'][-1]['right'] = list(new_entity)
             new_graphs.append(new_g)
     return new_graphs
@@ -56,7 +56,7 @@ def last_relation_hop_up(g):
     """
     if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1]:
         return []
-    new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
+    new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': copy.copy(g.get('entities', []))}
     new_g['edgeSet'][-1]['hopUp'] = None
     return [new_g]
 
@@ -76,7 +76,7 @@ def add_entity_and_relation(g):
     if len(g.get('entities', [])) == 0:
         return []
 
-    new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': g.get('entities', [])}
+    new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': copy.copy(g.get('entities', []))}
     entity = new_g['entities'].pop(0)
     new_edge = {'left': [0], 'right': entity}
     new_g['edgeSet'].append(new_edge)
@@ -99,7 +99,7 @@ def last_relation_temporal(g):
         return []
     new_graphs = []
     for t in ARG_TYPES:
-        new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': g.get('entities', [])}
+        new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': copy.copy(g.get('entities', []))}
         new_g['edgeSet'][-1][t] = "time"
         new_graphs.append(new_g)
     return new_graphs
@@ -213,6 +213,62 @@ def ground_with_gold(input_graphs, gold_answers):
                           range(len(grounded_graphs))]
     chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
                      for i in range(len(grounded_graphs)) if evaluation_results[i][2] > 0.0]
+    logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
+    return chosen_graphs
+
+
+def generate_without_gold(ungrounded_graph, n = 1):
+    """
+    Generate all possible groundings of the given ungrounded graph
+    using expand and restrict operations on its denotation.
+
+    :param ungrounded_graph: the starting graph that should contain a list of tokens and a list of entities
+    :return: a list of generated grounded graphs
+    """
+    pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
+    generated_graphs = []
+    interation = 0
+    while len(pool) > 0 and len(generated_graphs) < 100:
+        if len(generated_graphs) % 10 == 0:
+            print("Generated", len(generated_graphs))
+            print("Pool", len(pool))
+        g = pool.pop()
+        logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
+        logger.debug("Restricting")
+        suggested_graphs = restrict(g[0])
+        logger.debug("Suggested graphs: {}".format(suggested_graphs))
+        chosen_graphs = ground_without_gold(suggested_graphs)
+        if len(chosen_graphs) == 0:
+            logger.debug("Expanding")
+            suggested_graphs = [e_g for s_g in suggested_graphs for e_g in expand(s_g)]
+            logger.debug("Graph: {}".format(suggested_graphs))
+            chosen_graphs = ground_without_gold(suggested_graphs)
+        logger.debug("Extending the pool.")
+        pool.extend(chosen_graphs)
+        logger.debug("Extending the generated graph set.")
+        generated_graphs.extend(chosen_graphs)
+        interation += 1
+    return generated_graphs
+
+
+def ground_without_gold(input_graphs):
+    """
+
+    :param input_graphs: a list of ungrounded graphs
+    :return: a list of graph groundings
+    """
+    grounded_graphs = []
+    for s_g in input_graphs:
+        if get_free_variables(s_g):
+            grounded_graphs.extend([apply_grounding(s_g, p) for p in query_wikidata(graph_to_query(s_g))])
+        else:
+            grounded_graphs.append(s_g)
+
+    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
+    logger.debug("First one: {}".format(grounded_graphs[:1]))
+
+    chosen_graphs = [(grounded_graphs[i], (0.0, 0.0, 0.0), [])
+                     for i in range(len(grounded_graphs))]
     logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
     return chosen_graphs
 
