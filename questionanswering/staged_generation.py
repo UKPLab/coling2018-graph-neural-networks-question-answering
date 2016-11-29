@@ -68,6 +68,8 @@ def last_relation_hop_up(g):
     True
     >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':[4,5,6], 'hopUp': None}], 'entities': []})
     []
+    >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':["Bahama"], "rightkbID":"Q6754"}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':["Bahama"], "rightkbID":"Q6754", 'hopUp': None}], 'entities': [], 'tokens':[]}]
+    True
     """
     if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1]:
         return []
@@ -200,6 +202,28 @@ def generate_with_gold(ungrounded_graph, question_obj):
     return generated_graphs
 
 
+def find_groundings(input_graphs):
+    grounded_graphs = []
+    for s_g in input_graphs:
+        g_gs = []
+        if get_free_variables(s_g, include_relations=False, include_entities=True):
+            logger.debug("Grounding entities first.")
+            for edge in [e for e in s_g.get('edgeSet', []) if 'rightkbID' not in e]:
+                linkings = link_entity(edge['right'])
+                [apply_grounding(s_g, p) for p in query_wikidata(graph_to_query(s_g))]
+                # for linking in linkings:
+                    # edge['rightkbID'] =
+
+        if get_free_variables(s_g):
+            grounded_graphs.extend([apply_grounding(s_g, p) for p in query_wikidata(graph_to_query(s_g))])
+        else:
+            grounded_graphs.append(s_g)
+
+    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
+    logger.debug("First one: {}".format(grounded_graphs[:1]))
+    return grounded_graphs
+
+
 def ground_with_gold(input_graphs, gold_answers):
     """
     For each graph among the suggested_graphs find its groundings in the WikiData, then evaluate each suggested graph
@@ -301,7 +325,7 @@ def link_entity(entity_tokens):
         while not linkings and subentities:
             subentity_tokens = subentities.pop(0)
             linkings = query_wikidata(entity_query(" ".join(subentity_tokens)))
-    linkings = [l.get("e20", "") for l in linkings if l]
+    # linkings = [l.get("e20", "") for l in linkings if l]
     return linkings
 
 

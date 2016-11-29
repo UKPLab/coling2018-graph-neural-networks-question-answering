@@ -159,12 +159,12 @@ def graph_to_query(g, return_var_values = False):
     return query
 
 
-def get_free_variables(g, include_question_variable=False):
+def get_free_variables(g, include_relations=True, include_entities=True, include_question_variable=False):
     free_variables = []
     for i, edge in enumerate(g.get('edgeSet', [])):
-        if 'kbID' not in edge:
+        if include_relations and 'kbID' not in edge:
             free_variables.extend(["?r{}{}".format(i, t[0]) for t in sparql_relation] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
-        if 'rightkbID' not in edge:
+        if include_entities and 'rightkbID' not in edge:
             free_variables.append("?e2" + str(i))
     if include_question_variable:
         free_variables.append("?e1")
