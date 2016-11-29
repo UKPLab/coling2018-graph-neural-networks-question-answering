@@ -301,7 +301,7 @@ def link_entity(entity_tokens):
         while not linkings and subentities:
             subentity_tokens = subentities.pop(0)
             linkings = query_wikidata(entity_query(" ".join(subentity_tokens)))
-    linkings = [l.values()[0] for l in linkings if l]
+    linkings = [l.get("e20", "") for l in linkings if l]
     return linkings
 
 

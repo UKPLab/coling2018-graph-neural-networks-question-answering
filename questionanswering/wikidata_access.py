@@ -51,12 +51,19 @@ sparql_relation_complex = """
         {GRAPH <http://wikidata.org/statements> { ?m ?p ?e2. ?m ?rv ?e1. }}}
         """
 
+# sparql_entity_label = """
+#         {{GRAPH <http://wikidata.org/terms> { ?e2 rdfs:label "%labelright%"@en  }}
+#         UNION
+#         {GRAPH <http://wikidata.org/terms> { ?e2 skos:altLabel "%labelright%"@en  }}
+#         }
+#         """
+
 sparql_entity_label = """
-        {{GRAPH <http://wikidata.org/terms> { ?e2 rdfs:label "%labelright%"@en  }}
-        UNION
-        {GRAPH <http://wikidata.org/terms> { ?e2 skos:altLabel "%labelright%"@en  }}
-        }
+        { VALUES ?labelpredicate {rdfs:label skos:altLabel}
+        GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate "%labelright%"@en  }
+        } FILTER NOT EXISTS {GRAPH <http://wikidata.org/instances> {?e2 rdf:type e:Q4167410}}
         """
+
 
 sparql_relation_time_argmax = "?m ?a [base:time ?n]."
 
