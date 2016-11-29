@@ -291,7 +291,7 @@ def ground_without_gold(input_graphs):
 def link_entity(entity_tokens):
     """
     Link the given list of tokens to an entity in a knowledge base. If none linkings is found try all combinations of
-    subtokens of teh given entity.
+    subtokens of the given entity.
     :param entity_tokens: list of entity tokens
     :return: list of KB ids
     """
@@ -303,6 +303,7 @@ def link_entity(entity_tokens):
             linkings = query_wikidata(entity_query(" ".join(subentity_tokens)))
     linkings = [l.values()[0] for l in linkings if l]
     return linkings
+
 
 def apply_grounding(g, grounding):
     """
