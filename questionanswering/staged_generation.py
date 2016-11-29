@@ -9,6 +9,28 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
 
+def possible_subentities(entity_tokens):
+    """
+    Retrive all possible subentities of the given entity. Short title tokens are also capitalized.
+
+    :param entity_tokens: a list of entity tokens
+    :return: a list of subentities.
+    >>> possible_subentities(["Nfl", "Redskins"])
+    [('Nfl',), ('Redskins',), ('NFL',)]
+    >>> possible_subentities(["senator"])
+    []
+    >>> possible_subentities(["Grand", "Bahama", "Island"])
+    [('Grand', 'Bahama'), ('Bahama', 'Island'), ('Grand',), ('Bahama',), ('Island',)]
+    """
+    new_entities = []
+    for i in range(len(entity_tokens)-1, 0, -1):
+        for new_entity in nltk.ngrams(entity_tokens, i):
+            new_entities.append(new_entity)
+    for new_entity in [(ne.upper(),) for ne in entity_tokens if len(ne) < 5 and ne.istitle()]:
+        new_entities.append(new_entity)
+    return new_entities
+
+
 def last_relation_subentities(g):
     """
     Takes a graph with an existing relation and suggests a set of graphs with the same relation but one of the entities
@@ -27,17 +49,10 @@ def last_relation_subentities(g):
         return []
     new_graphs = []
     right_entity = g['edgeSet'][-1]['right']
-    # TODO: Move the upper variant of single word entities here
-    # ne_vertices_upper = [[w.upper() for w in ne] for ne in ne_vertices if len(ne) == 1 and len(ne[0]) < 6]
-    for new_entity in [[ne.upper()] for ne in right_entity if len(ne) < 6 and ne.istitle()]:
+    for new_entity in possible_subentities(right_entity):
         new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': copy.copy(g.get('entities', []))}
         new_g['edgeSet'][-1]['right'] = list(new_entity)
         new_graphs.append(new_g)
-    for i in range(1, len(right_entity)):
-        for new_entity in list(nltk.ngrams(right_entity, i)):
-            new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': copy.copy(g.get('entities', []))}
-            new_g['edgeSet'][-1]['right'] = list(new_entity)
-            new_graphs.append(new_g)
     return new_graphs
 
 
@@ -159,7 +174,7 @@ def generate_with_gold(ungrounded_graph, question_obj):
     gold_answers = [e.lower() for e in get_answers_from_question(question_obj)]
 
     while len(pool) > 0:
-        g = pool.pop()
+        g = pool.pop(0)
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
         if g[1][2] < 0.5:
             logger.debug("Restricting")
@@ -168,7 +183,7 @@ def generate_with_gold(ungrounded_graph, question_obj):
             chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
             if len(chosen_graphs) == 0:
                 logger.debug("Expanding")
-                # TODO: allow to explicitly throw out a relation
+                # TODO: allow to explicitly throw out a relation/entity
                 suggested_graphs = [e_g for s_g in suggested_graphs for e_g in expand(s_g)]
                 logger.debug("Graph: {}".format(suggested_graphs))
                 chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
@@ -232,7 +247,7 @@ def generate_without_gold(ungrounded_graph, n = 1):
         if len(generated_graphs) % 10 == 0:
             print("Generated", len(generated_graphs))
             print("Pool", len(pool))
-        g = pool.pop()
+        g = pool.pop(0)
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
         logger.debug("Restricting")
         suggested_graphs = restrict(g[0])
@@ -272,6 +287,22 @@ def ground_without_gold(input_graphs):
     logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
     return chosen_graphs
 
+
+def link_entity(entity_tokens):
+    """
+    Link the given list of tokens to an entity in a knowledge base. If none linkings is found try all combinations of
+    subtokens of teh given entity.
+    :param entity_tokens: list of entity tokens
+    :return: list of KB ids
+    """
+    linkings = query_wikidata(entity_query(" ".join(entity_tokens)))
+    if not linkings:
+        subentities = possible_subentities(entity_tokens)
+        while not linkings and subentities:
+            subentity_tokens = subentities.pop(0)
+            linkings = query_wikidata(entity_query(" ".join(subentity_tokens)))
+    linkings = [l.values()[0] for l in linkings if l]
+    return linkings
 
 def apply_grounding(g, grounding):
     """

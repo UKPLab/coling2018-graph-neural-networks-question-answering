@@ -164,9 +164,25 @@ def get_free_variables(g, include_question_variable=False):
     return free_variables
 
 
-def link_entity():
+def entity_query(label):
+    """
 
-    pass
+    :param label:
+    :return:
+    """
+    query = sparql_prefix
+    variables = []
+    query += sparql_select
+    query += "{"
+    sparql_entity_label_inst = sparql_entity_label.replace("?e2", "?e2" + str(0))
+    sparql_entity_label_inst = sparql_entity_label_inst.replace("%labelright%", label)
+    variables.append("?e2" + str(0))
+    query += sparql_entity_label_inst
+    query += "}"
+    query = query.replace("%queryvariables%", " ".join(variables))
+    query += sparql_close
+    logger.debug("Querying for entity with variables: {}".format(variables))
+    return query
 
 
 def query_wikidata(query):
