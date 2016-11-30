@@ -270,8 +270,8 @@ def generate_without_gold(ungrounded_graph):
     iterations = 0
     while pool:  # and len(generated_graphs) < 100:
         if len(generated_graphs) % 10 == 0:
-            print("Generated", len(generated_graphs))
-            print("Pool", len(pool))
+            logger.debug("Generated", len(generated_graphs))
+            logger.debug("Pool", len(pool))
         g = pool.pop(0)
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
 
