@@ -208,23 +208,15 @@ def generate_with_gold(ungrounded_graph, gold_answers):
 
 
 def find_groundings(input_graphs):
+    """
+    Retrieve possible groundings of the give list of (partially ungrounded) graph.
+    If a graph doesn't have free variables, itself is returned.
+
+    :param input_graphs: a list of ungrounded graphs.
+    :return: a list of possible grounded graphs.
+    """
     grounded_graphs = []
     for s_g in input_graphs:
-        g_gs = []
-        if get_free_variables(s_g, include_relations=False, include_entities=True):
-            logger.debug("Grounding entities first.")
-            for i, edge in enumerate(s_g.get('edgeSet', [])):
-                if 'rightkbID' not in edge:
-                    linkings = link_entity(edge['right'])
-                    for linking in linkings:
-                        g_g = copy.deepcopy(g_g)
-                        g_g['edgeSet'][i]['rightkbID'] = linking
-                        g_gs.append(g_g)
-                [apply_grounding(s_g, p) for p in query_wikidata(graph_to_query(s_g))]
-
-                # for linking in linkings:
-                    # edge['rightkbID'] =
-
         if get_free_variables(s_g):
             grounded_graphs.extend([apply_grounding(s_g, p) for p in query_wikidata(graph_to_query(s_g))])
         else:
@@ -245,15 +237,7 @@ def ground_with_gold(input_graphs, gold_answers):
     :param gold_answers: a set of gold answers
     :return: a list of graph groundings
     """
-    grounded_graphs = []
-    for s_g in input_graphs:
-        if get_free_variables(s_g):
-            grounded_graphs.extend([apply_grounding(s_g, p) for p in query_wikidata(graph_to_query(s_g))])
-        else:
-            grounded_graphs.append(s_g)
-
-    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
-    logger.debug("First one: {}".format(grounded_graphs[:1]))
+    grounded_graphs = find_groundings(input_graphs)
     retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in grounded_graphs]
     logger.debug(
         "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
@@ -267,7 +251,7 @@ def ground_with_gold(input_graphs, gold_answers):
     return chosen_graphs
 
 
-def generate_without_gold(ungrounded_graph, n = 1):
+def generate_without_gold(ungrounded_graph):
     """
     Generate all possible groundings of the given ungrounded graph
     using expand and restrict operations on its denotation.
@@ -307,15 +291,7 @@ def ground_without_gold(input_graphs):
     :param input_graphs: a list of ungrounded graphs
     :return: a list of graph groundings
     """
-    grounded_graphs = []
-    for s_g in input_graphs:
-        if get_free_variables(s_g):
-            grounded_graphs.extend([apply_grounding(s_g, p) for p in query_wikidata(graph_to_query(s_g))])
-        else:
-            grounded_graphs.append(s_g)
-
-    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
-    logger.debug("First one: {}".format(grounded_graphs[:1]))
+    grounded_graphs = grounded_graphs = find_groundings(input_graphs)
 
     chosen_graphs = [(grounded_graphs[i], (0.0, 0.0, 0.0), [])
                      for i in range(len(grounded_graphs))]
