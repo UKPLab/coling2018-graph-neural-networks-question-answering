@@ -180,21 +180,26 @@ def generate_with_gold(ungrounded_graph, gold_answers):
     """
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
     generated_graphs = []
-
-    while len(pool) > 0:
+    iterations = 0
+    while pool and (generated_graphs[-1][2] if len(generated_graphs) > 0 else 0.0) < 0.7:
+        iterations += 1
         g = pool.pop(0)
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
+
         if g[1][2] < 0.5:
             logger.debug("Restricting")
-            suggested_graphs = restrict(g[0])
-            logger.debug("Suggested graphs: {}".format(suggested_graphs))
-            chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
-            if len(chosen_graphs) == 0:
-                logger.debug("Expanding")
-                # TODO: allow to explicitly throw out a relation/entity
-                suggested_graphs = [e_g for s_g in suggested_graphs for e_g in expand(s_g)]
-                logger.debug("Graph: {}".format(suggested_graphs))
-                chosen_graphs = ground_with_gold(suggested_graphs, gold_answers)
+            restricted_graphs = restrict(g[0])
+            logger.debug("Suggested graphs: {}".format(restricted_graphs))
+            chosen_graphs = []
+            suggested_graphs = restricted_graphs[:]
+            while not chosen_graphs and suggested_graphs:
+                s_g = suggested_graphs.pop(0)
+                chosen_graphs = ground_with_gold([s_g], gold_answers)
+                if not chosen_graphs:
+                    logger.debug("Expanding")
+                    expanded_graphs = expand(s_g)
+                    logger.debug("Expanded graphs: {}".format(expanded_graphs))
+                    chosen_graphs = ground_with_gold(expanded_graphs, gold_answers)
             if len(chosen_graphs) > 0:
                 logger.debug("Extending the pool.")
                 pool.extend(chosen_graphs)
@@ -204,7 +209,7 @@ def generate_with_gold(ungrounded_graph, gold_answers):
         else:
             logger.debug("Extending the generated graph set.")
             generated_graphs.append(g)
-
+    logger.debug("Iterations {}".format(iterations))
     return generated_graphs
 
 
@@ -314,6 +319,7 @@ def link_entity(entity_tokens):
             subentity_tokens = subentities.pop(0)
             linkings = query_wikidata(entity_query(" ".join(subentity_tokens)))
     linkings = [l.get("e20", "") for l in linkings if l]
+    linkings = sorted(linkings, key=lambda k: int(k[1:]))
     return linkings
 
 

@@ -12,6 +12,7 @@ sparql.setReturnFormat(JSON)
 sparql.setMethod("GET")
 sparql.setTimeout(40)
 GLOBAL_RESULT_LIMIT = 1000
+ENTITY_RESULT_LIMIT = 100
 
 
 # PREFIX e:<http://www.wikidata.org/entity/>
@@ -68,7 +69,7 @@ sparql_entity_label = """
 sparql_relation_time_argmax = "?m ?a [base:time ?n]."
 
 sparql_close_order = " ORDER BY {} LIMIT 1"
-sparql_close = " LIMIT {}".format(GLOBAL_RESULT_LIMIT)
+sparql_close = " LIMIT {}"
 
 # TODO: Additional?: given name
 HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
@@ -154,7 +155,7 @@ def graph_to_query(g, return_var_values = False):
         order_by_pattern = sparql_close_order.format(" ".join(order_by))
         query += order_by_pattern
     else:
-        query += sparql_close
+        query += sparql_close.format(GLOBAL_RESULT_LIMIT)
 
     logger.debug("Querying with variables: {}".format(variables))
     return query
@@ -188,7 +189,7 @@ def entity_query(label):
     query += sparql_entity_label_inst
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
-    query += sparql_close
+    query += sparql_close.format(ENTITY_RESULT_LIMIT)
     logger.debug("Querying for entity with variables: {}".format(variables))
     return query
 
