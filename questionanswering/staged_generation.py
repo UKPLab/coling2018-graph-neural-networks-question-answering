@@ -1,8 +1,6 @@
 import copy
-import nltk
 from wikidata_access import *
 from evaluation import *
-from webquestions_io import *
 import logging
 
 logger = logging.getLogger(__name__)
@@ -87,16 +85,19 @@ def add_entity_and_relation(g):
     :return: a list of suggested graphs
     >>> add_entity_and_relation({'edgeSet': [], 'entities': []})
     []
-    >>> add_entity_and_relation({'edgeSet': [], 'entities': [[4, 5, 6]]})  == [{'tokens':[], 'edgeSet': [{'left':[0], 'right':[4, 5, 6]}], 'entities': []}]
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [["Natalie", "Portman"]]}) == [{'tokens': [], 'edgeSet': [{'left': [0], 'right': ['Natalie', 'Portman'], 'rightkbID': 'Q37876'}], 'entities': []}]
     True
     """
     if len(g.get('entities', [])) == 0:
         return []
     entities = copy.copy(g.get('entities', []))
     linkings = []
+    entity = None
     while entities and not linkings:
         entity = entities.pop(0)
         linkings = link_entity(entity)
+    if not (linkings and entity):
+        return []
     new_graphs = []
     for linking in linkings:
         new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': entities}
