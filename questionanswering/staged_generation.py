@@ -267,27 +267,33 @@ def generate_without_gold(ungrounded_graph):
     """
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
     generated_graphs = []
-    iteration = 0
-    while len(pool) > 0:  # and len(generated_graphs) < 100:
+    iterations = 0
+    while pool:  # and len(generated_graphs) < 100:
         if len(generated_graphs) % 10 == 0:
             print("Generated", len(generated_graphs))
             print("Pool", len(pool))
         g = pool.pop(0)
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
+
         logger.debug("Restricting")
-        suggested_graphs = restrict(g[0])
+        suggested_graphs = add_entity_and_relation(g[0])
         logger.debug("Suggested graphs: {}".format(suggested_graphs))
         chosen_graphs = ground_without_gold(suggested_graphs)
-        if len(chosen_graphs) == 0:
-            logger.debug("Expanding")
-            suggested_graphs = [e_g for s_g in suggested_graphs for e_g in expand(s_g)]
-            logger.debug("Graph: {}".format(suggested_graphs))
-            chosen_graphs = ground_without_gold(suggested_graphs)
+
+        further_restricted_graphs = [(e_g, f, a) for s_g, f, a in chosen_graphs for e_g in last_relation_temporal(s_g)]
+
+        logger.debug("Expanding")
+        extended_graphs = [(e_g, f, a) for s_g, f, a in chosen_graphs for e_g in expand(s_g)]
+
+        chosen_graphs.extend(further_restricted_graphs)
+        chosen_graphs.extend(extended_graphs)
+
         logger.debug("Extending the pool.")
         pool.extend(chosen_graphs)
         logger.debug("Extending the generated graph set.")
         generated_graphs.extend(chosen_graphs)
-        iteration += 1
+        iterations += 1
+    logger.debug("Iterations {}".format(iterations))
     return generated_graphs
 
 
