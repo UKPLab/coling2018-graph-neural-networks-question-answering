@@ -43,7 +43,7 @@ def last_relation_subentities(g):
     >>> last_relation_subentities({'edgeSet': [{'right':['Jfk']}], 'entities': []}) == [{'tokens': [], 'edgeSet': [{'right': ['JFK']}], 'entities': []}]
     True
     """
-    if len(g.get('edgeSet',[])) == 0 or len(g['edgeSet'][-1]['right']) < 1:
+    if len(g.get('edgeSet', [])) == 0 or len(g['edgeSet'][-1]['right']) < 1:
         return []
     new_graphs = []
     right_entity = g['edgeSet'][-1]['right']
@@ -292,7 +292,7 @@ def ground_without_gold(input_graphs):
     :param input_graphs: a list of ungrounded graphs
     :return: a list of graph groundings
     """
-    grounded_graphs = grounded_graphs = find_groundings(input_graphs)
+    grounded_graphs = find_groundings(input_graphs)
 
     chosen_graphs = [(grounded_graphs[i], (0.0, 0.0, 0.0), [])
                      for i in range(len(grounded_graphs))]
