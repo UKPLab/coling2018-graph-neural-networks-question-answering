@@ -12,7 +12,7 @@ sparql.setReturnFormat(JSON)
 sparql.setMethod("GET")
 sparql.setTimeout(40)
 GLOBAL_RESULT_LIMIT = 1000
-ENTITY_RESULT_LIMIT = 100
+ENTITY_RESULT_LIMIT = 3
 
 
 # PREFIX e:<http://www.wikidata.org/entity/>
@@ -50,6 +50,15 @@ sparql_relation_complex = """
         {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . }}
         UNION
         {GRAPH <http://wikidata.org/statements> { ?m ?p ?e2. ?m ?rv ?e1. }}}
+
+        BIND (SUBSTR(STR(?p), 1, STRLEN(?p) - 1) as ?_p)
+        FILTER NOT EXISTS {
+            VALUES ?topic {e:Q19847637 e:Q18610173 e:Q18667213 e:Q18608359}
+            {GRAPH <http://wikidata.org/properties> { ?_p e:P31s / e:P31v  ?r}
+            GRAPH  <http://wikidata.org/statements> { ?r (e:P279s/e:P279v)+ ?topic}}
+            UNION
+            { GRAPH <http://wikidata.org/properties> { ?_p e:P31s / e:P31v  ?topic}}
+        }
         """
 
 # sparql_entity_label = """

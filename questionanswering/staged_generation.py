@@ -268,7 +268,7 @@ def generate_without_gold(ungrounded_graph):
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
     generated_graphs = []
     iteration = 0
-    while len(pool) > 0 and len(generated_graphs) < 100:
+    while len(pool) > 0:  # and len(generated_graphs) < 100:
         if len(generated_graphs) % 10 == 0:
             print("Generated", len(generated_graphs))
             print("Pool", len(pool))
