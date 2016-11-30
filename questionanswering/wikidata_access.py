@@ -77,6 +77,7 @@ HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
 sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
 sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
 
+
 def graph_to_query(g, return_var_values = False):
     """
     Convert graph to a sparql query.

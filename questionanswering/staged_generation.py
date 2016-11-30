@@ -6,7 +6,7 @@ from webquestions_io import *
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 
 
 def possible_subentities(entity_tokens):
@@ -92,13 +92,19 @@ def add_entity_and_relation(g):
     """
     if len(g.get('entities', [])) == 0:
         return []
+    entities = copy.copy(g.get('entities', []))
+    linkings = []
+    while entities and not linkings:
+        entity = entities.pop(0)
+        linkings = link_entity(entity)
+    new_graphs = []
+    for linking in linkings:
+        new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': entities}
+        new_edge = {'left': [0], 'right': entity, 'rightkbID': linking}
+        new_g['edgeSet'].append(new_edge)
+        new_graphs.append(new_g)
 
-    new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': copy.copy(g.get('entities', []))}
-    entity = new_g['entities'].pop(0)
-    new_edge = {'left': [0], 'right': entity}
-    new_g['edgeSet'].append(new_edge)
-
-    return [new_g]
+    return new_graphs
 
 
 def last_relation_temporal(g):
@@ -121,7 +127,7 @@ def last_relation_temporal(g):
         new_graphs.append(new_g)
     return new_graphs
 
-EXPAND_ACTIONS = [last_relation_hop_up, last_relation_subentities]
+EXPAND_ACTIONS = [last_relation_hop_up]
 RESTRICT_ACTIONS = [add_entity_and_relation, last_relation_temporal]
 ARG_TYPES = ['argmax', 'argmin']
 
@@ -162,18 +168,17 @@ def restrict(g):
     return return_graphs
 
 
-def generate_with_gold(ungrounded_graph, question_obj):
+def generate_with_gold(ungrounded_graph, gold_answers):
     """
     Generate all possible groundings that produce positive f-score starting with the given ungrounded graph and
     using expand and restrict operations on its denotation.
 
     :param ungrounded_graph: the starting graph that should contain a list of tokens and a list of entities
-    :param question_obj: a WebQuestions question encoded as a dictionary
+    :param gold_answers: list of gold answers for the encoded question
     :return: a list of generated grounded graphs
     """
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
     generated_graphs = []
-    gold_answers = [e.lower() for e in get_answers_from_question(question_obj)]
 
     while len(pool) > 0:
         g = pool.pop(0)
@@ -208,9 +213,15 @@ def find_groundings(input_graphs):
         g_gs = []
         if get_free_variables(s_g, include_relations=False, include_entities=True):
             logger.debug("Grounding entities first.")
-            for edge in [e for e in s_g.get('edgeSet', []) if 'rightkbID' not in e]:
-                linkings = link_entity(edge['right'])
+            for i, edge in enumerate(s_g.get('edgeSet', [])):
+                if 'rightkbID' not in edge:
+                    linkings = link_entity(edge['right'])
+                    for linking in linkings:
+                        g_g = copy.deepcopy(g_g)
+                        g_g['edgeSet'][i]['rightkbID'] = linking
+                        g_gs.append(g_g)
                 [apply_grounding(s_g, p) for p in query_wikidata(graph_to_query(s_g))]
+
                 # for linking in linkings:
                     # edge['rightkbID'] =
 
@@ -325,7 +336,7 @@ def link_entity(entity_tokens):
         while not linkings and subentities:
             subentity_tokens = subentities.pop(0)
             linkings = query_wikidata(entity_query(" ".join(subentity_tokens)))
-    # linkings = [l.get("e20", "") for l in linkings if l]
+    linkings = [l.get("e20", "") for l in linkings if l]
     return linkings
 
 

@@ -1,11 +1,11 @@
 import numpy as np
 import logging
 import json
-import nltk
 import tqdm
 
 import graph
 import staged_generation
+import webquestions_io
 
 np.random.seed(1)
 
@@ -38,7 +38,8 @@ if __name__ == "__main__":
                             'edgeSet': [],
                             'entities': webquestions_entities[i]}
         logger.info("Generating from: {}".format(ungrounded_graph))
-        generated_graphs = staged_generation.generate_with_gold(ungrounded_graph, webquestions[i])
+        gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions[i])]
+        generated_graphs = staged_generation.generate_with_gold(ungrounded_graph, gold_answers)
         silver_dataset.append(generated_graphs)
 
     logger.debug("Silver dataset size: {}".format(len(silver_dataset)))
