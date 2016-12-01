@@ -257,7 +257,7 @@ def ground_with_gold(input_graphs, gold_answers):
     return chosen_graphs
 
 
-def generate_without_gold(ungrounded_graph):
+def generate_without_gold(ungrounded_graph, wikidata_actions, simple_actions):
     """
     Generate all possible groundings of the given ungrounded graph
     using expand and restrict operations on its denotation.
@@ -269,7 +269,7 @@ def generate_without_gold(ungrounded_graph):
     generated_graphs = []
     iterations = 0
     while pool:  # and len(generated_graphs) < 100:
-        if len(generated_graphs) % 10 == 0:
+        if len(generated_graphs) % 50 == 0:
             logger.debug("Generated", len(generated_graphs))
             logger.debug("Pool", len(pool))
         g = pool.pop(0)
