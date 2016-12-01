@@ -274,40 +274,39 @@ def ground_with_gold(input_graphs, gold_answers):
     return chosen_graphs
 
 
-def generate_without_gold(ungrounded_graph, wikidata_actions, non_linking_actions):
+def generate_without_gold(ungrounded_graph,
+                          wikidata_actions=WIKIDATA_ACTIONS, non_linking_actions=NON_LINKING_ACTIONS):
     """
     Generate all possible groundings of the given ungrounded graph
     using expand and restrict operations on its denotation.
 
     :param ungrounded_graph: the starting graph that should contain a list of tokens and a list of entities
+    :param wikidata_actions: optional, list of actions to apply with grounding in WikiData
+    :param non_linking_actions: optional, list of actions to apply without checking in WikiData
     :return: a list of generated grounded graphs
     """
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
     generated_graphs = []
     iterations = 0
-    while pool:  # and len(generated_graphs) < 100:
+    while pool:
         if len(generated_graphs) % 50 == 0:
             logger.debug("Generated", len(generated_graphs))
             logger.debug("Pool", len(pool))
         g = pool.pop(0)
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
 
-        logger.debug("Restricting")
-        suggested_graphs = add_entity_and_relation(g[0])
+        logger.debug("Constructing with WikiData")
+        suggested_graphs = [el for f in wikidata_actions for el in f(g[0])]
         logger.debug("Suggested graphs: {}".format(suggested_graphs))
         chosen_graphs = ground_without_gold(suggested_graphs)
 
-        further_restricted_graphs = [(e_g, f, a) for s_g, f, a in chosen_graphs for e_g in last_relation_temporal(s_g)]
-
-        logger.debug("Expanding")
-        extended_graphs = [(e_g, f, a) for s_g, f, a in chosen_graphs for e_g in expand(s_g)]
-
-        chosen_graphs.extend(further_restricted_graphs)
+        logger.debug("Constructing without WikiData")
+        extended_graphs = [(el, f, a) for s_g, f, a in chosen_graphs for f in non_linking_actions for el in f(s_g)]
         chosen_graphs.extend(extended_graphs)
 
-        logger.debug("Extending the pool.")
+        logger.debug("Extending the pool with {} graphs.".format(len(chosen_graphs)))
         pool.extend(chosen_graphs)
-        logger.debug("Extending the generated graph set.")
+        logger.debug("Extending the generated with {} graphs.".format(len(chosen_graphs)))
         generated_graphs.extend(chosen_graphs)
         iterations += 1
     logger.debug("Iterations {}".format(iterations))
