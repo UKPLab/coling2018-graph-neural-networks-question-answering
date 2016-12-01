@@ -21,12 +21,13 @@ if __name__ == "__main__":
 
     with open(data_folder + "webquestions.examples.train.json") as f:
         webquestions = json.load(f)
-    # webquestions = webquestions[:100]
+    webquestions = webquestions[:100]
     logging.debug('Loaded WebQuestions, size: {}'.format(len(webquestions)))
 
     with open(data_folder + "webquestions.examples.train.utterances.tagged.json") as f:
         webquestions_utterances_alltagged = json.load(f)
     logger.debug('Loaded preprocessed data.')
+    webquestions_utterances_alltagged = webquestions_utterances_alltagged[:100]
     assert len(webquestions) == len(webquestions_utterances_alltagged)
 
     webquestions_entities = [graph.extract_entities(webquestions_utterances_alltagged[i]) for i in range(len(webquestions))]
