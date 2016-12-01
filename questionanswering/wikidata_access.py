@@ -5,7 +5,7 @@ import re
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 
 sparql = SPARQLWrapper("http://knowledgebase:8890/sparql")
 sparql.setReturnFormat(JSON)
@@ -72,6 +72,13 @@ sparql_entity_label = """
         { VALUES ?labelpredicate {rdfs:label skos:altLabel}
         GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate "%labelright%"@en  }
         } FILTER NOT EXISTS {GRAPH <http://wikidata.org/instances> {?e2 rdf:type e:Q4167410}}
+        """
+
+sparql_label_entity = """
+        { VALUES ?labelpredicate {rdfs:label skos:altLabel}
+        GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate ?label }
+        FILTER ( lang(?label) = "en" )
+        }
         """
 
 
@@ -203,7 +210,30 @@ def entity_query(label):
     return query
 
 
-def query_wikidata(query):
+def label_query(entity):
+    """
+
+    :param entity:
+    :return:
+    >>> query_wikidata(label_query("Q36"), starts_with=None)
+    [{'label0': 'Poland'}, {'label0': 'Republic of Poland'}, {'label0': 'POL'}]
+    """
+    query = sparql_prefix
+    variables = []
+    query += sparql_select
+    query += "{"
+    sparql_label_entity_inst = sparql_label_entity.replace("?e2", "e:" + entity)
+    sparql_label_entity_inst = sparql_label_entity_inst.replace("?label", "?label" + str(0))
+    variables.append("?label" + str(0))
+    query += sparql_label_entity_inst
+    query += "}"
+    query = query.replace("%queryvariables%", " ".join(variables))
+    query += sparql_close.format(10)
+    logger.debug("Querying for label with variables: {}".format(variables))
+    return query
+
+
+def query_wikidata(query, starts_with="http://www.wikidata.org/entity/"):
     sparql.setQuery(query)
     try:
         results = sparql.query().convert()
@@ -213,8 +243,9 @@ def query_wikidata(query):
     if len(results["results"]["bindings"]) > 0:
         results = results["results"]["bindings"]
         logger.debug("Results bindings: {}".format(results[0].keys()))
-        results = [r for r in results if all(r[b]['value'].startswith("http://www.wikidata.org/entity/") for b in r)]
-        results = [{b: r[b]['value'].replace("http://www.wikidata.org/entity/", "") for b in r} for r in results]
+        if starts_with:
+            results = [r for r in results if all(r[b]['value'].startswith(starts_with) for b in r)]
+        results = [{b: (r[b]['value'].replace(starts_with, "") if starts_with else r[b]['value']) for b in r} for r in results]
         return results
     else:
         logger.debug(results)
@@ -247,6 +278,20 @@ def map_query_results(query_results, question_variable='e1'):
     answers = [e.lower() for a in answers for e in entity_map.get(a, [a])]
     return answers
 
+
+def label_query_results(query_results, question_variable='e1'):
+    """
+    Extract the variable values from the query results and map them to canonical WebQuestions strings.
+
+    :param query_results: list of dictionaries returned by the sparql endpoint
+    :param question_variable: the variable to extract
+    :return: list of answers as entity labels or an original id if no canonical label was found.
+    >>> label_query_results([{'e1':'Q76'}, {'e1':'Q235234'}])
+    [['Barack Obama', 'Barack Hussein Obama II', 'Obama', 'Barack Hussein Obama', 'Barack Obama II', 'Barry Obama'], ['James I of Scotland', 'James I, King of Scots']]
+    """
+    answers = [r[question_variable] for r in query_results]
+    answers = [[l.get('label0') for l in query_wikidata(label_query(a), starts_with="")] for a in answers]
+    return answers
 
 if __name__ == "__main__":
     import doctest
