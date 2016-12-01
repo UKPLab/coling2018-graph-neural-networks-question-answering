@@ -247,9 +247,9 @@ def ground_with_gold(input_graphs, gold_answers):
     retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in grounded_graphs]
     logger.debug(
         "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
-    retrieved_answers = [map_query_results(answer_set) for answer_set in retrieved_answers]
+    retrieved_answers = [label_query_results(answer_set) for answer_set in retrieved_answers]
 
-    evaluation_results = [retrieval_prec_rec_f1(gold_answers, retrieved_answers[i]) for i in
+    evaluation_results = [retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers[i]) for i in
                           range(len(grounded_graphs))]
     chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
                      for i in range(len(grounded_graphs)) if evaluation_results[i][2] > 0.0]
