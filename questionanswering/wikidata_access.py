@@ -244,13 +244,19 @@ def label_query(entity):
     return query
 
 
-def query_wikidata(query, starts_with="http://www.wikidata.org/entity/"):
+query_cache = {}
+
+
+def query_wikidata(query, starts_with="http://www.wikidata.org/entity/", use_cache=False):
     """
     Execute the following query against WikiData
     :param query: SPARQL query to execute
     :param starts_with: if supplied, then each result should have the give prefix. The prefix is stripped
+    :param use_cache:
     :return: a list of dictionaries that represent the queried bindings
     """
+    if use_cache and query in query_cache:
+        return query_cache[query]
     sparql.setQuery(query)
     try:
         results = sparql.query().convert()
@@ -263,6 +269,8 @@ def query_wikidata(query, starts_with="http://www.wikidata.org/entity/"):
         if starts_with:
             results = [r for r in results if all(r[b]['value'].startswith(starts_with) for b in r)]
         results = [{b: (r[b]['value'].replace(starts_with, "") if starts_with else r[b]['value']) for b in r} for r in results]
+        if use_cache:
+            query_cache[query] = results
         return results
     else:
         logger.debug(results)
@@ -313,7 +321,7 @@ def label_query_results(query_results, question_variable='e1'):
     [['Barack Obama', 'Barack Hussein Obama II', 'Obama', 'Barack Hussein Obama', 'Barack Obama II', 'Barry Obama'], ['James I of Scotland', 'James I, King of Scots']]
     """
     answers = [r[question_variable] for r in query_results]
-    answers = [[l.get('label0') for l in query_wikidata(label_query(a), starts_with="")] for a in answers]
+    answers = [[l.get('label0') for l in query_wikidata(label_query(a), starts_with="", use_cache=True)] for a in answers]
     return answers
 
 if __name__ == "__main__":
