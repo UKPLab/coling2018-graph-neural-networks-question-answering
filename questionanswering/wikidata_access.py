@@ -191,9 +191,10 @@ def get_free_variables(g, include_relations=True, include_entities=True, include
 
 def entity_query(label):
     """
+    A method to look up a WikiData entity by a label.
 
-    :param label:
-    :return:
+    :param label: label of the entity as str
+    :return: a query that can be executed against WikiData
     """
     query = sparql_prefix
     variables = []
@@ -212,9 +213,10 @@ def entity_query(label):
 
 def label_query(entity):
     """
+    Construct a WikiData query to retrieve entity labels for the given entity id.
 
-    :param entity:
-    :return:
+    :param entity: entity kbID
+    :return: a WikiData query
     >>> query_wikidata(label_query("Q36"), starts_with=None)
     [{'label0': 'Poland'}, {'label0': 'Republic of Poland'}, {'label0': 'POL'}]
     """
@@ -234,6 +236,12 @@ def label_query(entity):
 
 
 def query_wikidata(query, starts_with="http://www.wikidata.org/entity/"):
+    """
+    Execute the following query against WikiData
+    :param query: SPARQL query to execute
+    :param starts_with: if supplied, then each result should have the give prefix. The prefix is stripped
+    :return: a list of dictionaries that represent the queried bindings
+    """
     sparql.setQuery(query)
     try:
         results = sparql.query().convert()
@@ -253,6 +261,12 @@ def query_wikidata(query, starts_with="http://www.wikidata.org/entity/"):
 
 
 def load_entity_map(path_to_map):
+    """
+    Load the map of entity labels from a file.
+
+    :param path_to_map: location of the map file
+    :return: entity map as an nltk.Index
+    """
     try:
         with open(path_to_map) as f:
             return_map = [l.strip().split("\t") for l in f.readlines()]

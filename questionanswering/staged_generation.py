@@ -21,7 +21,7 @@ def possible_subentities(entity_tokens):
     [('Grand', 'Bahama'), ('Bahama', 'Island'), ('Grand',), ('Bahama',), ('Island',)]
     """
     new_entities = []
-    for i in range(len(entity_tokens)-1, 0, -1):
+    for i in range(len(entity_tokens) - 1, 0, -1):
         for new_entity in nltk.ngrams(entity_tokens, i):
             new_entities.append(new_entity)
     for new_entity in [(ne.upper(),) for ne in entity_tokens if len(ne) < 5 and ne.istitle()]:
@@ -48,7 +48,8 @@ def last_relation_subentities(g):
     new_graphs = []
     right_entity = g['edgeSet'][-1]['right']
     for new_entity in possible_subentities(right_entity):
-        new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': copy.copy(g.get('entities', []))}
+        new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']),
+                 'entities': copy.copy(g.get('entities', []))}
         new_g['edgeSet'][-1]['right'] = list(new_entity)
         new_graphs.append(new_g)
     return new_graphs
@@ -71,7 +72,8 @@ def last_relation_hop_up(g):
     """
     if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1]:
         return []
-    new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': copy.copy(g.get('entities', []))}
+    new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']),
+             'entities': copy.copy(g.get('entities', []))}
     new_g['edgeSet'][-1]['hopUp'] = None
     return [new_g]
 
@@ -123,13 +125,28 @@ def last_relation_temporal(g):
         return []
     new_graphs = []
     for t in ARG_TYPES:
-        new_g = {"tokens":  g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']), 'entities': copy.copy(g.get('entities', []))}
+        new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']),
+                 'entities': copy.copy(g.get('entities', []))}
         new_g['edgeSet'][-1][t] = "time"
         new_graphs.append(new_g)
     return new_graphs
 
-EXPAND_ACTIONS = [last_relation_hop_up]
+
+# This division of actions is relevant for grounding with gold answers:
+# - Restrict action limit the set of answers and should be applied
+#   to a graph that has groundings
 RESTRICT_ACTIONS = [add_entity_and_relation, last_relation_temporal]
+# - Expand actions change graph to extract another set of answers and should be
+#   applied to a graph that has empty denotation
+EXPAND_ACTIONS = [last_relation_hop_up]  # Expand actions
+
+# This division is relevant for constructing all possible groundings without gold answers:
+# - WikiData actions need to be grounded in Wikidata in order to construct the next graph
+WIKIDATA_ACTIONS = [add_entity_and_relation]
+# - Non linking options just add options to the graph structure without checking if it is possible in WikiData.
+#   Hopup is alwasy possible anyway, temporal is possible most of the time.
+NON_LINKING_ACTIONS = [last_relation_temporal, last_relation_hop_up]
+
 ARG_TYPES = ['argmax', 'argmin']
 
 
@@ -257,7 +274,7 @@ def ground_with_gold(input_graphs, gold_answers):
     return chosen_graphs
 
 
-def generate_without_gold(ungrounded_graph, wikidata_actions, simple_actions):
+def generate_without_gold(ungrounded_graph, wikidata_actions, non_linking_actions):
     """
     Generate all possible groundings of the given ungrounded graph
     using expand and restrict operations on its denotation.
@@ -315,6 +332,7 @@ def link_entity(entity_tokens):
     """
     Link the given list of tokens to an entity in a knowledge base. If none linkings is found try all combinations of
     subtokens of the given entity.
+
     :param entity_tokens: list of entity tokens
     :return: list of KB ids
     """
