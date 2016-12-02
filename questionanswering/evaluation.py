@@ -63,8 +63,14 @@ def retrieval_prec_rec_f1_with_altlabels(gold, predicted_sets):
     :param gold: the set of gold retrieved elements.
     :param predicted_sets: the set of predicted elements.
     :return: a triple of precision, recall and f-score
-    >>> retrieval_prec_rec_f1_with_altlabels(['Star Wars', 'Black Swan', 'Thor', 'Leon'], [['thor','Thor','God fo thunder'], ['Avengers', 'Defenders'], ['Iron Man']])
+    >>> retrieval_prec_rec_f1_with_altlabels(['Star Wars', 'Black Swan', 'Thor', 'Leon'], [['thor','Thor','God of thunder'], ['Avengers', 'Defenders'], ['Iron Man']])
     (0.3333333333333333, 0.25, 0.28571428571428575)
+    >>> retrieval_prec_rec_f1_with_altlabels(['Star Wars', 'Black Swan', 'Thor', 'Leon'], [])
+    (0.0, 0.0, 0.0)
+    >>> retrieval_prec_rec_f1_with_altlabels(['Star Wars', 'Black Swan', 'Thor', 'Leon'], [[],[]])
+    (0.0, 0.0, 0.0)
+    >>> retrieval_prec_rec_f1_with_altlabels(['Leon'], [['Black Swan'],['Leon']])
+    (0.5, 1.0, 0.6666666666666666)
     """
     prec = retrieval_precision_with_altlabels(gold, predicted_sets) if len(predicted_sets) > 0 else 0.0
     rec = retrieval_precision({label for label_set in predicted_sets for label in label_set}, gold) if len(gold) > 0 else 0.0

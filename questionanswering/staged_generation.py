@@ -221,7 +221,7 @@ def generate_with_gold(ungrounded_graph, gold_answers):
                 logger.debug("Extending the pool.")
                 pool.extend(chosen_graphs)
             else:
-                logger.debug("Extending the generated graph set.")
+                logger.debug("Extending the generated graph set: {}".format(g))
                 generated_graphs.append(g)
         else:
             logger.debug("Extending the generated graph set.")
