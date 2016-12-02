@@ -198,7 +198,7 @@ def generate_with_gold(ungrounded_graph, gold_answers):
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
     generated_graphs = []
     iterations = 0
-    while pool and (generated_graphs[-1][2] if len(generated_graphs) > 0 else 0.0) < 0.7:
+    while pool and (generated_graphs[-1][1][2] if len(generated_graphs) > 0 else 0.0) < 0.7:
         iterations += 1
         g = pool.pop(0)
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
@@ -224,7 +224,7 @@ def generate_with_gold(ungrounded_graph, gold_answers):
                 logger.debug("Extending the generated graph set: {}".format(g))
                 generated_graphs.append(g)
         else:
-            logger.debug("Extending the generated graph set.")
+            logger.debug("Extending the generated graph set: {}".format(g))
             generated_graphs.append(g)
     logger.debug("Iterations {}".format(iterations))
     return generated_graphs

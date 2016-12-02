@@ -5,7 +5,7 @@ import re
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 
 sparql = SPARQLWrapper("http://knowledgebase:8890/sparql")
 sparql.setReturnFormat(JSON)
