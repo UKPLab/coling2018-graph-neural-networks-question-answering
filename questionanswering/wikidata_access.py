@@ -11,7 +11,7 @@ sparql = SPARQLWrapper("http://knowledgebase:8890/sparql")
 sparql.setReturnFormat(JSON)
 sparql.setMethod("GET")
 sparql.setTimeout(40)
-GLOBAL_RESULT_LIMIT = 500
+GLOBAL_RESULT_LIMIT = 1000
 
 
 # PREFIX e:<http://www.wikidata.org/entity/>
