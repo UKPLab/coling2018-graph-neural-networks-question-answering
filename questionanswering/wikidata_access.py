@@ -50,16 +50,15 @@ sparql_relation_complex = """
         {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . }}
         UNION
         {GRAPH <http://wikidata.org/statements> { ?m ?p ?e2. ?m ?rv ?e1. }}}
-
-        BIND (SUBSTR(STR(?p), 1, STRLEN(?p) - 1) as ?_p)
-        FILTER NOT EXISTS {
-            VALUES ?topic {e:Q19847637 e:Q18610173 e:Q18667213 e:Q18608359}
-            {GRAPH <http://wikidata.org/properties> { ?_p e:P31s / e:P31v  ?r}
-            GRAPH  <http://wikidata.org/statements> { ?r (e:P279s/e:P279v)+ ?topic}}
-            UNION
-            { GRAPH <http://wikidata.org/properties> { ?_p e:P31s / e:P31v  ?topic}}
-        }
         """
+# BIND (SUBSTR(STR(?p), 1, STRLEN(?p) - 1) as ?_p)
+# FILTER NOT EXISTS {
+#     VALUES ?topic {e:Q19847637 e:Q18610173 e:Q18667213 e:Q18608359}
+# {GRAPH <http://wikidata.org/properties> { ?_p e:P31s / e:P31v  ?r}
+# GRAPH  <http://wikidata.org/statements> { ?r (e:P279s/e:P279v)+ ?topic}}
+# UNION
+# { GRAPH <http://wikidata.org/properties> { ?_p e:P31s / e:P31v  ?topic}}
+# }
 
 # sparql_entity_label = """
 #         {{GRAPH <http://wikidata.org/terms> { ?e2 rdfs:label "%labelright%"@en  }}
@@ -71,7 +70,9 @@ sparql_relation_complex = """
 sparql_entity_label = """
         { VALUES ?labelpredicate {rdfs:label skos:altLabel}
         GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate "%labelright%"@en  }
-        } FILTER NOT EXISTS {GRAPH <http://wikidata.org/instances> {?e2 rdf:type e:Q4167410}}
+        } FILTER NOT EXISTS {
+            VALUES ?topic {e:Q4167410 e:Q21286738}
+            GRAPH <http://wikidata.org/instances> {?e2 rdf:type ?topic}}
         """
 
 sparql_label_entity = """
@@ -109,7 +110,7 @@ def graph_to_query(g, return_var_values = False):
     5
     >>> g = {'edgeSet': [{'left': [0], 'right': ["Missouri"]}], 'entities': [[4]], 'tokens': ['who', 'are', 'the', 'current', 'senator', 'from', 'missouri', '?']}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = False)))
-    160
+    114
     """
     query = sparql_prefix
     variables = []
@@ -269,12 +270,23 @@ def query_wikidata(query, starts_with="http://www.wikidata.org/entity/", use_cac
         if starts_with:
             results = [r for r in results if all(r[b]['value'].startswith(starts_with) for b in r)]
         results = [{b: (r[b]['value'].replace(starts_with, "") if starts_with else r[b]['value']) for b in r} for r in results]
+        results = [r for r in results if not any(r[b][:-1] in property_blacklist for b in r)]
         if use_cache:
             query_cache[query] = results
         return results
     else:
         logger.debug(results)
         return []
+
+
+def load_blacklist(path_to_list):
+    try:
+        with open(path_to_list) as f:
+            return_list = {l.strip() for l in f.readlines()}
+        return return_list
+    except Exception as ex:
+        logger.error("No list found. {}".format(ex))
+        return set()
 
 
 def load_entity_map(path_to_map):
@@ -292,8 +304,6 @@ def load_entity_map(path_to_map):
         logger.error("No entity map found. {}".format(ex))
         return {}
 
-entity_map = load_entity_map("../data/" + "entity_map.tsv")
-
 
 def map_query_results(query_results, question_variable='e1'):
     """
@@ -306,7 +316,7 @@ def map_query_results(query_results, question_variable='e1'):
     ['barack obama', 'q235234']
     """
     answers = [r[question_variable] for r in query_results]
-    answers = [e.lower() for a in answers for e in entity_map.get(a, [a])]
+    answers = [[e.lower() for e in entity_map.get(a, [a])] for a in answers ]
     return answers
 
 
@@ -318,12 +328,16 @@ def label_query_results(query_results, question_variable='e1'):
     :param question_variable: the variable to extract
     :return: list of answers as entity labels or an original id if no canonical label was found.
     >>> label_query_results([{'e1':'Q76'}, {'e1':'Q235234'}])
-    [['Barack Obama', 'Barack Hussein Obama II', 'Obama', 'Barack Hussein Obama', 'Barack Obama II', 'Barry Obama'], ['James I of Scotland', 'James I, King of Scots']]
+    [['barack obama', 'barack hussein obama ii', 'obama', 'barack hussein obama', 'barack obama ii', 'barry obama'], ['james i of scotland', 'james i, king of scots']]
     """
     answers = [r[question_variable] for r in query_results]
     answers = [a for a in answers if '-' not in a]  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
     answers = [[l.get('label0').lower() for l in query_wikidata(label_query(a), starts_with="", use_cache=True)] for a in answers]
     return answers
+
+
+entity_map = load_entity_map("../data/" + "entity_map.tsv")
+property_blacklist = load_blacklist("../data/" + "property_blacklist.txt")
 
 if __name__ == "__main__":
     import doctest

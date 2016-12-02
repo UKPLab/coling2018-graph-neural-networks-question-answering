@@ -158,7 +158,7 @@ def expand(g):
     :return: a list of new graphs that are modified copies
     >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[["Barack", "Obama"]]})
     []
-    >>> expand({"edgeSet":[{"left":[0], "right":["Barack", "Obama"]}]}) == [{'edgeSet': [{'left': [0], 'hopUp': None, 'right': ['Barack', 'Obama']}], 'tokens': [], 'entities': []}, {'edgeSet': [{'left': [0], 'right': ['OBAMA']}], 'tokens': [], 'entities': []}, {'edgeSet': [{'left': [0], 'right': ['Barack']}], 'tokens': [], 'entities': []}, {'edgeSet': [{'left': [0], 'right': ['Obama']}], 'tokens': [], 'entities': []}]
+    >>> expand({"edgeSet":[{"left":[0], "right":["Barack", "Obama"]}]}) == [{'edgeSet': [{'left': [0], 'hopUp': None, 'right': ['Barack', 'Obama']}], 'tokens': [], 'entities': []}]
     True
     """
     if "edgeSet" not in g:
@@ -174,7 +174,7 @@ def restrict(g):
 
     :param g: dict object representing the graph with "edgeSet" and "entities"
     :return: a list of new graphs that are modified copies
-    >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[[2, 3]]}) == [{'edgeSet': [{'left': [0], 'right': [2, 3]}], 'entities': [], 'tokens': ['Who', 'is', 'Barack', 'Obama', '?']}]
+    >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[['Barack', 'Obama']]}) == [{'entities': [], 'edgeSet': [{'right': ['Barack', 'Obama'], 'left': [0], 'rightkbID': 'Q76'}], 'tokens': ['Who', 'is', 'Barack', 'Obama', '?']}]
     True
     >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]})
     []
