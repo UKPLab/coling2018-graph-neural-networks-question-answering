@@ -321,7 +321,7 @@ def label_query_results(query_results, question_variable='e1'):
     [['Barack Obama', 'Barack Hussein Obama II', 'Obama', 'Barack Hussein Obama', 'Barack Obama II', 'Barry Obama'], ['James I of Scotland', 'James I, King of Scots']]
     """
     answers = [r[question_variable] for r in query_results]
-    answers = [a for a in answers if not '-' in a]  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
+    answers = [a for a in answers if '-' not in a]  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
     answers = [[l.get('label0').lower() for l in query_wikidata(label_query(a), starts_with="", use_cache=True)] for a in answers]
     return answers
 
