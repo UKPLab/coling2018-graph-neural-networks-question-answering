@@ -4,7 +4,7 @@ from evaluation import *
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 
 
 def possible_subentities(entity_tokens):
@@ -70,7 +70,7 @@ def last_relation_hop_up(g):
     >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':["Bahama"], "rightkbID":"Q6754"}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':["Bahama"], "rightkbID":"Q6754", 'hopUp': None}], 'entities': [], 'tokens':[]}]
     True
     """
-    if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1]:
+    if len(g.get('edgeSet', [])) == 0 or any('hopUp' in edge for edge in g['edgeSet']):
         return []
     new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']),
              'entities': copy.copy(g.get('entities', []))}
@@ -121,7 +121,7 @@ def last_relation_temporal(g):
     >>> last_relation_temporal({'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmin':'time'}], 'entities': []})
     []
     """
-    if len(g.get('edgeSet', [])) == 0 or any(t in g['edgeSet'][-1] for t in ARG_TYPES):
+    if len(g.get('edgeSet', [])) == 0 or any(t in edge for t in ARG_TYPES for edge in g['edgeSet']):
         return []
     new_graphs = []
     for t in ARG_TYPES:
@@ -264,12 +264,14 @@ def ground_with_gold(input_graphs, gold_answers):
     retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in grounded_graphs]
     logger.debug(
         "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
-    retrieved_answers = [label_query_results(answer_set) for answer_set in retrieved_answers]
+    retrieved_answers = [map_query_results(answer_set) for answer_set in retrieved_answers]
 
     evaluation_results = [retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers[i]) for i in
                           range(len(grounded_graphs))]
     chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
                      for i in range(len(grounded_graphs)) if evaluation_results[i][2] > 0.0]
+    if len(chosen_graphs) > 3:
+        chosen_graphs = sorted(chosen_graphs, key=lambda x:x[1][2], reverse=True)[:3]
     logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
     return chosen_graphs
 
@@ -327,16 +329,17 @@ def ground_without_gold(input_graphs):
     return chosen_graphs
 
 
-def link_entity(entity_tokens):
+def link_entity(entity_tokens, try_subentities=True):
     """
     Link the given list of tokens to an entity in a knowledge base. If none linkings is found try all combinations of
     subtokens of the given entity.
 
     :param entity_tokens: list of entity tokens
+    :param try_subentities:
     :return: list of KB ids
     """
     linkings = query_wikidata(entity_query(" ".join(entity_tokens)))
-    if not linkings:
+    if not linkings and try_subentities:
         subentities = possible_subentities(entity_tokens)
         while not linkings and subentities:
             subentity_tokens = subentities.pop(0)

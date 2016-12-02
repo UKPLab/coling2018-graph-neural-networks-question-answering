@@ -11,8 +11,7 @@ sparql = SPARQLWrapper("http://knowledgebase:8890/sparql")
 sparql.setReturnFormat(JSON)
 sparql.setMethod("GET")
 sparql.setTimeout(40)
-GLOBAL_RESULT_LIMIT = 1000
-ENTITY_RESULT_LIMIT = 3
+GLOBAL_RESULT_LIMIT = 500
 
 
 # PREFIX e:<http://www.wikidata.org/entity/>
@@ -71,7 +70,7 @@ sparql_entity_label = """
         { VALUES ?labelpredicate {rdfs:label skos:altLabel}
         GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate "%labelright%"@en  }
         } FILTER NOT EXISTS {
-            VALUES ?topic {e:Q4167410 e:Q21286738}
+            VALUES ?topic {e:Q4167410 e:Q21286738 e:Q11266439}
             GRAPH <http://wikidata.org/instances> {?e2 rdf:type ?topic}}
         """
 
@@ -96,11 +95,12 @@ sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
 sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
 
 
-def graph_to_query(g, return_var_values = False):
+def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
     """
     Convert graph to a sparql query.
     :param g: a graph as a dictionary with non-empty edgeSet
     :param return_var_values: if True the denotations for free variables will be returned
+    :param limit: limit on the result list size
     :return: a sparql query
     >>> g = {'edgeSet': [{'left': [0], 'kbID': 'P35v', 'type': 'reverse', 'rightkbID': 'Q155', 'right': [5], 'argmax':'time'}], 'entities': []}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = True)))
@@ -172,7 +172,7 @@ def graph_to_query(g, return_var_values = False):
         order_by_pattern = sparql_close_order.format(" ".join(order_by))
         query += order_by_pattern
     else:
-        query += sparql_close.format(GLOBAL_RESULT_LIMIT)
+        query += sparql_close.format(limit)
 
     logger.debug("Querying with variables: {}".format(variables))
     return query
@@ -199,11 +199,12 @@ def get_free_variables(g, include_relations=True, include_entities=True, include
     return free_variables
 
 
-def entity_query(label):
+def entity_query(label, limit=3):
     """
     A method to look up a WikiData entity by a label.
 
     :param label: label of the entity as str
+    :param limit: limit on the result list size
     :return: a query that can be executed against WikiData
     """
     query = sparql_prefix
@@ -216,16 +217,17 @@ def entity_query(label):
     query += sparql_entity_label_inst
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
-    query += sparql_close.format(ENTITY_RESULT_LIMIT)
+    query += sparql_close.format(limit)
     logger.debug("Querying for entity with variables: {}".format(variables))
     return query
 
 
-def label_query(entity):
+def label_query(entity, limit=10):
     """
     Construct a WikiData query to retrieve entity labels for the given entity id.
 
     :param entity: entity kbID
+    :param limit: limit on the result list size
     :return: a WikiData query
     >>> query_wikidata(label_query("Q36"), starts_with=None)
     [{'label0': 'Poland'}, {'label0': 'Republic of Poland'}, {'label0': 'POL'}]
@@ -240,7 +242,7 @@ def label_query(entity):
     query += sparql_label_entity_inst
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
-    query += sparql_close.format(10)
+    query += sparql_close.format(limit)
     logger.debug("Querying for label with variables: {}".format(variables))
     return query
 
@@ -316,7 +318,9 @@ def map_query_results(query_results, question_variable='e1'):
     ['barack obama', 'q235234']
     """
     answers = [r[question_variable] for r in query_results]
-    answers = [[e.lower() for e in entity_map.get(a, [a])] for a in answers ]
+    answers = [a for a in answers if '-' not in a]
+    answers = [[e.lower() for e in entity_map.get(a, [a])] for a in answers]
+    # answers = [[e.lower() for e in entity_map.get(a, [l.get('label0') for l in query_wikidata(label_query(a), starts_with="", use_cache=True)])] for a in answers]
     return answers
 
 
