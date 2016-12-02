@@ -340,7 +340,7 @@ def label_query_results(query_results, question_variable='e1'):
     return answers
 
 
-entity_map = load_entity_map("../data/" + "entity_map_2.tsv")
+entity_map = load_entity_map("../data/" + "entity_map.tsv")
 property_blacklist = load_blacklist("../data/" + "property_blacklist.txt")
 
 if __name__ == "__main__":
