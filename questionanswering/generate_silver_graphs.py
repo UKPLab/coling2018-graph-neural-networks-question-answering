@@ -9,7 +9,7 @@ import webquestions_io
 import wikidata_access
 
 np.random.seed(1)
-
+# TODO: read logging settings from a file
 logging.basicConfig(level=logging.ERROR)
 
 if __name__ == "__main__":
@@ -35,7 +35,6 @@ if __name__ == "__main__":
 
     silver_dataset = []
     for i in tqdm.trange(len(webquestions)):
-        logger.info(graph.construct_graphs(webquestions[i]['utterance'], webquestions_entities[i]))
         ungrounded_graph = {'tokens': [w for w, _, _ in webquestions_utterances_alltagged[i]],
                             'edgeSet': [],
                             'entities': webquestions_entities[i]}

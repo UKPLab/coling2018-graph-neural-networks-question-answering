@@ -7,25 +7,40 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def possible_subentities(entity_tokens):
+def possible_subentities(entity_tokens, entity_type):
     """
-    Retrive all possible subentities of the given entity. Short title tokens are also capitalized.
+    Retrive all possible sub-entities of the given entity. Short title tokens are also capitalized.
 
     :param entity_tokens: a list of entity tokens
-    :return: a list of subentities.
-    >>> possible_subentities(["Nfl", "Redskins"])
+    :param entity_type:  type of the entity
+    :return: a list of sub-entities.
+    >>> possible_subentities(["Nfl", "Redskins"], "ORGANIZATION")
     [('Nfl',), ('Redskins',), ('NFL',)]
-    >>> possible_subentities(["senator"])
+    >>> possible_subentities(["senator"], "NN")
     []
-    >>> possible_subentities(["Grand", "Bahama", "Island"])
+    >>> possible_subentities(["Grand", "Bahama", "Island"], "LOCATION")
     [('Grand', 'Bahama'), ('Bahama', 'Island'), ('Grand',), ('Bahama',), ('Island',)]
+    >>> possible_subentities(["Dmitri", "Mendeleev"], "PERSON")
+    [('Mendeleev',), ('Dmitri',)]
+    >>> possible_subentities(["Dmitrii", "Ivanovich",  "Mendeleev"], "PERSON")
+    [('Dmitrii', 'Mendeleev'), ('Mendeleev',), ('Dmitrii',)]
+    >>> possible_subentities(["Jfk"], "NNP")
+    [('JFK',)]
     """
     new_entities = []
-    for i in range(len(entity_tokens) - 1, 0, -1):
-        for new_entity in nltk.ngrams(entity_tokens, i):
+    if entity_type is "PERSON":
+        if len(entity_tokens) > 2:
+            new_entities.append((entity_tokens[0], entity_tokens[-1]))
+        if len(entity_tokens) > 1:
+            new_entities.extend([(entity_tokens[-1],), (entity_tokens[0],)])
+    else:
+        for i in range(len(entity_tokens) - 1, 0, -1):
+            ngrams = nltk.ngrams(entity_tokens, i)
+            for new_entity in ngrams:
+                new_entities.append(new_entity)
+    if entity_type in ['PERSON', 'ORGANIZATION', 'NNP']:
+        for new_entity in [(ne.upper(),) for ne in entity_tokens if len(ne) < 5]:
             new_entities.append(new_entity)
-    for new_entity in [(ne.upper(),) for ne in entity_tokens if len(ne) < 5 and ne.istitle()]:
-        new_entities.append(new_entity)
     return new_entities
 
 
@@ -36,18 +51,18 @@ def last_relation_subentities(g):
 
     :param g: a graph with an non-empty edgeSet
     :return: a list of suggested graphs
-    >>> last_relation_subentities({'edgeSet': [], 'entities': [['grand', 'bahama', 'island']], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']})
+    >>> last_relation_subentities({'edgeSet': [], 'entities': [(['grand', 'bahama', 'island'], 'LOCATION')], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']})
     []
-    >>> len(last_relation_subentities({'edgeSet': [{'left':[0], 'right': ['grand', 'bahama', 'island']}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
+    >>> len(last_relation_subentities({'edgeSet': [{'left':[0], 'right': (['grand', 'bahama', 'island'], 'LOCATION')}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
     5
-    >>> last_relation_subentities({'edgeSet': [{'right':['Jfk']}], 'entities': []}) == [{'tokens': [], 'edgeSet': [{'right': ['JFK']}], 'entities': []}]
+    >>> last_relation_subentities({'edgeSet': [{'right':(['Jfk'], 'PERSON')}], 'entities': []}) == [{'tokens': [], 'edgeSet': [{'right': ['JFK']}], 'entities': []}]
     True
     """
     if len(g.get('edgeSet', [])) == 0 or len(g['edgeSet'][-1]['right']) < 1:
         return []
     new_graphs = []
     right_entity = g['edgeSet'][-1]['right']
-    for new_entity in possible_subentities(right_entity):
+    for new_entity in possible_subentities(*right_entity):
         new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']),
                  'entities': copy.copy(g.get('entities', []))}
         new_g['edgeSet'][-1]['right'] = list(new_entity)
@@ -87,7 +102,7 @@ def add_entity_and_relation(g):
     :return: a list of suggested graphs
     >>> add_entity_and_relation({'edgeSet': [], 'entities': []})
     []
-    >>> add_entity_and_relation({'edgeSet': [], 'entities': [["Natalie", "Portman"]]}) == [{'tokens': [], 'edgeSet': [{'left': [0], 'right': ['Natalie', 'Portman'], 'rightkbID': 'Q37876'}], 'entities': []}]
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [(["Natalie", "Portman"], 'PERSON')]}) == [{'tokens': [], 'edgeSet': [{'left': [0], 'right': ['Natalie', 'Portman'], 'rightkbID': 'Q37876'}], 'entities': []}]
     True
     """
     if len(g.get('entities', [])) == 0:
@@ -103,7 +118,7 @@ def add_entity_and_relation(g):
     new_graphs = []
     for linking in linkings:
         new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': entities}
-        new_edge = {'left': [0], 'right': entity, 'rightkbID': linking}
+        new_edge = {'left': [0], 'right': entity[0], 'rightkbID': linking}
         new_g['edgeSet'].append(new_edge)
         new_graphs.append(new_g)
 
@@ -174,7 +189,7 @@ def restrict(g):
 
     :param g: dict object representing the graph with "edgeSet" and "entities"
     :return: a list of new graphs that are modified copies
-    >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[['Barack', 'Obama']]}) == [{'entities': [], 'edgeSet': [{'right': ['Barack', 'Obama'], 'left': [0], 'rightkbID': 'Q76'}], 'tokens': ['Who', 'is', 'Barack', 'Obama', '?']}]
+    >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[(['Barack', 'Obama'], "PERSON")]}) == [{'entities': [], 'edgeSet': [{'right': ['Barack', 'Obama'], 'left': [0], 'rightkbID': 'Q76'}], 'tokens': ['Who', 'is', 'Barack', 'Obama', '?']}]
     True
     >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]})
     []
@@ -329,7 +344,7 @@ def ground_without_gold(input_graphs):
     return chosen_graphs
 
 
-def link_entity(entity_tokens, try_subentities=True):
+def link_entity(entity, try_subentities=True):
     """
     Link the given list of tokens to an entity in a knowledge base. If none linkings is found try all combinations of
     subtokens of the given entity.
@@ -338,9 +353,10 @@ def link_entity(entity_tokens, try_subentities=True):
     :param try_subentities:
     :return: list of KB ids
     """
+    entity_tokens, entity_type = entity
     linkings = query_wikidata(entity_query(" ".join(entity_tokens)))
     if not linkings and try_subentities:
-        subentities = possible_subentities(entity_tokens)
+        subentities = possible_subentities(entity_tokens, entity_type)
         while not linkings and subentities:
             subentity_tokens = subentities.pop(0)
             linkings = query_wikidata(entity_query(" ".join(subentity_tokens)))

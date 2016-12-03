@@ -39,26 +39,31 @@ def extract_entities(tokens_ne_pos):
     :param tokens_ne: list of NE tags.
     :param tokens_pos: list of POS tags.
     :return: list of entities in the order: NE>NNP>NN
-    >>> extract_entities([('who', 'O'), ('are', 'O'), ('the', 'O'), ('current', 'O'), ('senators', 'O'), ('from', 'O'), ('missouri', 'LOCATION'), ('?', 'O')], [('who', 'WP'), ('are', 'VBP'), ('the', 'DT'), ('current', 'JJ'), ('senators', 'NNS'), ('from', 'IN'), ('missouri', 'NNP'), ('?', '.')])
-    [['Missouri'], ['senator']]
-    >>> extract_entities([('what', 'O'), ('awards', 'O'), ('has', 'O'), ('louis', 'PERSON'), ('sachar', 'PERSON'), ('won', 'O'), ('?', 'O')], [('what', 'WDT'), ('awards', 'NNS'), ('has', 'VBZ'), ('louis', 'NNP'), ('sachar', 'NNP'), ('won', 'NNP'), ('?', '.')])
-    [['Louis', 'Sachar'], ['award']]
-    >>> extract_entities([('who', 'O'), ('was', 'O'), ('the', 'O'), ('president', 'O'), ('after', 'O'), ('jfk', 'O'), ('died', 'O'), ('?', 'O')], [('who', 'WP'), ('was', 'VBD'), ('the', 'DT'), ('president', 'NN'), ('after', 'IN'), ('jfk', 'NNP'), ('died', 'VBD'), ('?', '.')])
-    [['Jfk'], ['president']]
+    >>> extract_entities([('who', 'O', 'WP'), ('are', 'O', 'VBP'), ('the', 'O', 'DT'), ('current', 'O', 'JJ'), ('senators', 'O', 'NNS'), ('from', 'O', 'IN'), ('missouri', 'LOCATION', 'NNP'), ('?', 'O', '.')])
+    [(['Missouri'], 'LOCATION'), (['senator'], 'NN')]
+    >>> extract_entities([('what', 'O', 'WDT'), ('awards', 'O', 'NNS'), ('has', 'O', 'VBZ'), ('louis', 'PERSON', 'NNP'), ('sachar', 'PERSON', 'NNP'), ('won', 'O', 'NNP'), ('?', 'O', '.')])
+    [(['Louis', 'Sachar'], 'PERSON'), (['award'], 'NN')]
+    >>> extract_entities([('who', 'O', 'WP'), ('was', 'O', 'VBD'), ('the', 'O', 'DT'), ('president', 'O', 'NN'), ('after', 'O', 'IN'), ('jfk', 'O', 'NNP'), ('died', 'O', 'VBD'), ('?', 'O', '.')])
+    [(['Jfk'], 'NNP'), (['president'], 'NN')]
+    >>> extract_entities([('who', 'O', 'WP'), ('natalie', 'PERSON', 'NN'), ('likes', 'O', 'VBP')])
+    [(['Natalie'], 'PERSON')]
     """
-    nes = extract_entities_from_tagged([(w, 'NE' if t != 'O' else 'O') for w, t, _ in tokens_ne_pos], ['NE'])
+    persons = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['PERSON'])
+    locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])
+    orgs = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['ORGANIZATION'])
+
     nns = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NN', 'NNS'])
     nnps = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NNP', 'NNPS'])
-    ne_vertices = nes
+    ne_vertices = [(ne, 'PERSON') for ne in persons] + [(ne, 'LOCATION') for ne in locations] + [(ne, 'ORGANIZATION') for ne in orgs]
     vertices = []
     for nn in nnps:
-        if not any(n in v for n in nn for v in vertices + ne_vertices):
-            ne_vertices.append(nn)
+        if not any(n in v for n in nn for v, _ in vertices + ne_vertices):
+            ne_vertices.append((nn, 'NNP'))
     for nn in nns:
-        if not any(n.title() in v for n in nn for v in vertices + ne_vertices):
+        if not any(n in v for n in nn for v, _ in vertices + ne_vertices):
             nn = [lemmatizer.lemmatize(n) for n in nn]
-            vertices.append(nn)
-    ne_vertices = [[w.title() for w in ne] for ne in ne_vertices]
+            vertices.append((nn, 'NN'))
+    ne_vertices = [([w.title() for w in ne], pos) for ne, pos in ne_vertices]
     return ne_vertices + vertices
 
 
