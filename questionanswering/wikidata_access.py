@@ -199,7 +199,7 @@ def get_free_variables(g, include_relations=True, include_entities=True, include
     return free_variables
 
 
-def entity_query(label, limit=GLOBAL_RESULT_LIMIT):
+def entity_query(label, limit=100):
     """
     A method to look up a WikiData entity by a label.
 

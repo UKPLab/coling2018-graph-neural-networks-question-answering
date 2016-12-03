@@ -4,7 +4,7 @@ from evaluation import *
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 
 
 def possible_subentities(entity_tokens, entity_type):
