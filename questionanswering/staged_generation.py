@@ -28,7 +28,7 @@ def possible_subentities(entity_tokens, entity_type):
     [('JFK',)]
     """
     new_entities = []
-    if entity_type in ['ORGANIZATION', 'NNP']:
+    if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP']:
         for new_entity in [(ne.upper(),) for ne in entity_tokens if len(ne) < 5]:
             new_entities.append(new_entity)
     if entity_type is "PERSON":
