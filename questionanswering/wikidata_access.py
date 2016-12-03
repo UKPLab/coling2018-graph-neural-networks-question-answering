@@ -11,7 +11,7 @@ sparql = SPARQLWrapper("http://knowledgebase:8890/sparql")
 sparql.setReturnFormat(JSON)
 sparql.setMethod("GET")
 sparql.setTimeout(40)
-GLOBAL_RESULT_LIMIT = 1000
+GLOBAL_RESULT_LIMIT = 500
 
 
 # PREFIX e:<http://www.wikidata.org/entity/>
@@ -199,7 +199,7 @@ def get_free_variables(g, include_relations=True, include_entities=True, include
     return free_variables
 
 
-def entity_query(label, limit=3):
+def entity_query(label, limit=10):
     """
     A method to look up a WikiData entity by a label.
 

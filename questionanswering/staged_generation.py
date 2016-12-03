@@ -4,7 +4,7 @@ from evaluation import *
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 
 
 def possible_subentities(entity_tokens):
@@ -346,6 +346,7 @@ def link_entity(entity_tokens, try_subentities=True):
             linkings = query_wikidata(entity_query(" ".join(subentity_tokens)))
     linkings = [l.get("e20", "") for l in linkings if l]
     linkings = sorted(linkings, key=lambda k: int(k[1:]))
+    linkings = linkings[:3]
     return linkings
 
 
