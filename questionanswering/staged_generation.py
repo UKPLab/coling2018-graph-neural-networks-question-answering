@@ -15,7 +15,7 @@ def possible_subentities(entity_tokens, entity_type):
     :param entity_type:  type of the entity
     :return: a list of sub-entities.
     >>> possible_subentities(["Nfl", "Redskins"], "ORGANIZATION")
-    [('Nfl',), ('Redskins',), ('NFL',)]
+    [('NFL',), ('Nfl',), ('Redskins',)]
     >>> possible_subentities(["senator"], "NN")
     []
     >>> possible_subentities(["Grand", "Bahama", "Island"], "LOCATION")
@@ -28,6 +28,9 @@ def possible_subentities(entity_tokens, entity_type):
     [('JFK',)]
     """
     new_entities = []
+    if entity_type in ['ORGANIZATION', 'NNP']:
+        for new_entity in [(ne.upper(),) for ne in entity_tokens if len(ne) < 5]:
+            new_entities.append(new_entity)
     if entity_type is "PERSON":
         if len(entity_tokens) > 2:
             new_entities.append((entity_tokens[0], entity_tokens[-1]))
@@ -38,9 +41,6 @@ def possible_subentities(entity_tokens, entity_type):
             ngrams = nltk.ngrams(entity_tokens, i)
             for new_entity in ngrams:
                 new_entities.append(new_entity)
-    if entity_type in ['PERSON', 'ORGANIZATION', 'NNP']:
-        for new_entity in [(ne.upper(),) for ne in entity_tokens if len(ne) < 5]:
-            new_entities.append(new_entity)
     return new_entities
 
 
@@ -55,7 +55,7 @@ def last_relation_subentities(g):
     []
     >>> len(last_relation_subentities({'edgeSet': [{'left':[0], 'right': (['grand', 'bahama', 'island'], 'LOCATION')}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
     5
-    >>> last_relation_subentities({'edgeSet': [{'right':(['Jfk'], 'PERSON')}], 'entities': []}) == [{'tokens': [], 'edgeSet': [{'right': ['JFK']}], 'entities': []}]
+    >>> last_relation_subentities({'edgeSet': [{'right':(['Jfk'], 'NNP')}], 'entities': []}) == [{'tokens': [], 'edgeSet': [{'right': ['JFK']}], 'entities': []}]
     True
     """
     if len(g.get('edgeSet', [])) == 0 or len(g['edgeSet'][-1]['right']) < 1:
@@ -355,11 +355,14 @@ def link_entity(entity, try_subentities=True):
     """
     entity_tokens, entity_type = entity
     linkings = query_wikidata(entity_query(" ".join(entity_tokens)))
-    if not linkings and try_subentities:
+    if len(entity_tokens) == 1:
+        subentities = possible_subentities(entity_tokens, entity_type)
+        if subentities:
+            linkings += query_wikidata(entity_query(" ".join(subentities.pop(0))))
+    if try_subentities and not linkings:
         subentities = possible_subentities(entity_tokens, entity_type)
         while not linkings and subentities:
-            subentity_tokens = subentities.pop(0)
-            linkings = query_wikidata(entity_query(" ".join(subentity_tokens)))
+            linkings = query_wikidata(entity_query(" ".join(subentities.pop(0))))
     linkings = [l.get("e20", "") for l in linkings if l]
     linkings = sorted(linkings, key=lambda k: int(k[1:]))
     linkings = linkings[:3]
