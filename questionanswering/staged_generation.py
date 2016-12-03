@@ -26,21 +26,26 @@ def possible_subentities(entity_tokens, entity_type):
     [('Dmitrii', 'Mendeleev'), ('Mendeleev',), ('Dmitrii',)]
     >>> possible_subentities(["Jfk"], "NNP")
     [('JFK',)]
+    >>> possible_subentities(["Us"], "LOCATION")
+    [('US',)]
+    >>> possible_subentities(['Names', 'Of', 'Walt', 'Disney'], 'ORGANIZATION')
+    [('Names', 'Of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('OF',), ('WALT',), ('Names',), ('Of',), ('Walt',), ('Disney',)]
     """
     new_entities = []
-    if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP']:
-        for new_entity in [(ne.upper(),) for ne in entity_tokens if len(ne) < 5]:
-            new_entities.append(new_entity)
     if entity_type is "PERSON":
         if len(entity_tokens) > 2:
             new_entities.append((entity_tokens[0], entity_tokens[-1]))
         if len(entity_tokens) > 1:
             new_entities.extend([(entity_tokens[-1],), (entity_tokens[0],)])
     else:
-        for i in range(len(entity_tokens) - 1, 0, -1):
+        for i in range(len(entity_tokens) - 1, 1, -1):
             ngrams = nltk.ngrams(entity_tokens, i)
             for new_entity in ngrams:
                 new_entities.append(new_entity)
+        if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP']:
+            new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 5])
+        if len(entity_tokens) > 1:
+            new_entities.extend([(ne,) for ne in entity_tokens])
     return new_entities
 
 
