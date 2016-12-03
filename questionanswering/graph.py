@@ -36,8 +36,7 @@ def extract_entities(tokens_ne_pos):
     """
     Extract entities from the NE tags and POS tags of a sentence. Regular nouns are lemmatized to get rid of plurals.
 
-    :param tokens_ne: list of NE tags.
-    :param tokens_pos: list of POS tags.
+    :param tokens_ne_pos: list of POS and NE tags.
     :return: list of entities in the order: NE>NNP>NN
     >>> extract_entities([('who', 'O', 'WP'), ('are', 'O', 'VBP'), ('the', 'O', 'DT'), ('current', 'O', 'JJ'), ('senators', 'O', 'NNS'), ('from', 'O', 'IN'), ('missouri', 'LOCATION', 'NNP'), ('?', 'O', '.')])
     [(['Missouri'], 'LOCATION'), (['senator'], 'NN')]

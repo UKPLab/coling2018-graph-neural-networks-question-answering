@@ -37,7 +37,7 @@ if __name__ == "__main__":
     for i in tqdm.trange(len(webquestions)):
         ungrounded_graph = {'tokens': [w for w, _, _ in webquestions_utterances_alltagged[i]],
                             'edgeSet': [],
-                            'entities': webquestions_entities[i]}
+                            'entities': [webquestions_io.get_main_entity_from_question(webquestions[i])] + webquestions_entities[i]}
         logger.info("Generating from: {}".format(ungrounded_graph))
         gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions[i])]
         generated_graphs = staged_generation.generate_with_gold(ungrounded_graph, gold_answers)
