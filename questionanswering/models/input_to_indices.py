@@ -30,10 +30,11 @@ def encode_by_trigrams(graphs, trigram2idx, property2label, max_sent_len=70, max
         sentences_matrix[index, :len(trigram_ids)] = trigram_ids[:max_sent_len]
         if g["edgeSet"]:
             property_label = property2label.get(g["edgeSet"][0].get('kbID', '')[:-1], utils.unknown)
-            edge_ids = tokens_to_trigrams(property_label.split())
+            trigrams = tokens_to_trigrams(property_label.split())
+            edge_ids = [trigram2idx.get(t, 0) for t in trigrams]
             edges_matrix[index, :len(edge_ids)] = edge_ids[:max_property_len]
 
-    return sentences_matrix, edges_matrix, trigram2idx
+    return sentences_matrix, edges_matrix
 
 
 def tokens_to_trigrams(tokens):
