@@ -19,7 +19,7 @@ def encode_by_tokens(graphs, max_sent_len, max_property_len, word2idx, property2
     return sentences_matrix, edges_matrix
 
 
-def encode_by_trigrams(graphs, trigram2idx, property2label, max_sent_len=36, max_property_len=20, verbose=False):
+def encode_by_trigrams(graphs, trigram2idx, property2label, max_sent_len=70, max_property_len=70, verbose=False):
     sentences_matrix = np.zeros((len(graphs), max_sent_len), dtype="int32")
     edges_matrix = np.zeros((len(graphs), max_property_len), dtype="int32")
 
@@ -46,6 +46,20 @@ def tokens_to_trigrams(tokens):
     [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#'), ('#', 'p', 'l'), ('p', 'l', 'a'), ('l', 'a', 'y'), ('a', 'y', 'e'), ('y', 'e', 'd'), ('e', 'd', '#'), ('#', 'b', 'o'), ('b', 'o', 'n'), ('o', 'n', 'd'), ('n', 'd', '#')]
     """
     return [trigram for t in tokens for trigram in nltk.ngrams("#{}#".format(t), 3)]
+
+
+def get_trigram_index(sentences):
+    """
+    Create a trigram index from the list of tokenized sentences.
+
+    :param sentences: list of list of tokens
+    :return: trigram to index mapping
+    >>> len(get_trigram_index([['who', 'played', 'whom']]))
+    11
+    """
+    trigram_set = {t for tokens in sentences for t in tokens_to_trigrams(tokens)}
+    trigram2idx = {t: i for i, t in enumerate(trigram_set, 1)}
+    return trigram2idx
 
 
 if __name__ == "__main__":
