@@ -81,6 +81,13 @@ sparql_label_entity = """
         }
         """
 
+sparql_canoncial_label_entity = """
+        {
+        GRAPH <http://wikidata.org/terms> { ?e2 rdfs:label ?label }
+        FILTER ( lang(?label) = "en" )
+        }
+        """
+
 
 sparql_relation_time_argmax = "?m ?a [base:time ?n]."
 
@@ -320,8 +327,13 @@ def map_query_results(query_results, question_variable='e1'):
     answers = [r[question_variable] for r in query_results]
     answers = [a for a in answers if '-' not in a]
     answers = [[e.lower() for e in entity_map.get(a, [a])] for a in answers]
+    # TODO: what to do about further inconsistencies
     # answers = [[e.lower() for e in entity_map.get(a, [l.get('label0') for l in query_wikidata(label_query(a), starts_with="", use_cache=True)])] for a in answers]
     return answers
+
+
+def label_entity(entity):
+    return query_wikidata(label_query(a), starts_with="", use_cache=True)
 
 
 def label_query_results(query_results, question_variable='e1'):

@@ -1,0 +1,8 @@
+logger:
+  level: INFO
+
+# global:
+
+experiments:
+  max_sent_len: 70
+  max_property_len: 60
