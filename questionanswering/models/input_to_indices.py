@@ -22,20 +22,22 @@ def encode_by_tokens(graphs, max_sent_len, max_property_len, word2idx, property2
 
 
 def encode_by_trigrams(graphs, trigram2idx, property2label, max_sent_len=70, max_property_len=70, verbose=False):
+    graphs = [el for el in graphs if el]
     sentences_matrix = np.zeros((len(graphs), max_sent_len), dtype="int32")
-    edges_matrix = np.zeros((len(graphs), max_property_len), dtype="int32")
+    edges_matrix = np.zeros((len(graphs), len(graphs[0]),  max_property_len), dtype="int32")
 
-    for index, g in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
-        tokens = g.get("tokens", [])
+    for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
+        tokens = graph_set[0].get("tokens", [])
         trigrams = tokens_to_trigrams(tokens)
         trigram_ids = [trigram2idx.get(t, trigram2idx[unknown]) for t in trigrams]
         sentences_matrix[index, :len(trigram_ids)] = trigram_ids[:max_sent_len]
-        if g["edgeSet"]:
-            property_label = property2label.get(g["edgeSet"][0].get('kbID', '')[:-1], utils.unknown)
-            property_label += " " + g["edgeSet"][0].get('type', '')
-            trigrams = tokens_to_trigrams(property_label.split())
-            edge_ids = [trigram2idx.get(t, trigram2idx[unknown]) for t in trigrams]
-            edges_matrix[index, :len(edge_ids)] = edge_ids[:max_property_len]
+        for g_index, g in enumerate(graph_set):
+            if g["edgeSet"]:
+                property_label = property2label.get(g["edgeSet"][0].get('kbID', '')[:-1], utils.unknown)
+                property_label += " " + g["edgeSet"][0].get('type', '')
+                trigrams = tokens_to_trigrams(property_label.split())
+                edge_ids = [trigram2idx.get(t, trigram2idx[unknown]) for t in trigrams]
+                edges_matrix[index, g_index, :len(edge_ids)] = edge_ids[:max_property_len]
 
     return sentences_matrix, edges_matrix
 
