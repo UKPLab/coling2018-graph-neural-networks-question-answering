@@ -1,9 +1,10 @@
-import nltk
-from SPARQLWrapper import SPARQLWrapper, JSON
 import logging
 import re
 
-import stages
+import nltk
+from SPARQLWrapper import SPARQLWrapper, JSON
+
+from construction import stages
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)

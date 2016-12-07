@@ -1,8 +1,8 @@
-import evaluation
-import graph
-import stages
-import wikidata_access
 import logging
+
+import wikidata
+from . import stages, graph
+from datasets import evaluation
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
@@ -60,7 +60,7 @@ def find_groundings(input_graphs):
     :param input_graphs: a list of ungrounded graphs.
     :return: a list of possible grounded graphs.
     """
-    grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in wikidata_access.query_graph_groundings(s_g)]
+    grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in wikidata.query_graph_groundings(s_g)]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     logger.debug("First one: {}".format(grounded_graphs[:1]))
     return grounded_graphs
@@ -77,10 +77,10 @@ def ground_with_gold(input_graphs, gold_answers):
     :return: a list of graph groundings
     """
     grounded_graphs = find_groundings(input_graphs)
-    retrieved_answers = [wikidata_access.query_graph_denotations(s_g) for s_g in grounded_graphs]
+    retrieved_answers = [wikidata.query_graph_denotations(s_g) for s_g in grounded_graphs]
     logger.debug(
         "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
-    retrieved_answers = [wikidata_access.map_query_results(answer_set) for answer_set in retrieved_answers]
+    retrieved_answers = [wikidata.map_query_results(answer_set) for answer_set in retrieved_answers]
 
     evaluation_results = [evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers[i]) for i in
                           range(len(grounded_graphs))]

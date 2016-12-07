@@ -1,7 +1,7 @@
 import copy
 
-import graph
-from entity_linking import possible_subentities, link_entity
+from construction import graph
+from wikidata import entity_linking
 
 
 def last_relation_subentities(g):
@@ -22,7 +22,7 @@ def last_relation_subentities(g):
         return []
     new_graphs = []
     right_entity = g['edgeSet'][-1]['right']
-    for new_entity in possible_subentities(*right_entity):
+    for new_entity in entity_linking.possible_subentities(*right_entity):
         new_g = graph.copy_graph(g)
         new_g['edgeSet'][-1]['right'] = list(new_entity)
         new_graphs.append(new_g)
@@ -70,7 +70,7 @@ def add_entity_and_relation(g):
     entity = None
     while entities and not linkings:
         entity = entities.pop(0)
-        linkings = link_entity(entity)
+        linkings = entity_linking.link_entity(entity)
     if not (linkings and entity):
         return []
     new_graphs = []

@@ -1,6 +1,6 @@
 import nltk
 
-from wikidata_access import query_wikidata, entity_query
+from . import wdaccess
 
 
 def possible_subentities(entity_tokens, entity_type):
@@ -55,16 +55,16 @@ def link_entity(entity, try_subentities=True):
     :return: list of KB ids
     """
     entity_tokens, entity_type = entity
-    linkings = query_wikidata(entity_query(" ".join(entity_tokens)))
+    linkings = wdaccess.query_wikidata(wdaccess.entity_query(" ".join(entity_tokens)))
     if entity_type is not 'URL':
         if len(entity_tokens) == 1:
             subentities = possible_subentities(entity_tokens, entity_type)
             if subentities:
-                linkings += query_wikidata(entity_query(" ".join(subentities.pop(0))))
+                linkings += wdaccess.query_wikidata(wdaccess.entity_query(" ".join(subentities.pop(0))))
         if try_subentities and not linkings:
             subentities = possible_subentities(entity_tokens, entity_type)
             while not linkings and subentities:
-                linkings = query_wikidata(entity_query(" ".join(subentities.pop(0))))
+                linkings = wdaccess.query_wikidata(wdaccess.entity_query(" ".join(subentities.pop(0))))
     linkings = [l.get("e20", "") for l in linkings if l]
     linkings = sorted(linkings, key=lambda k: int(k[1:]))
     linkings = linkings[:3]
