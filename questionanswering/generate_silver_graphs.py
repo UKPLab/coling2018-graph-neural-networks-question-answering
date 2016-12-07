@@ -1,12 +1,13 @@
-import numpy as np
-import logging
 import json
+import logging
+
+import numpy as np
 import tqdm
 
 import graph
 import staged_generation
-import webquestions_io
 import wikidata_access
+from datasets import webquestions_io
 
 np.random.seed(1)
 # TODO: read logging settings from a file
