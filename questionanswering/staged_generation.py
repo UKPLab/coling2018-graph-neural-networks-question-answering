@@ -1,5 +1,3 @@
-import copy
-
 import evaluation
 import graph
 import stages
@@ -62,13 +60,7 @@ def find_groundings(input_graphs):
     :param input_graphs: a list of ungrounded graphs.
     :return: a list of possible grounded graphs.
     """
-    grounded_graphs = []
-    for s_g in input_graphs:
-        if wikidata_access.get_free_variables(s_g):
-            grounded_graphs.extend([apply_grounding(s_g, p) for p in wikidata_access.query_graph_groundings(s_g)])
-        else:
-            grounded_graphs.append(s_g)
-
+    grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in wikidata_access.query_graph_groundings(s_g)]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     logger.debug("First one: {}".format(grounded_graphs[:1]))
     return grounded_graphs
@@ -95,7 +87,7 @@ def ground_with_gold(input_graphs, gold_answers):
     chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
                      for i in range(len(grounded_graphs)) if evaluation_results[i][2] > 0.0]
     if len(chosen_graphs) > 3:
-        chosen_graphs = sorted(chosen_graphs, key=lambda x:x[1][2], reverse=True)[:3]
+        chosen_graphs = sorted(chosen_graphs, key=lambda x: x[1][2], reverse=True)[:3]
     logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
     return chosen_graphs
 
@@ -161,16 +153,18 @@ def apply_grounding(g, grounding):
     :param g: a single ungrounded graph
     :param grounding: a dictionary representing the grounding of relations and variables
     :return: a grounded graph
-    >>> apply_grounding({'edgeSet':[{}]}, {'r0d':'P31v'}) == {'edgeSet': [{'type': 'direct', 'kbID': 'P31v'}]}
+    >>> apply_grounding({'edgeSet':[{}]}, {'r0d':'P31v'}) == {'edgeSet': [{'type': 'direct', 'kbID': 'P31v', }], 'entities': [], 'tokens': []}
     True
-    >>> apply_grounding({'edgeSet':[{}]}, {'r0v':'P31v'}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v'}]}
+    >>> apply_grounding({'edgeSet':[{}]}, {'r0v':'P31v'}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v'}], 'entities': [], 'tokens': []}
     True
-    >>> apply_grounding({'edgeSet':[{}]}, {'r0v':'P31v', 'hopup0v':'P131v'}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v', 'hopUp':'P131v'}]}
+    >>> apply_grounding({'edgeSet':[{}]}, {'r0v':'P31v', 'hopup0v':'P131v'}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v', 'hopUp':'P131v'}], 'entities': [], 'tokens': []}
     True
-    >>> apply_grounding({'edgeSet':[{}, {}]}, {'r1d':'P39v', 'r0v':'P31v', 'e20': 'Q18'}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v', 'rightkbID': 'Q18'}, {'type': 'direct', 'kbID': 'P39v'}]}
+    >>> apply_grounding({'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v', 'hopUp':'P131v'}]}, {}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v', 'hopUp':'P131v'}], 'entities': [], 'tokens': []}
     True
-    >>> apply_grounding({'edgeSet':[]}, {})
-    {'edgeSet': []}
+    >>> apply_grounding({'edgeSet':[{}, {}]}, {'r1d':'P39v', 'r0v':'P31v', 'e20': 'Q18'}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v', 'rightkbID': 'Q18'}, {'type': 'direct', 'kbID': 'P39v'}], 'entities': [], 'tokens': []}
+    True
+    >>> apply_grounding({'edgeSet':[]}, {}) == {'entities': [], 'edgeSet': [], 'tokens': []}
+    True
     """
     grounded = graph.copy_graph(g)
     for i, edge in enumerate(grounded.get('edgeSet', [])):

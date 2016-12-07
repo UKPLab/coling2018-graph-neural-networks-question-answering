@@ -79,14 +79,14 @@ sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".f
 def query_graph_groundings(g):
     """
     Convert the given graph to a WikiData query and retrieve the results. The results contain possible bindings
-    for all free variables in the graph. If there are no free variables an empty list is returned.
+    for all free variables in the graph. If there are no free variables a single empty grounding is returned.
 
     :param g: graph as a dictionary
     :return: graph groundings encoded as a list of dictionaries
     """
     if get_free_variables(g):
         return query_wikidata(graph_to_query(g))
-    return []
+    return [{}]
 
 
 def query_graph_denotations(g):
