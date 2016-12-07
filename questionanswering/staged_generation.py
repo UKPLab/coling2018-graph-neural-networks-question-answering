@@ -1,209 +1,12 @@
 import copy
-from wikidata_access import *
-from evaluation import *
+
+import evaluation
+import stages
+import wikidata_access
 import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
-
-
-def possible_subentities(entity_tokens, entity_type):
-    """
-    Retrive all possible sub-entities of the given entity. Short title tokens are also capitalized.
-
-    :param entity_tokens: a list of entity tokens
-    :param entity_type:  type of the entity
-    :return: a list of sub-entities.
-    >>> possible_subentities(["Nfl", "Redskins"], "ORGANIZATION")
-    [('NFL',), ('Nfl',), ('Redskins',)]
-    >>> possible_subentities(["senator"], "NN")
-    []
-    >>> possible_subentities(["Grand", "Bahama", "Island"], "LOCATION")
-    [('Grand', 'Bahama'), ('Bahama', 'Island'), ('Grand',), ('Bahama',), ('Island',)]
-    >>> possible_subentities(["Dmitri", "Mendeleev"], "PERSON")
-    [('Mendeleev',), ('Dmitri',)]
-    >>> possible_subentities(["Dmitrii", "Ivanovich",  "Mendeleev"], "PERSON")
-    [('Dmitrii', 'Mendeleev'), ('Mendeleev',), ('Dmitrii',)]
-    >>> possible_subentities(["Jfk"], "NNP")
-    [('JFK',)]
-    >>> possible_subentities(["Us"], "LOCATION")
-    [('US',)]
-    >>> possible_subentities(['Names', 'Of', 'Walt', 'Disney'], 'ORGANIZATION')
-    [('Names', 'Of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('OF',), ('WALT',), ('Names',), ('Of',), ('Walt',), ('Disney',)]
-    """
-    new_entities = []
-    if entity_type is "PERSON":
-        if len(entity_tokens) > 2:
-            new_entities.append((entity_tokens[0], entity_tokens[-1]))
-        if len(entity_tokens) > 1:
-            new_entities.extend([(entity_tokens[-1],), (entity_tokens[0],)])
-    else:
-        for i in range(len(entity_tokens) - 1, 1, -1):
-            ngrams = nltk.ngrams(entity_tokens, i)
-            for new_entity in ngrams:
-                new_entities.append(new_entity)
-        if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP']:
-            new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 5])
-        if len(entity_tokens) > 1:
-            new_entities.extend([(ne,) for ne in entity_tokens])
-    return new_entities
-
-
-def last_relation_subentities(g):
-    """
-    Takes a graph with an existing relation and suggests a set of graphs with the same relation but one of the entities
-     is a sub-span of the original entity.
-
-    :param g: a graph with an non-empty edgeSet
-    :return: a list of suggested graphs
-    >>> last_relation_subentities({'edgeSet': [], 'entities': [(['grand', 'bahama', 'island'], 'LOCATION')], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']})
-    []
-    >>> len(last_relation_subentities({'edgeSet': [{'left':[0], 'right': (['grand', 'bahama', 'island'], 'LOCATION')}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
-    5
-    >>> last_relation_subentities({'edgeSet': [{'right':(['Jfk'], 'NNP')}], 'entities': []}) == [{'tokens': [], 'edgeSet': [{'right': ['JFK']}], 'entities': []}]
-    True
-    """
-    if len(g.get('edgeSet', [])) == 0 or len(g['edgeSet'][-1]['right']) < 1:
-        return []
-    new_graphs = []
-    right_entity = g['edgeSet'][-1]['right']
-    for new_entity in possible_subentities(*right_entity):
-        new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']),
-                 'entities': copy.copy(g.get('entities', []))}
-        new_g['edgeSet'][-1]['right'] = list(new_entity)
-        new_graphs.append(new_g)
-    return new_graphs
-
-
-def last_relation_hop_up(g):
-    """
-    Takes a graph with an existing relation and an intermediate variable by performing a hop-up for the second entity.
-
-    :param g: a graph with an non-empty edgeSet
-    :return: a list of suggested graphs
-    >>> last_relation_hop_up({'edgeSet': [], 'entities': [[4, 5, 6]]})
-    []
-    >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':[4,5,6], 'hopUp': None}], 'entities': [], 'tokens':[]}]
-    True
-    >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':[4,5,6], 'hopUp': None}], 'entities': []})
-    []
-    >>> last_relation_hop_up({'edgeSet': [{'left':[0], 'right':["Bahama"], "rightkbID":"Q6754"}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':["Bahama"], "rightkbID":"Q6754", 'hopUp': None}], 'entities': [], 'tokens':[]}]
-    True
-    """
-    if len(g.get('edgeSet', [])) == 0 or any('hopUp' in edge for edge in g['edgeSet']):
-        return []
-    new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']),
-             'entities': copy.copy(g.get('entities', []))}
-    new_g['edgeSet'][-1]['hopUp'] = None
-    return [new_g]
-
-
-def add_entity_and_relation(g):
-    """
-    Takes a graph with a non-empty list of free entities and adds a new relations with the one of the free entities, thus
-    removing it from the list.
-
-    :param g: a graph with a non-empty 'entities' list
-    :return: a list of suggested graphs
-    >>> add_entity_and_relation({'edgeSet': [], 'entities': []})
-    []
-    >>> add_entity_and_relation({'edgeSet': [], 'entities': [(["Natalie", "Portman"], 'PERSON')]}) == [{'tokens': [], 'edgeSet': [{'left': [0], 'right': ['Natalie', 'Portman'], 'rightkbID': 'Q37876'}], 'entities': []}]
-    True
-    """
-    if len(g.get('entities', [])) == 0:
-        return []
-    entities = copy.copy(g.get('entities', []))
-    linkings = []
-    entity = None
-    while entities and not linkings:
-        entity = entities.pop(0)
-        linkings = link_entity(entity)
-    if not (linkings and entity):
-        return []
-    new_graphs = []
-    for linking in linkings:
-        new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': entities}
-        new_edge = {'left': [0], 'right': entity[0], 'rightkbID': linking}
-        new_g['edgeSet'].append(new_edge)
-        new_graphs.append(new_g)
-
-    return new_graphs
-
-
-def last_relation_temporal(g):
-    """
-    Adds a temporal argmax to the last relation in the graph, that is only the latest entity is returned as the answer.
-
-    :param g: a graph with a non-empty edgeSet
-    :return: a list of suggested graphs
-    >>> last_relation_temporal({'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8]}], 'entities': []}) == [{'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmax': 'time'}], 'entities': [], 'tokens':[]}, {'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmin': 'time'}], 'entities': [], 'tokens':[]}]
-    True
-    >>> last_relation_temporal({'edgeSet': [{'left':[0], 'right':[2]}, {'left':[0], 'right':[8], 'argmin':'time'}], 'entities': []})
-    []
-    """
-    if len(g.get('edgeSet', [])) == 0 or any(t in edge for t in ARG_TYPES for edge in g['edgeSet']):
-        return []
-    new_graphs = []
-    for t in ARG_TYPES:
-        new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']),
-                 'entities': copy.copy(g.get('entities', []))}
-        new_g['edgeSet'][-1][t] = "time"
-        new_graphs.append(new_g)
-    return new_graphs
-
-
-# This division of actions is relevant for grounding with gold answers:
-# - Restrict action limit the set of answers and should be applied
-#   to a graph that has groundings
-RESTRICT_ACTIONS = [add_entity_and_relation, last_relation_temporal]
-# - Expand actions change graph to extract another set of answers and should be
-#   applied to a graph that has empty denotation
-EXPAND_ACTIONS = [last_relation_hop_up]  # Expand actions
-
-# This division is relevant for constructing all possible groundings without gold answers:
-# - WikiData actions need to be grounded in Wikidata in order to construct the next graph
-WIKIDATA_ACTIONS = [add_entity_and_relation]
-# - Non linking options just add options to the graph structure without checking if it is possible in WikiData.
-#   Hopup is alwasy possible anyway, temporal is possible most of the time.
-NON_LINKING_ACTIONS = [last_relation_temporal, last_relation_hop_up]
-
-ARG_TYPES = ['argmax', 'argmin']
-
-
-def expand(g):
-    """
-    Expand the coverage of the given graph by constructing version that has more possible/other denotations.
-
-    :param g: dict object representing the graph with "edgeSet" and "entities"
-    :return: a list of new graphs that are modified copies
-    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[["Barack", "Obama"]]})
-    []
-    >>> expand({"edgeSet":[{"left":[0], "right":["Barack", "Obama"]}]}) == [{'edgeSet': [{'left': [0], 'hopUp': None, 'right': ['Barack', 'Obama']}], 'tokens': [], 'entities': []}]
-    True
-    """
-    if "edgeSet" not in g:
-        return []
-    available_expansions = EXPAND_ACTIONS
-    return_graphs = [el for f in available_expansions for el in f(g)]
-    return return_graphs
-
-
-def restrict(g):
-    """
-    Restrict the set of possible graph denotations by adding new constraints that should be fullfilled by the linking.
-
-    :param g: dict object representing the graph with "edgeSet" and "entities"
-    :return: a list of new graphs that are modified copies
-    >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[(['Barack', 'Obama'], "PERSON")]}) == [{'entities': [], 'edgeSet': [{'right': ['Barack', 'Obama'], 'left': [0], 'rightkbID': 'Q76'}], 'tokens': ['Who', 'is', 'Barack', 'Obama', '?']}]
-    True
-    >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]})
-    []
-    """
-    if "entities" not in g:
-        return []
-    available_restrictions = RESTRICT_ACTIONS
-    return_graphs = [el for f in available_restrictions for el in f(g)]
-    return return_graphs
 
 
 def generate_with_gold(ungrounded_graph, gold_answers):
@@ -225,7 +28,7 @@ def generate_with_gold(ungrounded_graph, gold_answers):
 
         if g[1][2] < 0.5:
             logger.debug("Restricting")
-            restricted_graphs = restrict(g[0])
+            restricted_graphs = stages.restrict(g[0])
             logger.debug("Suggested graphs: {}".format(restricted_graphs))
             chosen_graphs = []
             suggested_graphs = restricted_graphs[:]
@@ -234,7 +37,7 @@ def generate_with_gold(ungrounded_graph, gold_answers):
                 chosen_graphs = ground_with_gold([s_g], gold_answers)
                 if not chosen_graphs:
                     logger.debug("Expanding")
-                    expanded_graphs = expand(s_g)
+                    expanded_graphs = stages.expand(s_g)
                     logger.debug("Expanded graphs: {}".format(expanded_graphs))
                     chosen_graphs = ground_with_gold(expanded_graphs, gold_answers)
             if len(chosen_graphs) > 0:
@@ -260,8 +63,8 @@ def find_groundings(input_graphs):
     """
     grounded_graphs = []
     for s_g in input_graphs:
-        if get_free_variables(s_g):
-            grounded_graphs.extend([apply_grounding(s_g, p) for p in query_wikidata(graph_to_query(s_g))])
+        if wikidata_access.get_free_variables(s_g):
+            grounded_graphs.extend([apply_grounding(s_g, p) for p in wikidata_access.query_graph_groundings(s_g)])
         else:
             grounded_graphs.append(s_g)
 
@@ -281,12 +84,12 @@ def ground_with_gold(input_graphs, gold_answers):
     :return: a list of graph groundings
     """
     grounded_graphs = find_groundings(input_graphs)
-    retrieved_answers = [query_wikidata(graph_to_query(s_g, return_var_values=True)) for s_g in grounded_graphs]
+    retrieved_answers = [wikidata_access.query_graph_denotations(s_g) for s_g in grounded_graphs]
     logger.debug(
         "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
-    retrieved_answers = [map_query_results(answer_set) for answer_set in retrieved_answers]
+    retrieved_answers = [wikidata_access.map_query_results(answer_set) for answer_set in retrieved_answers]
 
-    evaluation_results = [retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers[i]) for i in
+    evaluation_results = [evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers[i]) for i in
                           range(len(grounded_graphs))]
     chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
                      for i in range(len(grounded_graphs)) if evaluation_results[i][2] > 0.0]
@@ -297,7 +100,7 @@ def ground_with_gold(input_graphs, gold_answers):
 
 
 def generate_without_gold(ungrounded_graph,
-                          wikidata_actions=WIKIDATA_ACTIONS, non_linking_actions=NON_LINKING_ACTIONS):
+                          wikidata_actions=stages.WIKIDATA_ACTIONS, non_linking_actions=stages.NON_LINKING_ACTIONS):
     """
     Generate all possible groundings of the given ungrounded graph
     using expand and restrict operations on its denotation.
@@ -347,32 +150,6 @@ def ground_without_gold(input_graphs):
                      for i in range(len(grounded_graphs))]
     logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
     return chosen_graphs
-
-
-def link_entity(entity, try_subentities=True):
-    """
-    Link the given list of tokens to an entity in a knowledge base. If none linkings is found try all combinations of
-    subtokens of the given entity.
-
-    :param entity_tokens: list of entity tokens
-    :param try_subentities:
-    :return: list of KB ids
-    """
-    entity_tokens, entity_type = entity
-    linkings = query_wikidata(entity_query(" ".join(entity_tokens)))
-    if entity_type is not 'URL':
-        if len(entity_tokens) == 1:
-            subentities = possible_subentities(entity_tokens, entity_type)
-            if subentities:
-                linkings += query_wikidata(entity_query(" ".join(subentities.pop(0))))
-        if try_subentities and not linkings:
-            subentities = possible_subentities(entity_tokens, entity_type)
-            while not linkings and subentities:
-                linkings = query_wikidata(entity_query(" ".join(subentities.pop(0))))
-    linkings = [l.get("e20", "") for l in linkings if l]
-    linkings = sorted(linkings, key=lambda k: int(k[1:]))
-    linkings = linkings[:3]
-    return linkings
 
 
 def apply_grounding(g, grounding):

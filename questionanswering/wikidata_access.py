@@ -3,6 +3,7 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 import logging
 import re
 
+import stages
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
@@ -13,18 +14,6 @@ sparql.setMethod("GET")
 sparql.setTimeout(40)
 GLOBAL_RESULT_LIMIT = 500
 
-
-# PREFIX e:<http://www.wikidata.org/entity/>
-# PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
-# PREFIX skos:<http://www.w3.org/2004/02/skos/core#>
-# PREFIX base:<http://www.wikidata.org/ontology#>
-#
-# SELECT DISTINCT ?e1 WHERE
-# {{GRAPH <http://wikidata.org/statements> {
-# ?e1 e:P69s ?m0 . { SELECT DISTINCT ?d0 WHERE {
-# ?m0 e:P69v ?d0. ?d0 ?s0 [ e:P131v|e:P31v|e:P279v|e:P17v|e:P361v e:Q1581]
-# } }  }
-# }}
 
 sparql_prefix = """
         PREFIX e:<http://www.wikidata.org/entity/>
@@ -42,6 +31,7 @@ sparql_relation = {
 
     "v-structure": "{GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}",
 }
+
 sparql_relation_complex = """
         {
         {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . }}
@@ -50,21 +40,6 @@ sparql_relation_complex = """
         UNION
         {GRAPH <http://wikidata.org/statements> { ?m ?p ?e2. ?m ?rv ?e1. }}}
         """
-# BIND (SUBSTR(STR(?p), 1, STRLEN(?p) - 1) as ?_p)
-# FILTER NOT EXISTS {
-#     VALUES ?topic {e:Q19847637 e:Q18610173 e:Q18667213 e:Q18608359}
-# {GRAPH <http://wikidata.org/properties> { ?_p e:P31s / e:P31v  ?r}
-# GRAPH  <http://wikidata.org/statements> { ?r (e:P279s/e:P279v)+ ?topic}}
-# UNION
-# { GRAPH <http://wikidata.org/properties> { ?_p e:P31s / e:P31v  ?topic}}
-# }
-
-# sparql_entity_label = """
-#         {{GRAPH <http://wikidata.org/terms> { ?e2 rdfs:label "%labelright%"@en  }}
-#         UNION
-#         {GRAPH <http://wikidata.org/terms> { ?e2 skos:altLabel "%labelright%"@en  }}
-#         }
-#         """
 
 sparql_entity_label = """
         { VALUES ?labelpredicate {rdfs:label skos:altLabel}
@@ -96,10 +71,33 @@ sparql_close = " LIMIT {}"
 
 # TODO: Additional?: given name
 HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
-# HOP_UP_RELATIONS = ["P131"]
 
 sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
 sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
+
+
+def query_graph_groundings(g):
+    """
+    Convert the given graph to a WikiData query and retrieve the results. The results contain possible bindings
+    for all free variables in the graph. If there are no free variables an empty list is returned.
+
+    :param g: graph as a dictionary
+    :return: graph groundings encoded as a list of dictionaries
+    """
+    if get_free_variables(g):
+        return query_wikidata(graph_to_query(g))
+    return []
+
+
+def query_graph_denotations(g):
+    """
+    Convert the given graph to a WikiData query and retrieve the denotations of the graph. The results contain the
+     list of the possible graph denotations
+
+    :param g: graph as a dictionary
+    :return: graph denotations as a list of dictionaries
+    """
+    return query_wikidata(graph_to_query(g, return_var_values=True))
 
 
 def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
@@ -145,7 +143,7 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
                 sparql_relation_inst = sparql_hopup_values + sparql_relation_inst
                 variables.append("?hopup{}v".format(i))
 
-        if 'argmax' in edge or 'argmin' in edge:
+        if any(arg_type in edge for arg_type in stages.ARG_TYPES):
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_relation_time_argmax)
             sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
             sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
@@ -185,7 +183,7 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
     return query
 
 
-def get_free_variables(g, include_relations=True, include_entities=True, include_question_variable=False):
+def get_free_variables(g, include_relations=True, include_entities=True):
     """
     Construct a list of free (not linked) variables in the graph.
 
@@ -201,8 +199,6 @@ def get_free_variables(g, include_relations=True, include_entities=True, include
             free_variables.extend(["?r{}{}".format(i, t[0]) for t in sparql_relation] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
         if include_entities and 'rightkbID' not in edge:
             free_variables.append("?e2" + str(i))
-    if include_question_variable:
-        free_variables.append("?e1")
     return free_variables
 
 
@@ -333,7 +329,7 @@ def map_query_results(query_results, question_variable='e1'):
 
 
 def label_entity(entity):
-    return query_wikidata(label_query(a), starts_with="", use_cache=True)
+    return query_wikidata(label_query(entity), starts_with="", use_cache=True)
 
 
 def label_query_results(query_results, question_variable='e1'):
