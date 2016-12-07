@@ -1,5 +1,23 @@
 import itertools
 import nltk
+import copy
+
+
+def copy_graph(g):
+    """
+    Create a copy of the given graph.
+
+    :param g: input graph as dictionary
+    :return: a copy of the graph
+    >>> copy_graph({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': []}) == {'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': [], 'tokens':[]}
+    True
+    >>> copy_graph({}) == {'tokens':[], 'edgeSet':[], 'entities':[]}
+    True
+    """
+    new_g = {'tokens': g.get('tokens', []),
+             'edgeSet': copy.deepcopy(g.get('edgeSet', [])),
+             'entities': copy.copy(g.get('entities', []))}
+    return new_g
 
 
 def extract_entities_from_tagged(annotated_tokens, tags):
