@@ -1,4 +1,6 @@
 import copy
+
+import graph
 from entity_linking import possible_subentities, link_entity
 
 
@@ -21,8 +23,7 @@ def last_relation_subentities(g):
     new_graphs = []
     right_entity = g['edgeSet'][-1]['right']
     for new_entity in possible_subentities(*right_entity):
-        new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']),
-                 'entities': copy.copy(g.get('entities', []))}
+        new_g = graph.copy_graph(g)
         new_g['edgeSet'][-1]['right'] = list(new_entity)
         new_graphs.append(new_g)
     return new_graphs
@@ -45,8 +46,7 @@ def last_relation_hop_up(g):
     """
     if len(g.get('edgeSet', [])) == 0 or any('hopUp' in edge for edge in g['edgeSet']):
         return []
-    new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']),
-             'entities': copy.copy(g.get('entities', []))}
+    new_g = graph.copy_graph(g)
     new_g['edgeSet'][-1]['hopUp'] = None
     return [new_g]
 
@@ -75,7 +75,7 @@ def add_entity_and_relation(g):
         return []
     new_graphs = []
     for linking in linkings:
-        new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g.get('edgeSet', [])), 'entities': entities}
+        new_g = graph.copy_graph(g)
         new_edge = {'left': [0], 'right': entity[0], 'rightkbID': linking}
         new_g['edgeSet'].append(new_edge)
         new_graphs.append(new_g)
@@ -98,8 +98,7 @@ def last_relation_temporal(g):
         return []
     new_graphs = []
     for t in ARG_TYPES:
-        new_g = {"tokens": g.get('tokens', []), 'edgeSet': copy.deepcopy(g['edgeSet']),
-                 'entities': copy.copy(g.get('entities', []))}
+        new_g = graph.copy_graph(g)
         new_g['edgeSet'][-1][t] = "time"
         new_graphs.append(new_g)
     return new_graphs

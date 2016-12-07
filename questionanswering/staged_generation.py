@@ -1,6 +1,7 @@
 import copy
 
 import evaluation
+import graph
 import stages
 import wikidata_access
 import logging
@@ -171,7 +172,7 @@ def apply_grounding(g, grounding):
     >>> apply_grounding({'edgeSet':[]}, {})
     {'edgeSet': []}
     """
-    grounded = copy.deepcopy(g)
+    grounded = graph.copy_graph(g)
     for i, edge in enumerate(grounded.get('edgeSet', [])):
         if "e2" + str(i) in grounding:
             edge['rightkbID'] = grounding["e2" + str(i)]
