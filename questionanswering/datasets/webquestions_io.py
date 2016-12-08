@@ -8,10 +8,10 @@ class WebQuestions(Dataset):
     def __init__(self, path_to_dataset):
         # Load the train questions
         with open(path_to_dataset + "input/webquestions.examples.train.train.json") as f:
-            self._dataset_train = json.load(f)
+            self._questions_train = json.load(f)
         # Load the validation questions
         with open(path_to_dataset + "input/webquestions.examples.train.validation.json") as f:
-            self._dataset_val = json.load(f)
+            self._questions_val = json.load(f)
         # Load the tagged version
         with open(path_to_dataset + "webquestions.examples.train.utterances.tagged.json") as f:
             self._dataset_tagged = json.load(f)
@@ -23,7 +23,10 @@ class WebQuestions(Dataset):
             self._choice_graphs = json.load(f)
 
     def get_trainig_samples(self):
-        pass
+        train_indices = [q_obj['index'] for q_obj in self._questions_train]
+        # webquestions_silver_graphs_for_training = [(q_obj['index'], g)
+        #                                            for q_obj in self
+        #                                            for g in webquestions_silver_graphs[q_obj['index']] if g[1][2] > 0.5]
 
 
 def get_answers_from_question(question_object):
