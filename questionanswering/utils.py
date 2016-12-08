@@ -14,7 +14,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.ERROR)
 
 all_zeroes = "ALL_ZERO"
-unknown = "_UNKNOWN"
+unknown_word = "_UNKNOWN"
 
 special_tokens = {"&ndash;": "–",
                   "&mdash;": "—",
@@ -47,7 +47,7 @@ def load(path):
     rare_w_ids = list(range(idx-101,idx-1))
     unknown_emb = np.average(embeddings[rare_w_ids,:], axis=0)
     embeddings = np.append(embeddings, [unknown_emb], axis=0)
-    word2idx[unknown] = idx
+    word2idx[unknown_word] = idx
     idx += 1
 
     logger.debug("Loaded: {}".format(embeddings.shape))
@@ -63,7 +63,7 @@ def get_idx(word, word2idx):
     :param word2idx: dictionary constructed from an embeddings file
     :return: integer index of the word
     """
-    unknown_idx = word2idx[unknown]
+    unknown_idx = word2idx[unknown_word]
     word = word.strip()
     if word in word2idx:
         return word2idx[word]

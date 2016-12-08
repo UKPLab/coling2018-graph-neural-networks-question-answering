@@ -10,5 +10,5 @@ class QAModel:
     def test(self):
         raise NotImplementedError
 
-    def encode_data(self):
+    def encode_data(self, data):
         raise NotImplementedError

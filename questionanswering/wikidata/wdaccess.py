@@ -295,6 +295,12 @@ def load_blacklist(path_to_list):
         return set()
 
 
+def load_property_labels(path_to_property_labels):
+    with open(path_to_property_labels) as infile:
+        return_map = {l.split("\t")[0] : l.split("\t")[1].strip() for l in infile.readlines()}
+    return return_map
+
+
 def load_entity_map(path_to_map):
     """
     Load the map of entity labels from a file.
@@ -348,9 +354,10 @@ def label_query_results(query_results, question_variable='e1'):
     answers = [[l.get('label0').lower() for l in query_wikidata(label_query(a), starts_with="", use_cache=True)] for a in answers]
     return answers
 
-
-entity_map = load_entity_map("../data/" + "entity_map.tsv")
-property_blacklist = load_blacklist("../data/" + "property_blacklist.txt")
+RESOURCES_FOLDER = "../resources/"
+entity_map = load_entity_map(RESOURCES_FOLDER + "entity_map.tsv")
+property_blacklist = load_blacklist(RESOURCES_FOLDER + "property_blacklist.txt")
+property2label = load_property_labels(RESOURCES_FOLDER + "properties-with-labels.txt")
 
 if __name__ == "__main__":
     import doctest

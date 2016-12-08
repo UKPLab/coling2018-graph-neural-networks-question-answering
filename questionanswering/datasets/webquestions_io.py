@@ -1,6 +1,7 @@
 import re
 import json
 import numpy as np
+import itertools
 
 from . import Dataset
 
@@ -8,27 +9,29 @@ from . import Dataset
 class WebQuestions(Dataset):
     def __init__(self, path_to_dataset):
         # Load the train questions
-        with open(path_to_dataset + "input/webquestions.examples.train.train.json") as f:
+        with open(path_to_dataset["webquestions.examples.train.train"]) as f:
             self._questions_train = json.load(f)
         # Load the validation questions
-        with open(path_to_dataset + "input/webquestions.examples.train.validation.json") as f:
+        with open(path_to_dataset["webquestions.examples.train.validation"]) as f:
             self._questions_val = json.load(f)
         # Load the tagged version
-        with open(path_to_dataset + "webquestions.examples.train.utterances.tagged.json") as f:
+        with open(path_to_dataset["webquestions.examples.train.tagged"]) as f:
             self._dataset_tagged = json.load(f)
         # Load the generated graphs
-        with open(path_to_dataset + "webquestions.examples.train.silvergraphs.full_11_29.json") as f:
+        with open(path_to_dataset["webquestions.examples.train.silvergraphs"]) as f:
             self._silver_graphs = json.load(f)
         # Load the choice graphs. Choice graphs are all graph derivable from each sentence.
-        with open(path_to_dataset + "webquestions.examples.train.silvergraphs.full_11_29.json") as f:
+        with open(path_to_dataset["webquestions.examples.train.choicegraphs"]) as f:
             self._choice_graphs = json.load(f)
             self._choice_graphs = [g[0] for g in self._choice_graphs]
         assert len(self._dataset_tagged) == len(self._choice_graphs) == len(self._silver_graphs)
 
     def _get_samples(self, questions):
         indices = [q_obj['index'] for q_obj in questions
-                   if any(g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']])
-                   and self._choice_graphs[q_obj['index']]]
+                   if any(g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[q_obj['index']]]
+        return self._get_indexed_samples(indices)
+
+    def _get_indexed_samples(self, indices):
         resulting_set = []
         targets = []
         for index in indices:
@@ -51,8 +54,12 @@ class WebQuestions(Dataset):
     def get_validation_samples(self):
         return self._get_samples(self._questions_val)
 
-    def get_training_generator(self):
-        pass
+    def get_training_generator(self, questions, batch_size):
+        indices = [q_obj['index'] for q_obj in questions
+                   if any(g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[q_obj['index']]]
+        for i in itertools.cycle(range(0, len(indices), batch_size)):
+            batch_indices = indices[i:i + batch_size]
+            yield self._get_indexed_samples(batch_indices)
 
 
 def get_answers_from_question(question_object):
@@ -86,6 +93,8 @@ def get_main_entity_from_question(question_object):
         return [w.title() for w in entity_tokens], 'URL'
     return ()
 
+
 if __name__ == "__main__":
     import doctest
+
     print(doctest.testmod())
