@@ -1,4 +1,29 @@
 import re
+import json
+
+from . import Dataset
+
+
+class WebQuestions(Dataset):
+    def __init__(self, path_to_dataset):
+        # Load the train questions
+        with open(path_to_dataset + "input/webquestions.examples.train.train.json") as f:
+            self._dataset_train = json.load(f)
+        # Load the validation questions
+        with open(path_to_dataset + "input/webquestions.examples.train.validation.json") as f:
+            self._dataset_val = json.load(f)
+        # Load the tagged version
+        with open(path_to_dataset + "webquestions.examples.train.utterances.tagged.json") as f:
+            self._dataset_tagged = json.load(f)
+        # Load the generated graphs
+        with open(path_to_dataset + "webquestions.examples.train.silvergraphs.full_11_29.json") as f:
+            self._silver_graphs = json.load(f)
+        # Load the choice graphs. Choice graphs are all graph derivable from each sentence.
+        with open(path_to_dataset + "webquestions.examples.train.silvergraphs.full_11_29.json") as f:
+            self._choice_graphs = json.load(f)
+
+    def get_trainig_samples(self):
+        pass
 
 
 def get_answers_from_question(question_object):
