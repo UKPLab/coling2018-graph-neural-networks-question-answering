@@ -1,5 +1,6 @@
 import re
 import json
+import numpy as np
 
 from . import Dataset
 
@@ -21,12 +22,37 @@ class WebQuestions(Dataset):
         # Load the choice graphs. Choice graphs are all graph derivable from each sentence.
         with open(path_to_dataset + "webquestions.examples.train.silvergraphs.full_11_29.json") as f:
             self._choice_graphs = json.load(f)
+            self._choice_graphs = [g[0] for g in self._choice_graphs]
+        assert len(self._dataset_tagged) == len(self._choice_graphs) == len(self._silver_graphs)
 
-    def get_trainig_samples(self):
-        train_indices = [q_obj['index'] for q_obj in self._questions_train]
-        # webquestions_silver_graphs_for_training = [(q_obj['index'], g)
-        #                                            for q_obj in self
-        #                                            for g in webquestions_silver_graphs[q_obj['index']] if g[1][2] > 0.5]
+    def _get_samples(self, questions):
+        indices = [q_obj['index'] for q_obj in questions
+                   if any(g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']])
+                   and self._choice_graphs[q_obj['index']]]
+        resulting_set = []
+        targets = []
+        for index in indices:
+            instance = self._silver_graphs[index]
+            negative_pool = [n_g for n_g in self._choice_graphs[index]
+                             if all(n_g.get('edgeSet', []) != g.get('edgeSet', []) for g in instance)]
+            negative_pool_size = 30 - len(instance)
+            instance += [(n_g,) for n_g in np.random.choice(negative_pool,
+                                                            negative_pool_size,
+                                                            replace=len(negative_pool) < negative_pool_size)]
+            np.random.shuffle(instance)
+            target = np.argmax([g[1][2] if len(g) > 1 else 0.0 for g in instance])
+            resulting_set.append(instance)
+            resulting_set.append(target)
+        return resulting_set, targets
+
+    def get_training_samples(self):
+        return self._get_samples(self._questions_train)
+
+    def get_validation_samples(self):
+        return self._get_samples(self._questions_val)
+
+    def get_training_generator(self):
+        pass
 
 
 def get_answers_from_question(question_object):
