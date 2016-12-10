@@ -2,7 +2,7 @@ from collections import deque
 
 import utils
 from . import QAModel
-import wikidata
+from wikidata import wdaccess
 import numpy as np
 from datasets import evaluation
 
@@ -31,8 +31,8 @@ class LabelOverlapModel(QAModel):
         for i, index in enumerate(predicted_indices):
             if index >= 0:
                 g = graphs[i][index]
-                retrieved_answers = wikidata.query_graph_denotations(g)
-                retrieved_answers = wikidata.map_query_results(retrieved_answers)
+                retrieved_answers = wdaccess.query_graph_denotations(g)
+                retrieved_answers = wdaccess.map_query_results(retrieved_answers)
                 _, _, f1 = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers)
                 if f1:
                     successes.append((i, f1, g))
