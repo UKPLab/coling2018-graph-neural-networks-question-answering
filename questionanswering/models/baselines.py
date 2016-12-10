@@ -33,7 +33,7 @@ class LabelOverlapModel(QAModel):
                 g = graphs[i][index]
                 retrieved_answers = wdaccess.query_graph_denotations(g)
                 retrieved_answers = wdaccess.map_query_results(retrieved_answers)
-                _, _, f1 = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers)
+                _, _, f1 = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers[i], retrieved_answers)
                 if f1:
                     successes.append((i, f1, g))
                 avg_f1 += f1
