@@ -4,8 +4,6 @@ import re
 import nltk
 from SPARQLWrapper import SPARQLWrapper, JSON
 
-from construction import stages
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
@@ -144,7 +142,7 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
                 sparql_relation_inst = sparql_hopup_values + sparql_relation_inst
                 variables.append("?hopup{}v".format(i))
 
-        if any(arg_type in edge for arg_type in stages.ARG_TYPES):
+        if any(arg_type in edge for arg_type in ['argmax', 'argmin']):
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_relation_time_argmax)
             sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
             sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
