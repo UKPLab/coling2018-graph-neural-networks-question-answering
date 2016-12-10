@@ -15,7 +15,7 @@ class LabelOverlapModel(QAModel):
     @staticmethod
     def encode_data_instance(instance):
         edge_vectors = deque()
-        tokens = instance[0].get("tokens", [])
+        tokens = instance[0].get("tokens", []) if instance else []
         for g_index, g in enumerate(instance):
             first_edge = g["edgeSet"][0] if 'edgeSet' in g else {}
             property_label = wdaccess.property2label.get(first_edge.get('kbID', '')[:-1], utils.unknown_word)
