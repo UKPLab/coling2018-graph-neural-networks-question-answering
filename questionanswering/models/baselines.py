@@ -18,7 +18,7 @@ class LabelOverlapModel(QAModel):
         tokens = instance[0].get("tokens", [])
         for g_index, g in enumerate(instance):
             first_edge = g["edgeSet"][0] if 'edgeSet' in g else {}
-            property_label = wikidata.property2label.get(first_edge.get('kbID', '')[:-1], utils.unknown_word)
+            property_label = wdaccess.property2label.get(first_edge.get('kbID', '')[:-1], utils.unknown_word)
             # property_label += " " + first_edge.get('type', '')
             edge_vectors.append(property_label.split())
         return tokens, edge_vectors
