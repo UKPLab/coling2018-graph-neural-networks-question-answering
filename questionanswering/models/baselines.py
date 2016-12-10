@@ -53,6 +53,6 @@ class LabelOverlapModel(QAModel):
         for edge_vector in edge_vectors:
             edge_vector = set(edge_vector)
             score = sum(1 for t in tokens if t in edge_vector)
-            predictions.apppend(score)
+            predictions.append(score)
         return np.argmax(predictions) if predictions else -1
 
