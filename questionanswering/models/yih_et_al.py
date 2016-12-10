@@ -6,6 +6,22 @@ import wikidata
 
 class CCNNModel(TrainableQAModel):
 
+    def test(self, data_with_targets):
+        pass
+
+    def apply_on_instance(self, instance):
+        pass
+
+    def apply_on_batch(self, data_batch):
+        pass
+
+    @staticmethod
+    def encode_data_instance(instance):
+        pass
+
+    def train(self, data):
+        pass
+
     def __init__(self, parameters):
         self._main_model, self._sibling_model = self._get_keras_model(parameters)
         self._character2idx = None
@@ -37,7 +53,7 @@ class CCNNModel(TrainableQAModel):
 
         return model, sibiling_model
 
-    def encode_data(self, data_with_targets):
+    def encode_data_for_training(self, data_with_targets):
         input_set, targets = data_with_targets
         if not self._character2idx:
             self._character2idx = input_to_indices.get_character_index([" ".join(graphs[0]['tokens']) for graphs in input_set])
