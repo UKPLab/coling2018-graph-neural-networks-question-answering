@@ -23,7 +23,7 @@ class WebQuestions(Dataset):
         # Load the choice graphs. Choice graphs are all graph derivable from each sentence.
         with open(path_to_dataset["webquestions.examples.train.choicegraphs"]) as f:
             self._choice_graphs = json.load(f)
-            self._choice_graphs = [g[0] for g in self._choice_graphs]
+            self._choice_graphs = [[g[0] for g in graph_set] for graph_set in self._choice_graphs]
         assert len(self._dataset_tagged) == len(self._choice_graphs) == len(self._silver_graphs)
 
     def _get_samples(self, questions):
