@@ -1,10 +1,10 @@
 import keras
-from . import QAModel
+from . import TrainableQAModel
 from . import input_to_indices
 import wikidata
 
 
-class CCNNModel(QAModel):
+class CCNNModel(TrainableQAModel):
 
     def __init__(self, parameters):
         self._main_model, self._sibling_model = self._get_keras_model(parameters)
@@ -37,11 +37,11 @@ class CCNNModel(QAModel):
 
         return model, sibiling_model
 
-    def encode_data(self, data):
-        input_set, targets = data
+    def encode_data(self, data_with_targets):
+        input_set, targets = data_with_targets
         if not self._character2idx:
             self._character2idx = input_to_indices.get_character_index([" ".join(graphs[0]['tokens']) for graphs in input_set])
-        sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_character(data, self._character2idx, wikidata.property2label)
+        sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_character(input_set, self._character2idx, wikidata.property2label)
         targets_as_one_hot = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets_as_one_hot
 

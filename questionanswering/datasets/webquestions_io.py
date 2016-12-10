@@ -28,25 +28,26 @@ class WebQuestions(Dataset):
 
     def _get_samples(self, questions):
         indices = [q_obj['index'] for q_obj in questions
-                   if any(g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[q_obj['index']]]
+                   if any(g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[
+                       q_obj['index']]]
         return self._get_indexed_samples(indices)
 
     def _get_indexed_samples(self, indices):
-        resulting_set = []
+        graph_lists = []
         targets = []
         for index in indices:
-            instance = self._silver_graphs[index]
+            graph_list = self._silver_graphs[index]
             negative_pool = [n_g for n_g in self._choice_graphs[index]
-                             if all(n_g.get('edgeSet', []) != g.get('edgeSet', []) for g in instance)]
-            negative_pool_size = 30 - len(instance)
-            instance += [(n_g,) for n_g in np.random.choice(negative_pool,
-                                                            negative_pool_size,
-                                                            replace=len(negative_pool) < negative_pool_size)]
-            np.random.shuffle(instance)
-            target = np.argmax([g[1][2] if len(g) > 1 else 0.0 for g in instance])
-            resulting_set.append(instance)
-            resulting_set.append(target)
-        return resulting_set, targets
+                             if all(n_g.get('edgeSet', []) != g.get('edgeSet', []) for g in graph_list)]
+            negative_pool_size = 30 - len(graph_list)
+            graph_list += [(n_g,) for n_g in np.random.choice(negative_pool,
+                                                              negative_pool_size,
+                                                              replace=len(negative_pool) < negative_pool_size)]
+            np.random.shuffle(graph_list)
+            target = np.argmax([g[1][2] if len(g) > 1 else 0.0 for g in graph_list])
+            graph_lists.append(graph_list)
+            targets.append(target)
+        return graph_lists, targets
 
     def get_training_samples(self):
         return self._get_samples(self._questions_train)
@@ -56,10 +57,22 @@ class WebQuestions(Dataset):
 
     def get_training_generator(self, questions, batch_size):
         indices = [q_obj['index'] for q_obj in questions
-                   if any(g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[q_obj['index']]]
+                   if any(g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[
+                       q_obj['index']]]
         for i in itertools.cycle(range(0, len(indices), batch_size)):
             batch_indices = indices[i:i + batch_size]
             yield self._get_indexed_samples(batch_indices)
+
+    def get_validation_with_gold(self):
+        graph_lists = []
+        gold_answers = []
+        for q_obj in self._questions_val:
+            index = q_obj['index']
+            graph_list = self._choice_graphs[index]
+            gold_answer = [e.lower() for e in get_answers_from_question(q_obj)]
+            graph_lists.append(graph_list)
+            gold_answers.append(gold_answer)
+        return graph_lists, gold_answers
 
 
 def get_answers_from_question(question_object):

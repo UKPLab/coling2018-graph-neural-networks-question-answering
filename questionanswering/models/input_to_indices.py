@@ -14,7 +14,7 @@ def encode_by_tokens(graphs, max_sent_len, max_property_len, word2idx, property2
     edges_matrix = np.zeros((len(graphs), max_property_len), dtype="int32")
 
     for index, g in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
-        token_ids = [utils.get_idx(t, word2idx) for t in  g.get("tokens", [])][:max_sent_len]
+        token_ids = [utils.get_idx(t, word2idx) for t in g.get("tokens", [])][:max_sent_len]
         sentences_matrix[index, :len(token_ids)] = token_ids
         if g["edgeSet"]:
             property_label = property2label.get(g["edgeSet"][0]['kbID'][:-1], utils.unknown_word)
@@ -58,6 +58,7 @@ def encode_batch_by_character(graphs, character2idx, property2label, max_input_l
             edge_ids = edge_ids[:max_input_len]
             edges_matrix[index, i, :len(edge_ids)] = edge_ids
     return sentences_matrix, edges_matrix
+
 
 def encode_by_character(graph_set, character2idx, property2label):
     sentence_str = " ".join(graph_set[0].get("tokens", []))
