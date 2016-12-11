@@ -45,7 +45,7 @@ def possible_subentities(entity_tokens, entity_type):
     return new_entities
 
 
-def link_entity(entity, try_subentities=True):
+def link_entity(entity, try_subentities=True, max_options=3):
     """
     Link the given list of tokens to an entity in a knowledge base. If none linkings is found try all combinations of
     subtokens of the given entity.
@@ -67,5 +67,5 @@ def link_entity(entity, try_subentities=True):
                 linkings = wdaccess.query_wikidata(wdaccess.entity_query(" ".join(subentities.pop(0))))
     linkings = [l.get("e20", "") for l in linkings if l]
     linkings = sorted(linkings, key=lambda k: int(k[1:]))
-    linkings = linkings[:3]
+    linkings = linkings[:max_options]
     return linkings

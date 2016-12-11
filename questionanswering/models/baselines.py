@@ -25,6 +25,7 @@ class LabelOverlapModel(QAModel):
 
     def test(self, data_with_gold):
         graphs, gold_answers = data_with_gold
+        graphs = self.restrict_to_one_entity(graphs)
         predicted_indices = self.apply_on_batch(graphs)
         successes = deque()
         avg_f1 = 0.0
@@ -55,4 +56,21 @@ class LabelOverlapModel(QAModel):
             score = sum(1 for t in tokens if t in edge_vector)
             predictions.append(score)
         return np.argmax(predictions) if predictions else -1
+
+    @staticmethod
+    def restrict_to_one_entity(data_batch):
+        new_data_batch = []
+        for instance in data_batch:
+            graph_with_entity_id = []
+            for g in instance:
+                if 'edgeSet' in g:
+                    first_edge = g["edgeSet"][0]
+                    graph_with_entity_id.append((int(first_edge['rightkbID'][1:]), g))
+            first_entity = sorted([i for i, _ in graph_with_entity_id])[0]
+            selected_graphs = [g for i, g in graph_with_entity_id if i == first_entity]
+            new_data_batch.append(selected_graphs)
+        return new_data_batch
+
+
+
 
