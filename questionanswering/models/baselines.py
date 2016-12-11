@@ -15,17 +15,20 @@ class LabelOverlapModel(QAModel):
     @staticmethod
     def encode_data_instance(instance):
         edge_vectors = deque()
+        edge_entities = []
         tokens = instance[0].get("tokens", []) if instance else []
         for g_index, g in enumerate(instance):
             first_edge = g["edgeSet"][0] if 'edgeSet' in g else {}
             property_label = wdaccess.property2label.get(first_edge.get('kbID', '')[:-1], utils.unknown_word)
             # property_label += " " + first_edge.get('type', '')
             edge_vectors.append(property_label.split())
-        return tokens, edge_vectors
+            edge_entities.append(int(first_edge['rightkbID'][1:]))
+        edge2idx = {e: i for i, e in enumerate(sorted(edge_entities, reverse=True))}
+        edge_entities = [edge2idx.get(e, 0) for e in edge_entities]
+        return tokens, edge_vectors, edge_entities
 
     def test(self, data_with_gold):
         graphs, gold_answers = data_with_gold
-        graphs = self.restrict_to_one_entity(graphs)
         predicted_indices = self.apply_on_batch(graphs)
         successes = deque()
         avg_f1 = 0.0
@@ -53,11 +56,11 @@ class LabelOverlapModel(QAModel):
         return predicted_indices
 
     def apply_on_instance(self, instance):
-        tokens, edge_vectors = self.encode_data_instance(instance)
+        tokens, edge_vectors, edge_entities = self.encode_data_instance(instance)
         predictions = deque()
-        for edge_vector in edge_vectors:
+        for i, edge_vector in enumerate(edge_vectors):
             edge_vector = set(edge_vector)
-            score = sum(1 for t in tokens if t in edge_vector)
+            score = sum(1 for t in tokens if t in edge_vector) + edge_entities[i]
             predictions.append(score)
         return np.argsort(predictions)[::-1]
 
