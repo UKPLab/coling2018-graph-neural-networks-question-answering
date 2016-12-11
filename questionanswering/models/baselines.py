@@ -30,9 +30,9 @@ class LabelOverlapModel(QAModel):
         successes = deque()
         avg_f1 = 0.0
         for i, sorted_indices in enumerate(predicted_indices):
+            sorted_indices = deque(sorted_indices)
             if sorted_indices:
                 retrieved_answers = []
-                sorted_indices = deque(sorted_indices)
                 while not retrieved_answers and sorted_indices:
                     index = sorted_indices.pop(0)
                     g = graphs[i][index]
