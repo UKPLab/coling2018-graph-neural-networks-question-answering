@@ -29,10 +29,14 @@ class LabelOverlapModel(QAModel):
         predicted_indices = self.apply_on_batch(graphs)
         successes = deque()
         avg_f1 = 0.0
-        for i, index in enumerate(predicted_indices):
-            if index >= 0:
-                g = graphs[i][index]
-                retrieved_answers = wdaccess.query_graph_denotations(g)
+        for i, sorted_indices in enumerate(predicted_indices):
+            if sorted_indices:
+                retrieved_answers = []
+                sorted_indices = deque(sorted_indices)
+                while not retrieved_answers and sorted_indices:
+                    index = sorted_indices.pop(0)
+                    g = graphs[i][index]
+                    retrieved_answers = wdaccess.query_graph_denotations(g)
                 retrieved_answers = wdaccess.map_query_results(retrieved_answers)
                 _, _, f1 = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers[i], retrieved_answers)
                 if f1:
@@ -55,7 +59,7 @@ class LabelOverlapModel(QAModel):
             edge_vector = set(edge_vector)
             score = sum(1 for t in tokens if t in edge_vector)
             predictions.append(score)
-        return np.argmax(predictions) if predictions else -1
+        return np.argsort(predictions)
 
     @staticmethod
     def restrict_to_one_entity(data_batch):
