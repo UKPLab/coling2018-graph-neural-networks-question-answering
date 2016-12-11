@@ -34,7 +34,7 @@ class LabelOverlapModel(QAModel):
             if sorted_indices:
                 retrieved_answers = []
                 while not retrieved_answers and sorted_indices:
-                    index = sorted_indices.pop(0)
+                    index = sorted_indices.popleft()
                     g = graphs[i][index]
                     retrieved_answers = wdaccess.query_graph_denotations(g)
                 retrieved_answers = wdaccess.map_query_results(retrieved_answers)
