@@ -59,7 +59,7 @@ class LabelOverlapModel(QAModel):
             edge_vector = set(edge_vector)
             score = sum(1 for t in tokens if t in edge_vector)
             predictions.append(score)
-        return np.argsort(predictions)
+        return np.argsort(predictions)[::-1]
 
     @staticmethod
     def restrict_to_one_entity(data_batch):
