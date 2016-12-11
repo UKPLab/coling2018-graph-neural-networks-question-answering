@@ -66,7 +66,7 @@ class LabelOverlapModel(QAModel):
                 if 'edgeSet' in g:
                     first_edge = g["edgeSet"][0]
                     graph_with_entity_id.append((int(first_edge['rightkbID'][1:]), g))
-            first_entity = sorted([i for i, _ in graph_with_entity_id])[0]
+            first_entity = sorted([i for i, _ in graph_with_entity_id])[0] if graph_with_entity_id else 0
             selected_graphs = [g for i, g in graph_with_entity_id if i == first_entity]
             new_data_batch.append(selected_graphs)
         return new_data_batch
