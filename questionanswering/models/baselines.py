@@ -1,16 +1,13 @@
 from collections import deque
 
 import utils
-from . import QAModel
+from . import QAModel, TrainableQAModel
 from wikidata import wdaccess
 import numpy as np
 from datasets import evaluation
 
 
 class LabelOverlapModel(QAModel):
-
-    def __init__(self):
-        pass
 
     @staticmethod
     def encode_data_instance(instance):
@@ -79,5 +76,25 @@ class LabelOverlapModel(QAModel):
         return new_data_batch
 
 
+class BagOfWordsModel(QAModel):
 
+    @staticmethod
+    def encode_data_instance(instance):
+        tokens, edge_vectors, edge_entities = QAModel.encode_data_instance(instance)
+        return tokens, edge_vectors, edge_entities
+
+    def encode_data_for_training(self, data_with_targets):
+        pass
+
+    def train(self, data):
+        pass
+
+    def apply_on_batch(self, data_batch):
+        pass
+
+    def apply_on_instance(self, instance):
+        pass
+
+    def test(self, data_with_targets):
+        pass
 
