@@ -1,12 +1,16 @@
 import abc
+import logging
 
 
 class QAModel:
     __metaclass__ = abc.ABCMeta
 
-    @staticmethod
+    def __init__(self, **kwargs):
+        if not hasattr(self, 'logger'):
+            self.logger = logging.getLogger(__name__)
+
     @abc.abstractmethod
-    def encode_data_instance(instance):
+    def encode_data_instance(self, instance):
         """
         Encode a single data instance in a format acceptable by the model.
         A data instance is a list of possible graphs.
@@ -16,7 +20,7 @@ class QAModel:
         """
 
     @abc.abstractmethod
-    def test(self, data_with_targets):
+    def test(self, data_with_targets, verbose=False):
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -31,8 +35,11 @@ class QAModel:
 class TrainableQAModel(QAModel):
     __metaclass__ = abc.ABCMeta
 
+    def __init__(self, **kwargs):
+        super(TrainableQAModel, self).__init__(**kwargs)
+
     @abc.abstractmethod
-    def train(self, data):
+    def train(self, data_with_targets):
         raise NotImplementedError
 
     @abc.abstractmethod

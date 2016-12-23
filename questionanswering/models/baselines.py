@@ -1,5 +1,7 @@
 from collections import deque
 import nltk
+import tqdm
+from sklearn import linear_model
 
 import utils
 from . import QAModel, TrainableQAModel
@@ -10,8 +12,10 @@ from datasets import evaluation
 
 class LabelOverlapModel(QAModel):
 
-    @staticmethod
-    def encode_data_instance(instance):
+    def __init__(self, **kwargs):
+        super(LabelOverlapModel, self).__init__(**kwargs)
+
+    def encode_data_instance(self, instance):
         edge_vectors = deque()
         edge_entities = []
         tokens = instance[0].get("tokens", []) if instance else []
@@ -21,16 +25,16 @@ class LabelOverlapModel(QAModel):
             # property_label += " " + first_edge.get('type', '')
             edge_vectors.append(property_label.split())
             edge_entities.append(int(first_edge['rightkbID'][1:]))
-        edge2idx = {e: i for i, e in enumerate(sorted(edge_entities, reverse=True))}
+        edge2idx = {e: i for i, e in enumerate(sorted(set(edge_entities), reverse=True))}
         edge_entities = [edge2idx.get(e, 0) for e in edge_entities]
         return tokens, edge_vectors, edge_entities
 
-    def test(self, data_with_gold):
+    def test(self, data_with_gold, verbose=False):
         graphs, gold_answers = data_with_gold
         predicted_indices = self.apply_on_batch(graphs)
         successes = deque()
         avg_f1 = 0.0
-        for i, sorted_indices in enumerate(predicted_indices):
+        for i, sorted_indices in enumerate(tqdm.tqdm(predicted_indices, ascii=True, disable=(not verbose))):
             sorted_indices = deque(sorted_indices)
             if sorted_indices:
                 retrieved_answers = []
@@ -77,38 +81,49 @@ class LabelOverlapModel(QAModel):
         return new_data_batch
 
 
-class BagOfWordsModel(QAModel):
+class BagOfWordsModel(LabelOverlapModel):
 
-    def __init__(self, input_set, threshold=1000):
-        encoded_input = [QAModel.encode_data_instance(instance) for instance in input_set]
-        question_fdist = nltk.FreqDist([t for tokens, _, _ in encoded_input for t in tokens])
-        edge_fdist = nltk.FreqDist([t for _, tokens, _ in encoded_input for t in tokens])
-        self.question_vocabulary = [t for t, _ in question_fdist.most_common(threshold)]
-        self.edge_vocabulary = [t for t, _ in edge_fdist.most_common(threshold)]
+    def __init__(self, threshold=1000, **kwargs):
+        self.question_vocabulary = []
+        self.edge_vocabulary = []
+        self.threshold = threshold
+        self.model = linear_model.LogisticRegression()
+        super(BagOfWordsModel, self).__init__(**kwargs)
 
-    @staticmethod
-    def encode_data_instance(instance):
-        tokens, edge_vectors, edge_entities = QAModel.encode_data_instance(instance)
+    def encode_data_instance(self, instance):
+        tokens, edge_vectors, edge_entities = LabelOverlapModel.encode_data_instance(self, instance)
+        tokens = set(tokens)
+        tokens_encoded = [int(t in tokens) for t in self.question_vocabulary]
+        edges_encoded = [[int(t in edge_vector) for t in self.edge_vocabulary] for edge_vector in edge_vectors]
+        return tokens_encoded, edges_encoded, edge_entities
 
-        return tokens, edge_vectors, edge_entities
-
-    def encode_data_for_training(self, data_with_targets):
+    def encode_data_for_training(self, data_with_targets, verbose=False):
         input_set, targets = data_with_targets
-        encoded_input = [QAModel.encode_data_instance(instance) for instance in input_set]
-        self.question_vocabulary = nltk.FreqDist([t for tokens, _, _ in encoded_input for t in tokens])
-        self.edge_vocabulary = nltk.FreqDist([t for _, tokens, _ in encoded_input for t in tokens])
+        input_encoded, targets_encoded = deque(), deque()
+        for index, instance in enumerate(tqdm.tqdm(input_set, ascii=True, disable=(not verbose))):
+            tokens_encoded, edges_encoded, _ = self.encode_data_instance(instance)
+            for e_index, edge_encoding in enumerate(edges_encoded):
+                input_encoded.append(tokens_encoded + edge_encoding)
+                targets_encoded.append(1 if targets[index] == e_index else 0)
 
-        pass
+        return np.asarray(input_encoded, dtype='int8'), np.asarray(targets_encoded, dtype='int8')
 
-    def train(self, data):
-        pass
+    def train(self, data_with_targets):
+        encoded_input = [LabelOverlapModel.encode_data_instance(self, instance) for instance in data_with_targets[0]]
+        question_fdist = nltk.FreqDist([t for tokens, _, _ in encoded_input for t in tokens])
+        edge_fdist = nltk.FreqDist([t for _, edges, _ in encoded_input for edge in edges for t in edge])
+        self.question_vocabulary = [t for t, _ in question_fdist.most_common(self.threshold)]
+        self.edge_vocabulary = [t for t, _ in edge_fdist.most_common(self.threshold)]
 
-    def apply_on_batch(self, data_batch):
-        pass
+        input_set, targets = self.encode_data_for_training(data_with_targets)
+        self.model.fit(input_set, targets)
+        self.logger.debug("Model training is finished.")
 
     def apply_on_instance(self, instance):
-        pass
-
-    def test(self, data_with_targets):
-        pass
-
+        tokens_encoded, edges_encoded, edge_entities = self.encode_data_instance(instance)
+        input_encoded = []
+        for edge_encoding in edges_encoded:
+            input_encoded.append(tokens_encoded + edge_encoding)
+        predictions = self.model.predict_proba(input_encoded) if input_encoded else []
+        predictions = [p[1] for p in predictions]
+        return np.argsort(predictions)[::-1]
