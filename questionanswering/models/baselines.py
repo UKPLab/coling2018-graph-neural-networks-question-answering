@@ -1,4 +1,5 @@
 from collections import deque
+import nltk
 
 import utils
 from . import QAModel, TrainableQAModel
@@ -78,12 +79,25 @@ class LabelOverlapModel(QAModel):
 
 class BagOfWordsModel(QAModel):
 
+    def __init__(self, input_set, threshold=1000):
+        encoded_input = [QAModel.encode_data_instance(instance) for instance in input_set]
+        question_fdist = nltk.FreqDist([t for tokens, _, _ in encoded_input for t in tokens])
+        edge_fdist = nltk.FreqDist([t for _, tokens, _ in encoded_input for t in tokens])
+        self.question_vocabulary = [t for t, _ in question_fdist.most_common(threshold)]
+        self.edge_vocabulary = [t for t, _ in edge_fdist.most_common(threshold)]
+
     @staticmethod
     def encode_data_instance(instance):
         tokens, edge_vectors, edge_entities = QAModel.encode_data_instance(instance)
+
         return tokens, edge_vectors, edge_entities
 
     def encode_data_for_training(self, data_with_targets):
+        input_set, targets = data_with_targets
+        encoded_input = [QAModel.encode_data_instance(instance) for instance in input_set]
+        self.question_vocabulary = nltk.FreqDist([t for tokens, _, _ in encoded_input for t in tokens])
+        self.edge_vocabulary = nltk.FreqDist([t for _, tokens, _ in encoded_input for t in tokens])
+
         pass
 
     def train(self, data):
