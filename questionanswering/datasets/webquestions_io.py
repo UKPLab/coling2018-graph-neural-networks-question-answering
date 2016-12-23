@@ -28,7 +28,7 @@ class WebQuestions(Dataset):
 
     def _get_samples(self, questions):
         indices = [q_obj['index'] for q_obj in questions
-                   if any(g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[
+                   if any(len(g) > 1 and g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[
                        q_obj['index']]]
         return self._get_indexed_samples(indices)
 
@@ -38,13 +38,15 @@ class WebQuestions(Dataset):
         for index in indices:
             graph_list = self._silver_graphs[index]
             negative_pool = [n_g for n_g in self._choice_graphs[index]
-                             if all(n_g.get('edgeSet', []) != g.get('edgeSet', []) for g in graph_list)]
+                             if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
             negative_pool_size = 30 - len(graph_list)
-            graph_list += [(n_g,) for n_g in np.random.choice(negative_pool,
-                                                              negative_pool_size,
-                                                              replace=len(negative_pool) < negative_pool_size)]
+            if negative_pool:
+                graph_list += [(n_g,) for n_g in np.random.choice(negative_pool,
+                                                                  negative_pool_size,
+                                                                  replace=len(negative_pool) < negative_pool_size)]
             np.random.shuffle(graph_list)
             target = np.argmax([g[1][2] if len(g) > 1 else 0.0 for g in graph_list])
+            graph_list = [el[0] for el in graph_list]
             graph_lists.append(graph_list)
             targets.append(target)
         return graph_lists, targets
@@ -57,8 +59,8 @@ class WebQuestions(Dataset):
 
     def get_training_generator(self, questions, batch_size):
         indices = [q_obj['index'] for q_obj in questions
-                   if any(g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[
-                       q_obj['index']]]
+                   if any(len(g) > 1 and g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and
+                   self._choice_graphs[q_obj['index']]]
         for i in itertools.cycle(range(0, len(indices), batch_size)):
             batch_indices = indices[i:i + batch_size]
             yield self._get_indexed_samples(batch_indices)
