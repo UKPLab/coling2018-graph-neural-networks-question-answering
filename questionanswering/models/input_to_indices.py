@@ -53,7 +53,7 @@ def encode_batch_by_character(graphs, character2idx, property2label, max_input_l
         assert len(edges_ids) == edges_matrix.shape[1]
         sentence_ids = sentence_ids[:max_input_len]
         sentences_matrix[index, :len(sentence_ids)] = sentence_ids
-        edges_ids = [edges_ids]
+        # edges_ids = [edges_ids] # What was that??
         for i, edge_ids in enumerate(edges_ids):
             edge_ids = edge_ids[:max_input_len]
             edges_matrix[index, i, :len(edge_ids)] = edge_ids

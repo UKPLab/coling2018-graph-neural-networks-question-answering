@@ -1,6 +1,6 @@
 import abc
 import logging
-
+from collections import deque
 
 class QAModel:
     __metaclass__ = abc.ABCMeta
@@ -41,9 +41,11 @@ class QAModel:
         print("Successful predictions: {} ({})".format(len(successes), len(successes)/len(gold_answers)))
         print("Average f1: {}".format(avg_f1))
 
-    @abc.abstractmethod
     def apply_on_batch(self, data_batch):
-        raise NotImplementedError
+        predicted_indices = deque()
+        for instance in data_batch:
+            predicted_indices.append(self.apply_on_instance(instance))
+        return predicted_indices
 
     @abc.abstractmethod
     def apply_on_instance(self, instance):
@@ -57,7 +59,7 @@ class TrainableQAModel(QAModel):
         super(TrainableQAModel, self).__init__(**kwargs)
 
     @abc.abstractmethod
-    def train(self, data_with_targets):
+    def train(self, data_with_targets, validation_with_targets=None):
         raise NotImplementedError
 
     @abc.abstractmethod

@@ -7,7 +7,6 @@ import utils
 from . import QAModel, TrainableQAModel
 from wikidata import wdaccess
 import numpy as np
-from datasets import evaluation
 
 
 class LabelOverlapModel(QAModel):
@@ -28,12 +27,6 @@ class LabelOverlapModel(QAModel):
         edge2idx = {e: i for i, e in enumerate(sorted(set(edge_entities), reverse=True))}
         edge_entities = [edge2idx.get(e, 0) for e in edge_entities]
         return tokens, edge_vectors, edge_entities
-
-    def apply_on_batch(self, data_batch):
-        predicted_indices = deque()
-        for instance in data_batch:
-            predicted_indices.append(self.apply_on_instance(instance))
-        return predicted_indices
 
     def apply_on_instance(self, instance):
         tokens, edge_vectors, edge_entities = self.encode_data_instance(instance)
@@ -65,7 +58,7 @@ class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
         self.question_vocabulary = []
         self.edge_vocabulary = []
         self.threshold = threshold
-        self.model = linear_model.LogisticRegression()
+        self._model = linear_model.LogisticRegression()
         super(BagOfWordsModel, self).__init__(**kwargs)
 
     def encode_data_instance(self, instance):
@@ -86,7 +79,7 @@ class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
 
         return np.asarray(input_encoded, dtype='int8'), np.asarray(targets_encoded, dtype='int8')
 
-    def train(self, data_with_targets):
+    def train(self, data_with_targets, **kwargs):
         encoded_input = [LabelOverlapModel.encode_data_instance(self, instance) for instance in data_with_targets[0]]
         question_fdist = nltk.FreqDist([t for tokens, _, _ in encoded_input for t in tokens])
         edge_fdist = nltk.FreqDist([t for _, edges, _ in encoded_input for edge in edges for t in edge])
@@ -94,7 +87,7 @@ class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
         self.edge_vocabulary = [t for t, _ in edge_fdist.most_common(self.threshold)]
 
         input_set, targets = self.encode_data_for_training(data_with_targets)
-        self.model.fit(input_set, targets)
+        self._model.fit(input_set, targets)
         self.logger.debug("Model training is finished.")
 
     def apply_on_instance(self, instance):
@@ -102,6 +95,6 @@ class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
         input_encoded = []
         for edge_encoding in edges_encoded:
             input_encoded.append(tokens_encoded + edge_encoding)
-        predictions = self.model.predict_proba(input_encoded) if input_encoded else []
+        predictions = self._model.predict_proba(input_encoded) if input_encoded else []
         predictions = [p[1] for p in predictions]
         return np.argsort(predictions)[::-1]
