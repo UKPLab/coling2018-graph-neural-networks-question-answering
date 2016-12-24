@@ -8,6 +8,13 @@ from . import Dataset
 
 class WebQuestions(Dataset):
     def __init__(self, path_to_dataset):
+        """
+        An object class to access the webquestion dataset. The path to the dataset should point to a folder that
+        contains a preprocessed dataset.
+
+        :param path_to_dataset: path to the data set location
+        """
+        # TODO: Tests needed!
         # Load the train questions
         with open(path_to_dataset["webquestions.examples.train.train"]) as f:
             self._questions_train = json.load(f)
@@ -52,13 +59,35 @@ class WebQuestions(Dataset):
         return graph_lists, targets
 
     def get_training_samples(self):
+        """
+        Get a set of training samples. A tuple is returned where the first element is a list of
+        graph sets and the second element is a list of indices. An index points to the correct graph parse
+        from the corresponding graph set. Graph sets are all of size 30, negative graphs are subsampled or
+        repeatedly sampled if there are more or less negative graphs respectively.
+        Graph are stored in triples, where the first element is the graph.
+
+        :return: a set of training samples.
+        """
         return self._get_samples(self._questions_train)
 
     def get_validation_samples(self):
+        """
+        See the documentation for get_training_samples
+
+        :return: a set of validation samples distinct from the training samples.
+        """
         return self._get_samples(self._questions_val)
 
-    def get_training_generator(self, questions, batch_size):
-        indices = [q_obj['index'] for q_obj in questions
+    def get_training_generator(self, batch_size):
+        """
+        Get a set of training samples as a cyclic generator. Negative samples are generated randomly at
+        each step.
+        Warning: This generator is endless, make sure you have a stopping condition.
+
+        :param batch_size: The size of a batch to return at each step
+        :return: a generation that continuously returns batch of training data.
+        """
+        indices = [q_obj['index'] for q_obj in self._questions_train
                    if any(len(g) > 1 and g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and
                    self._choice_graphs[q_obj['index']]]
         for i in itertools.cycle(range(0, len(indices), batch_size)):
@@ -66,6 +95,14 @@ class WebQuestions(Dataset):
             yield self._get_indexed_samples(batch_indices)
 
     def get_validation_with_gold(self):
+        """
+        Return the validation set with gold answers.
+        Returned is a tuple where the first element is a list of graph sets and the second is a list of gold answers.
+        Graph sets are of various length and include all possible valid parses of a question, gold answers is a list
+        of lists of answers for each qustion. Each answer is a string that might contain multiple tokens.
+
+        :return: a tuple of graphs to choose from and gokd answers
+        """
         graph_lists = []
         gold_answers = []
         for q_obj in self._questions_val:
