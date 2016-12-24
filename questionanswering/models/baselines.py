@@ -29,28 +29,6 @@ class LabelOverlapModel(QAModel):
         edge_entities = [edge2idx.get(e, 0) for e in edge_entities]
         return tokens, edge_vectors, edge_entities
 
-    def test(self, data_with_gold, verbose=False):
-        graphs, gold_answers = data_with_gold
-        predicted_indices = self.apply_on_batch(graphs)
-        successes = deque()
-        avg_f1 = 0.0
-        for i, sorted_indices in enumerate(tqdm.tqdm(predicted_indices, ascii=True, disable=(not verbose))):
-            sorted_indices = deque(sorted_indices)
-            if sorted_indices:
-                retrieved_answers = []
-                while not retrieved_answers and sorted_indices:
-                    index = sorted_indices.popleft()
-                    g = graphs[i][index]
-                    retrieved_answers = wdaccess.query_graph_denotations(g)
-                retrieved_answers = wdaccess.map_query_results(retrieved_answers)
-                _, _, f1 = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers[i], retrieved_answers)
-                if f1:
-                    successes.append((i, f1, g))
-                avg_f1 += f1
-        avg_f1 /= len(gold_answers)
-        print("Successful predictions: {} ({})".format(len(successes), len(successes)/len(gold_answers)))
-        print("Average f1: {}".format(avg_f1))
-
     def apply_on_batch(self, data_batch):
         predicted_indices = deque()
         for instance in data_batch:
@@ -81,7 +59,7 @@ class LabelOverlapModel(QAModel):
         return new_data_batch
 
 
-class BagOfWordsModel(LabelOverlapModel):
+class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
 
     def __init__(self, threshold=1000, **kwargs):
         self.question_vocabulary = []
