@@ -6,3 +6,14 @@ logger:
 experiments:
   max_sent_len: 70
   max_property_len: 60
+
+# dataset:
+
+webquestions:
+  train_train: "../data/input/webquestions.examples.train.train.json"
+  train_validation: "../data/input/webquestions.examples.train.validation.json"
+  train_tagged: "../data/generated/webquestions.examples.train.utterances.tagged.json"
+  train_silvergraphs: "../data/generated/webquestions.examples.train.silvergraphs.full_11_29.json"
+  train_choicegraphs: "../data/generated/webquestions.examples.train.choice_graphs.json"
+
+

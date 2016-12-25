@@ -16,19 +16,19 @@ class WebQuestions(Dataset):
         """
         # TODO: Tests needed!
         # Load the train questions
-        with open(path_to_dataset["webquestions.examples.train.train"]) as f:
+        with open(path_to_dataset["train_train"]) as f:
             self._questions_train = json.load(f)
         # Load the validation questions
-        with open(path_to_dataset["webquestions.examples.train.validation"]) as f:
+        with open(path_to_dataset["train_validation"]) as f:
             self._questions_val = json.load(f)
         # Load the tagged version
-        with open(path_to_dataset["webquestions.examples.train.tagged"]) as f:
+        with open(path_to_dataset["train_tagged"]) as f:
             self._dataset_tagged = json.load(f)
         # Load the generated graphs
-        with open(path_to_dataset["webquestions.examples.train.silvergraphs"]) as f:
+        with open(path_to_dataset["train_silvergraphs"]) as f:
             self._silver_graphs = json.load(f)
         # Load the choice graphs. Choice graphs are all graph derivable from each sentence.
-        with open(path_to_dataset["webquestions.examples.train.choicegraphs"]) as f:
+        with open(path_to_dataset["train_choicegraphs"]) as f:
             self._choice_graphs = json.load(f)
             self._choice_graphs = [[g[0] for g in graph_set] for graph_set in self._choice_graphs]
         assert len(self._dataset_tagged) == len(self._choice_graphs) == len(self._silver_graphs)
