@@ -56,7 +56,7 @@ class WebQuestions(Dataset):
             graph_list = [el[0] for el in graph_list]
             graph_lists.append(graph_list)
             targets.append(target)
-        return graph_lists, targets
+        return graph_lists, np.asarray(targets, dtype='int32')
 
     def get_training_samples(self):
         """
