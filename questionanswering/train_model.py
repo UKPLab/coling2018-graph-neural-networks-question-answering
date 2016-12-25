@@ -3,12 +3,14 @@ import click
 import numpy as np
 import yaml
 import json
-import models
+
+from datasets import webquestions_io
+from models import baselines
 
 
 @click.command()
-@click.argument('config_file_path')
-@click.option('data_folder', default="../data")
+@click.argument('config_file_path', default="default_config.yaml")
+@click.option('-data_folder', default="../data")
 def train(config_file_path, data_folder):
     """
 
@@ -28,24 +30,17 @@ def train(config_file_path, data_folder):
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
 
-    with open(data_folder + "webquestions.examples.train.silvergraphs.full_11_29.json") as f:
-        webquestions_silver_graphs = json.load(f)
+    if "webquestions" not in config:
+        print("Dataset location not inthe config file!")
+        exit()
 
-    with open(data_folder + "properties-with-labels.txt") as infile:
-        property2label = {l.split("\t")[0] : l.split("\t")[1].strip() for l in infile.readlines()}
+    webquestions = webquestions_io.WebQuestions(config['webquestions'])
 
-    max_sent_len = config['experiments'].get('max_sent_len', 60)
-    max_property_len = config['experiments'].get('max_property_len', 60)
+    trainablemodel = baselines.BagOfWordsModel(config.get('model', {}), logger=logger)
 
-    trigram2idx = models.get_trigram_index()
-    logger.info("Trigram vocabulary size: {}".format(trigram2idx))
+    trainablemodel.train(webquestions.get_training_samples())
 
-    sentences_matrix, edges_matrix = models.encode_by_trigrams(webquestions_silver_graphs_for_training, trigram2idx, property2label)
-
-
-
-
-
+    trainablemodel.test_on_silver(webquestions.get_validation_samples())
 
 if __name__ == "__main__":
     train()

@@ -1,5 +1,5 @@
 logger:
-  level: INFO
+  level: DEBUG
 
 # global:
 
@@ -15,5 +15,8 @@ webquestions:
   train_tagged: "../data/generated/webquestions.examples.train.utterances.tagged.json"
   train_silvergraphs: "../data/generated/webquestions.examples.train.silvergraphs.full_11_29.json"
   train_choicegraphs: "../data/generated/webquestions.examples.train.choice_graphs.json"
+
+model:
+  threshold: 2000
 
 

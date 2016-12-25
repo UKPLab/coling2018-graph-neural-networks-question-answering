@@ -1,13 +1,20 @@
 import abc
 import logging
 from collections import deque
+import tqdm
+import numpy as np
+
+from wikidata import wdaccess
+from datasets import evaluation
 
 class QAModel:
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, **kwargs):
-        if not hasattr(self, 'logger'):
+    def __init__(self, logger=None, **kwargs):
+        if not logger:
             self.logger = logging.getLogger(__name__)
+        else:
+            self.logger = logger
 
     @abc.abstractmethod
     def encode_data_instance(self, instance):
@@ -40,6 +47,12 @@ class QAModel:
         avg_f1 /= len(gold_answers)
         print("Successful predictions: {} ({})".format(len(successes), len(successes)/len(gold_answers)))
         print("Average f1: {}".format(avg_f1))
+
+    def test_on_silver(self, data_with_targets, **kwargs):
+        graphs, targets = data_with_targets
+        predicted_targets = [indices[0] for indices in self.apply_on_batch(graphs)]
+        accuracy = np.sum(np.asarray(predicted_targets) == targets) / len(targets)
+        print("Accuarcy on silver tagets: {}".format(accuracy))
 
     def apply_on_batch(self, data_batch):
         predicted_indices = deque()

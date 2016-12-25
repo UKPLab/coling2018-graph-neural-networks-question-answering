@@ -54,12 +54,13 @@ class LabelOverlapModel(QAModel):
 
 class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
 
-    def __init__(self, threshold=1000, **kwargs):
+    def __init__(self, parameters, **kwargs):
         self.question_vocabulary = []
         self.edge_vocabulary = []
-        self.threshold = threshold
+        self.threshold = parameters['threshold'] if parameters else 1000
         self._model = linear_model.LogisticRegression()
         super(BagOfWordsModel, self).__init__(**kwargs)
+        self.logger.debug("Parameters: threshold={}".format(self.threshold))
 
     def encode_data_instance(self, instance):
         tokens, edge_vectors, edge_entities = LabelOverlapModel.encode_data_instance(self, instance)

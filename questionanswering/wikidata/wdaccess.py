@@ -300,7 +300,7 @@ def load_property_labels(path_to_property_labels):
         return return_map
     except Exception as ex:
         logger.error("No list found. {}".format(ex))
-        return set()
+        return {}
 
 
 def load_entity_map(path_to_map):
