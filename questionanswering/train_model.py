@@ -2,10 +2,10 @@ import logging
 import click
 import numpy as np
 import yaml
-import json
 
 from datasets import webquestions_io
 from models import baselines
+from wikidata import wdaccess
 
 
 @click.command()
@@ -41,6 +41,9 @@ def train(config_file_path, data_folder):
     trainablemodel.train(webquestions.get_training_samples())
 
     trainablemodel.test_on_silver(webquestions.get_validation_samples())
+
+    if config.get("wikidata", False):
+        trainablemodel.test(webquestions.get_validation_with_gold())
 
 if __name__ == "__main__":
     train()

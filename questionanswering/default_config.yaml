@@ -19,4 +19,6 @@ webquestions:
 model:
   threshold: 2000
 
+wikidata: False
+
 
