@@ -37,12 +37,14 @@ def train(config_file_path, data_folder):
 
     # trainablemodel = baselines.BagOfWordsModel(config.get('model', {}), logger=logger)
     trainablemodel = char_based.CharCNNModel(config.get('model', {}), logger=logger)
-    trainablemodel.train(webquestions.get_training_samples())
+    trainablemodel.train(webquestions.get_training_samples(), validation_with_targets=webquestions.get_validation_samples())
 
     trainablemodel.test_on_silver(webquestions.get_validation_samples())
 
     if config.get("wikidata", False):
-        trainablemodel.test(webquestions.get_validation_with_gold(), verbose=True)
+        validation_graph_lists, validation_gold_answers = webquestions.get_validation_with_gold()
+        print("Evaluate on {} validation questions.".format(len(validation_gold_answers)))
+        trainablemodel.test((validation_graph_lists, validation_gold_answers), verbose=True)
 
 if __name__ == "__main__":
     train()

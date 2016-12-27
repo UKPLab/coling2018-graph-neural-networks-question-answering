@@ -14,37 +14,50 @@ class KerasModel(TrainableQAModel):
     def __init__(self, parameters, **kwargs):
         self._p = parameters
         self._save_model_to = self._p['models.save.path']
+        self._model = None
         super(KerasModel, self).__init__(**kwargs)
 
     @abc.abstractmethod
     def _get_keras_model(self):
         """
-
-        :return:
+        Initialize tha structure of a Keras model and return an instance of a model to train. It may store other models
+        as instance variables.
+        :return: a Keras model to be trained
         """
 
     def train(self, data_with_targets, validation_with_targets=None):
+        self.logger.debug('Training process started.')
+
         encoded_for_training = self.encode_data_for_training(data_with_targets)
         input_set, targets = encoded_for_training[:-1], encoded_for_training[-1]
+        self.logger.debug('Data encoded for training.')
         callbacks = [
             keras.callbacks.EarlyStopping(monitor="val_loss" if validation_with_targets else "loss", patience=5, verbose=1),
-            keras.callbacks.ModelCheckpoint(self._save_model_to + "{}.kerasmodel".format(self.__class__.__name__), save_best_only=True)
+            keras.callbacks.ModelCheckpoint(self._save_model_to + "{}.kerasmodel".format(self.__class__.__name__),
+                                            monitor="val_loss" if validation_with_targets else "loss", save_best_only=True)
         ]
-        self._p['graph_choices'] = 30
-        self._model, self._sibling_model = self._get_keras_model(self._p)
+        self.logger.debug("Callbacks are initialized. Save models to: {}.kerasmodel".format(self._save_model_to + self.__class__.__name__))
+
+        self._p['graph.choices'] = 30
+        self.logger.debug(self._p)
+        self._model = self._get_keras_model()
         if validation_with_targets:
+            self.logger.debug("Start training with a validation sample.")
             encoded_validation = self.encode_data_for_training(validation_with_targets)
             callback_history = self._model.fit(list(input_set), targets,
-                                               nb_epoch=200, batch_size=128, verbose=1,
-                                               validation_data=(encoded_validation[:-1], encoded_validation[-1]),
+                                               nb_epoch=self._p.get("epochs", 200), batch_size=self._p.get("batch.size", 128),
+                                               verbose=1,
+                                               validation_data=(list(encoded_validation[:-1]), encoded_validation[-1]),
                                                callbacks=callbacks)
         else:
+            self.logger.debug("Start training without a validation sample.")
             callback_history = self._model.fit(list(input_set), targets,
-                                               nb_epoch=200, batch_size=128, verbose=1, callbacks=callbacks)
+                                               nb_epoch=self._p.get("epochs", 200), batch_size=self._p.get("batch.size", 128),
+                                               verbose=1, callbacks=callbacks)
         self.logger.debug("Model training is finished.")
 
 
-class CharCNNModel(TrainableQAModel):
+class CharCNNModel(KerasModel):
     def __init__(self, parameters, **kwargs):
         self._p = parameters
         self._model, self._sibling_model = None, None
@@ -64,41 +77,16 @@ class CharCNNModel(TrainableQAModel):
         sentence_ids, edges_ids = input_to_indices.encode_by_character(instance, self._character2idx, wdaccess.property2label)
         sentence_ids = np.asarray(sentence_ids[:self._p.get('max.sent.len', 70)], dtype="int32")
         edges_ids = np.asarray(edges_ids, dtype="int32")
-        edges_ids = edges_ids[:,:self._p.get('max.sent.len', 70)]
+        edges_ids = edges_ids[:, :self._p.get('max.sent.len', 70)]
         return sentence_ids, edges_ids
 
     def train(self, data_with_targets, validation_with_targets=None):
-        self.logger.debug('Training process started.')
         if not self._character2idx:
             self._character2idx = input_to_indices.get_character_index(
                 [" ".join(graphs[0]['tokens']) for graphs in data_with_targets[0] if graphs])
             self.logger.debug('Character index created, size: {}'.format(len(self._character2idx)))
-
-        encoded_for_training = self.encode_data_for_training(data_with_targets)
-        input_set, targets = encoded_for_training[:-1], encoded_for_training[-1]
-        self.logger.debug('Data encoded for training.')
-        callbacks = [
-            keras.callbacks.EarlyStopping(monitor="val_loss" if validation_with_targets else "loss", patience=5, verbose=1),
-            keras.callbacks.ModelCheckpoint(self._save_model_to + "{}.kerasmodel".format(self.__class__.__name__),
-                                            monitor="val_loss" if validation_with_targets else "loss", save_best_only=True)
-        ]
-        self.logger.debug("Callbacks are initialized. Save models to: {}.kerasmodel".format(self._save_model_to + self.__class__.__name__))
         self._p['vocab.size'] = len(self._character2idx)
-        self._p['graph.choices'] = 30
-        self.logger.debug(self._p)
-        self._model, self._sibling_model = self._get_keras_model()
-        if validation_with_targets:
-            self.logger.debug("Start training with a validation sample.")
-            encoded_validation = self.encode_data_for_training(validation_with_targets)
-            callback_history = self._model.fit(list(input_set), targets,
-                                           nb_epoch=200, batch_size=128, verbose=1,
-                                           validation_data=(encoded_validation[:-1], encoded_validation[-1]),
-                                           callbacks=callbacks)
-        else:
-            self.logger.debug("Start training without a validation sample.")
-            callback_history = self._model.fit(list(input_set), targets,
-                                               nb_epoch=200, batch_size=128, verbose=1, callbacks=callbacks)
-        self.logger.debug("Model training is finished.")
+        KerasModel.train(self, data_with_targets, validation_with_targets)
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
