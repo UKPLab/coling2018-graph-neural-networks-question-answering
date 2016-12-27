@@ -1,17 +1,19 @@
-import logging
 import click
-import numpy as np
 import yaml
+import numpy as np
+import logging
+from models import char_based
 
 from datasets import webquestions_io
-from models import baselines, char_based
 
 
 @click.command()
+@click.argument('path_to_model')
 @click.argument('config_file_path', default="default_config.yaml")
-def train(config_file_path):
+def test_model(path_to_model, config_file_path):
     """
 
+    :param path_to_model:
     :param config_file_path:
     :return:
     """
@@ -32,17 +34,18 @@ def train(config_file_path):
         exit()
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'])
-
-    # trainablemodel = baselines.BagOfWordsModel(config.get('model', {}), logger=logger)
     trainablemodel = char_based.CharCNNModel(parameters=config.get('model', {}), logger=logger)
-    trainablemodel.train(webquestions.get_training_samples(), validation_with_targets=webquestions.get_validation_samples())
+    trainablemodel.load_from_file(path_to_model)
 
+    print("Testing the model on silver data.")
     trainablemodel.test_on_silver(webquestions.get_validation_samples())
 
     if config.get("wikidata", False):
+        print("Testing the model on gold answers.")
         validation_graph_lists, validation_gold_answers = webquestions.get_validation_with_gold()
         print("Evaluate on {} validation questions.".format(len(validation_gold_answers)))
         trainablemodel.test((validation_graph_lists, validation_gold_answers), verbose=True)
 
+
 if __name__ == "__main__":
-    train()
+    test_model()
