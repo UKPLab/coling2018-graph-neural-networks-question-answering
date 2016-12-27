@@ -6,16 +6,22 @@ logger:
 # dataset:
 
 webquestions:
-  train_train: "../data/input/webquestions.examples.train.train.json"
-  train_validation: "../data/input/webquestions.examples.train.validation.json"
-  train_tagged: "../data/generated/webquestions.examples.train.utterances.tagged.json"
-  train_silvergraphs: "../data/generated/webquestions.examples.train.silvergraphs.full_11_29.json"
-  train_choicegraphs: "../data/generated/webquestions.examples.train.choice_graphs.json"
+  f1.samples.threshold: 0.1
+  max.silver.samples: 15
+  max.negative.samples: 30
+  path.to.dataset:
+    train_train: "../data/input/webquestions.examples.train.train.json"
+    train_validation: "../data/input/webquestions.examples.train.validation.json"
+    train_tagged: "../data/generated/webquestions.examples.train.utterances.tagged.json"
+    train_silvergraphs: "../data/generated/webquestions.examples.train.silvergraphs.full_11_29.json"
+    train_choicegraphs: "../data/generated/webquestions.examples.train.choice_graphs.json"
 
 model:
   threshold: 2000
   models.save.path: "../trainedmodels/"
   max.sent.len: 70
+  epochs: 40
+  batch.size: 128
   emb.dim: 50
   vocab.size: 0 #set automatically
   graph.choices: 10 #set automatically

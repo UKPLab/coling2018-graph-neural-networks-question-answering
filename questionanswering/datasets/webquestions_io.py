@@ -7,7 +7,8 @@ from . import Dataset
 
 
 class WebQuestions(Dataset):
-    def __init__(self, path_to_dataset):
+
+    def __init__(self, parameters, **kwargs):
         """
         An object class to access the webquestion dataset. The path to the dataset should point to a folder that
         contains a preprocessed dataset.
@@ -15,6 +16,8 @@ class WebQuestions(Dataset):
         :param path_to_dataset: path to the data set location
         """
         # TODO: Tests needed!
+        self._p = parameters
+        path_to_dataset = self._p["path.to.dataset"]
         # Load the train questions
         with open(path_to_dataset["train_train"]) as f:
             self._questions_train = json.load(f)
@@ -32,26 +35,26 @@ class WebQuestions(Dataset):
             self._choice_graphs = json.load(f)
             self._choice_graphs = [[g[0] for g in graph_set] for graph_set in self._choice_graphs]
         assert len(self._dataset_tagged) == len(self._choice_graphs) == len(self._silver_graphs)
+        super(WebQuestions, self).__init__(**kwargs)
 
     def _get_samples(self, questions):
         indices = [q_obj['index'] for q_obj in questions
-                   if any(len(g) > 1 and g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[
-                       q_obj['index']]]
+                   if any(len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
+                          for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[q_obj['index']]
+                   ]
         return self._get_indexed_samples(indices)
 
     def _get_indexed_samples(self, indices):
         graph_lists = []
         targets = []
-        print(type(self._silver_graphs[0][:15]))
         for index in indices:
             graph_list = self._silver_graphs[index]
-            # print(len(graph_list))
-            if len(graph_list) > 15:
-                print(index, len(graph_list))
-                graph_list = graph_list
+            # if len(graph_list) > 15:
+            #     print(index, len(graph_list))
+            graph_list = graph_list[:self._p.get("max.silver.samples", 15)]
             negative_pool = [n_g for n_g in self._choice_graphs[index]
                              if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
-            negative_pool_size = 30 - len(graph_list)
+            negative_pool_size = self._p.get("max.negative.samples", 30) - len(graph_list)
             if negative_pool:
                 graph_list += [(n_g,) for n_g in np.random.choice(negative_pool,
                                                                   negative_pool_size,
