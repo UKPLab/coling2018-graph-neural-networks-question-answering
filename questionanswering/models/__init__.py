@@ -58,7 +58,7 @@ class QAModel:
     def apply_on_batch(self, data_batch):
         predicted_indices = deque()
         for instance in data_batch:
-            predicted_indices.append(self.apply_on_instance(instance))
+            predicted_indices.append(self.apply_on_instance(instance) if instance else [])
         return predicted_indices
 
     @abc.abstractmethod
