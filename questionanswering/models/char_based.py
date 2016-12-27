@@ -116,7 +116,9 @@ class CharCNNModel(KerasModel):
         self.logger.debug("Model structured is finished")
         model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         self.logger.debug("Model is compiled")
-        return model, sibiling_model
+
+        self._sibling_model = sibiling_model
+        return model
 
     def encode_data_for_training(self, data_with_targets):
         input_set, targets = data_with_targets
