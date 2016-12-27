@@ -6,6 +6,7 @@ import numpy as np
 import abc
 import os
 import json
+import re
 
 from . import TrainableQAModel
 from . import input_to_indices
@@ -19,6 +20,13 @@ class KerasModel(TrainableQAModel):
         self._p = parameters
         self._save_model_to = self._p['models.save.path']
         self._model = None
+
+        self._model_number = 0
+        self._model_file_name = "{}_{}.kerasmodel".format(self.__class__.__name__, self._model_number)
+        while os.path.exists(self._save_model_to + self._model_file_name):
+            self._model_number += 1
+            self._model_file_name = "{}_{}.kerasmodel".format(self.__class__.__name__, self._model_number)
+
         super(KerasModel, self).__init__(**kwargs)
 
     @abc.abstractmethod
@@ -44,18 +52,12 @@ class KerasModel(TrainableQAModel):
         input_set, targets = encoded_for_training[:-1], encoded_for_training[-1]
         self.logger.debug('Data encoded for training.')
 
-        model_number = 0
-        model_file_name = "{}_{}.kerasmodel".format(self.__class__.__name__, model_number)
-        while os.path.exists(self._save_model_to + model_file_name):
-            model_number += 1
-            model_file_name = "{}_{}.kerasmodel".format(self.__class__.__name__, model_number)
-
         callbacks = [
             keras.callbacks.EarlyStopping(monitor="val_loss" if validation_with_targets else "loss", patience=5, verbose=1),
-            keras.callbacks.ModelCheckpoint(self._save_model_to + model_file_name,
+            keras.callbacks.ModelCheckpoint(self._save_model_to + self._model_file_name,
                                             monitor="val_loss" if validation_with_targets else "loss", save_best_only=True)
         ]
-        self.logger.debug("Callbacks are initialized. Save models to: {}{}.kerasmodel".format(self._save_model_to, model_file_name))
+        self.logger.debug("Callbacks are initialized. Save models to: {}{}.kerasmodel".format(self._save_model_to, self._model_file_name))
 
         self._p['graph.choices'] = 30
         self.logger.debug(self._p)
@@ -101,9 +103,10 @@ class CharCNNModel(KerasModel):
             self._character2idx = input_to_indices.get_character_index(
                 [" ".join(graphs[0]['tokens']) for graphs in data_with_targets[0] if graphs])
             self.logger.debug('Character index created, size: {}'.format(len(self._character2idx)))
-            with open(self._save_model_to + "character2idx.json", 'w') as out:
+            with open(self._save_model_to + "character2idx_{}.json".format(self._model_number), 'w') as out:
                 json.dump(self._character2idx, out, indent=2)
         self._p['vocab.size'] = len(self._character2idx)
+
         KerasModel.train(self, data_with_targets, validation_with_targets)
         self._sibling_model = self._model.get_layer(name="sibiling_model")
 
@@ -150,6 +153,9 @@ class CharCNNModel(KerasModel):
         self._model = keras.models.load_model(path_to_model)
         self._sibling_model = self._model.get_layer(name="sibiling_model")
         self.logger.debug("Sibling model: {}".format(self._sibling_model))
+        fname_match = re.search(r"_(\d+)\.", path_to_model)
+        self._model_number = int(fname_match.group(1)) if fname_match else 0
+        self.logger.debug("Loading vocabulary from: character2idx_{}.json".format(self._model_number))
         with open(self._save_model_to + "character2idx.json") as f:
             self._character2idx = json.load(f)
         self._p['vocab.size'] = len(self._character2idx)
@@ -176,4 +182,5 @@ class YihModel(KerasModel):
     def encode_data_instance(self, instance):
         pass
 
-
+    def load_from_file(self, path_to_model):
+        pass
