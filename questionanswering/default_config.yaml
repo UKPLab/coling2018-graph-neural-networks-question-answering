@@ -3,10 +3,6 @@ logger:
 
 # global:
 
-experiments:
-  max_sent_len: 70
-  max_property_len: 60
-
 # dataset:
 
 webquestions:
@@ -18,6 +14,15 @@ webquestions:
 
 model:
   threshold: 2000
+  models.save.path: "../trainedmodels/"
+  max.sent.len: 70
+  emb.dim: 50
+  vocab.size: 0 #set automatically
+  graph.choices: 10 #set automatically
+  sem.layer.size: 300
+  conv.size: 100
+  conv.width: 3
+  dropout.sibling: 0.1
 
 wikidata: False
 

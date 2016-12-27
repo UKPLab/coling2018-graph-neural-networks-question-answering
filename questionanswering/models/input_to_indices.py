@@ -50,6 +50,8 @@ def encode_batch_by_character(graphs, character2idx, property2label, max_input_l
     edges_matrix = np.zeros((len(graphs), len(graphs[0]),  max_input_len), dtype="int32")
     for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
         sentence_ids, edges_ids = encode_by_character(graph_set, character2idx, property2label)
+        if len(edges_ids) != edges_matrix.shape[1]:
+            print(index, len(edges_ids),edges_matrix.shape[1])
         assert len(edges_ids) == edges_matrix.shape[1]
         sentence_ids = sentence_ids[:max_input_len]
         sentences_matrix[index, :len(sentence_ids)] = sentence_ids

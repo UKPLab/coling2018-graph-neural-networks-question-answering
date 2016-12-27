@@ -4,8 +4,7 @@ import numpy as np
 import yaml
 
 from datasets import webquestions_io
-from models import baselines
-from wikidata import wdaccess
+from models import baselines, char_based
 
 
 @click.command()
@@ -31,19 +30,19 @@ def train(config_file_path, data_folder):
     logger.addHandler(ch)
 
     if "webquestions" not in config:
-        print("Dataset location not inthe config file!")
+        print("Dataset location not in the config file!")
         exit()
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'])
 
-    trainablemodel = baselines.BagOfWordsModel(config.get('model', {}), logger=logger)
-
+    # trainablemodel = baselines.BagOfWordsModel(config.get('model', {}), logger=logger)
+    trainablemodel = char_based.CharCNNModel(config.get('model', {}), logger=logger)
     trainablemodel.train(webquestions.get_training_samples())
 
     trainablemodel.test_on_silver(webquestions.get_validation_samples())
 
     if config.get("wikidata", False):
-        trainablemodel.test(webquestions.get_validation_with_gold())
+        trainablemodel.test(webquestions.get_validation_with_gold(), verbose=True)
 
 if __name__ == "__main__":
     train()

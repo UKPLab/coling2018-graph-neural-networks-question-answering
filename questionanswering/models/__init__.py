@@ -7,6 +7,7 @@ import numpy as np
 from wikidata import wdaccess
 from datasets import evaluation
 
+
 class QAModel:
     __metaclass__ = abc.ABCMeta
 

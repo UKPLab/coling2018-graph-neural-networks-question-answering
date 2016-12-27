@@ -42,8 +42,13 @@ class WebQuestions(Dataset):
     def _get_indexed_samples(self, indices):
         graph_lists = []
         targets = []
+        print(type(self._silver_graphs[0][:15]))
         for index in indices:
             graph_list = self._silver_graphs[index]
+            # print(len(graph_list))
+            if len(graph_list) > 15:
+                print(index, len(graph_list))
+                graph_list = graph_list
             negative_pool = [n_g for n_g in self._choice_graphs[index]
                              if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
             negative_pool_size = 30 - len(graph_list)
@@ -51,6 +56,8 @@ class WebQuestions(Dataset):
                 graph_list += [(n_g,) for n_g in np.random.choice(negative_pool,
                                                                   negative_pool_size,
                                                                   replace=len(negative_pool) < negative_pool_size)]
+            else:
+                graph_list += [({'edgeSet': []},)]*negative_pool_size
             np.random.shuffle(graph_list)
             target = np.argmax([g[1][2] if len(g) > 1 else 0.0 for g in graph_list])
             graph_list = [el[0] for el in graph_list]
