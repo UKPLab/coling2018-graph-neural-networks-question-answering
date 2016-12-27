@@ -79,11 +79,13 @@ class CharCNNModel(TrainableQAModel):
         self.logger.debug('Data encoded for training.')
         callbacks = [
             keras.callbacks.EarlyStopping(monitor="val_loss" if validation_with_targets else "loss", patience=5, verbose=1),
-            keras.callbacks.ModelCheckpoint(self._save_model_to + "{}.kerasmodel".format(self.__class__.__name__), save_best_only=True)
+            keras.callbacks.ModelCheckpoint(self._save_model_to + "{}.kerasmodel".format(self.__class__.__name__),
+                                            monitor="val_loss" if validation_with_targets else "loss", save_best_only=True)
         ]
-        self.logger.debug("Callback initialized. Save models to: {}.kerasmodel".format(self._save_model_to + self.__class__.__name__))
+        self.logger.debug("Callbacks are initialized. Save models to: {}.kerasmodel".format(self._save_model_to + self.__class__.__name__))
         self._p['vocab.size'] = len(self._character2idx)
         self._p['graph.choices'] = 30
+        self.logger.debug(self._p)
         self._model, self._sibling_model = self._get_keras_model()
         if validation_with_targets:
             self.logger.debug("Start training with a validation sample.")
@@ -104,15 +106,12 @@ class CharCNNModel(TrainableQAModel):
         character_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
                                                       input_length=self._p['max.sent.len'],
                                                       mask_zero=False)(characters_input)
-        self.logger.debug("Embeddings layer initialized.")
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(character_embeddings)
-        self.logger.debug("Convolution layer is initialized")
         sentence_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
-        self.logger.debug("Global max pooling layer is initialized")
+
         # semantic_vector = keras.layers.Dense(self._p['sem.layer.size'] * 3, activation='tanh')(sentence_vector)
         semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh', name='semantic_vector')(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
-        self.logger.debug("Sibling model structure is finished")
         sibiling_model = keras.models.Model(input=[characters_input], output=[semantic_vector])
         self.logger.debug("Sibling model is finished.")
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
