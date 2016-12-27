@@ -105,6 +105,7 @@ class CharCNNModel(KerasModel):
                 json.dump(self._character2idx, out, indent=2)
         self._p['vocab.size'] = len(self._character2idx)
         KerasModel.train(self, data_with_targets, validation_with_targets)
+        self._sibling_model = self._model.get_layer(name="sibiling_model")
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
@@ -134,8 +135,6 @@ class CharCNNModel(KerasModel):
         self.logger.debug("Model structured is finished")
         model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         self.logger.debug("Model is compiled")
-
-        # self._sibling_model = sibiling_model
         return model
 
     def encode_data_for_training(self, data_with_targets):
