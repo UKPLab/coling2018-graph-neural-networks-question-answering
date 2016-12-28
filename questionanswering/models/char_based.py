@@ -92,7 +92,7 @@ class CharCNNModel(KerasModel):
         with open(self._save_model_to + "character2idx.json") as f:
             self._character2idx = json.load(f)
         self._p['vocab.size'] = len(self._character2idx)
-        self.logger.debug("Vocabualry size: {}.".format(len(self._character2idx)))
+        self.logger.debug("Vocabulary size: {}.".format(len(self._character2idx)))
         self.logger.debug("Loaded successfully.")
 
 

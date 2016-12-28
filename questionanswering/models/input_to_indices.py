@@ -5,7 +5,7 @@ import nltk
 
 unknown = ('#', '#', '#')
 all_zeroes = (0,)
-zero_character = 0
+zero_character = '_zero'
 unknown_character = '#'
 
 
