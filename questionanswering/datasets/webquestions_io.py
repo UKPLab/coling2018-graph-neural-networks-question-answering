@@ -38,7 +38,7 @@ class WebQuestions(Dataset):
 
     def _get_samples(self, questions):
         indices = [q_obj['index'] for q_obj in questions
-                   if all(len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
+                   if any(len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
                           for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[q_obj['index']]
                    ]
         return self._get_indexed_samples_separate(indices)
@@ -80,9 +80,10 @@ class WebQuestions(Dataset):
             negative_pool = [n_g for n_g in self._choice_graphs[index]
                              if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
             for g in graph_list:
-                instance, target = self._instance_with_negative([g], negative_pool)
-                graph_lists.append(instance)
-                targets.append(target)
+                if len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5):
+                    instance, target = self._instance_with_negative([g], negative_pool)
+                    graph_lists.append(instance)
+                    targets.append(target)
         return graph_lists, np.asarray(targets, dtype='int32')
 
     def get_training_samples(self):
