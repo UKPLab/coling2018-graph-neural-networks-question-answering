@@ -2,8 +2,9 @@ import click
 import yaml
 import numpy as np
 import logging
-from models import char_based
+import sys
 
+import models
 from datasets import webquestions_io
 
 
@@ -21,6 +22,14 @@ def test_model(path_to_model, config_file_path):
         config = yaml.load(config_file.read())
     print(config)
     config_global = config.get('global', {})
+    if "webquestions" not in config:
+        print("Dataset location not in the config file!")
+        sys.exit()
+
+    if "model" not in config and 'class' not in config['model']:
+        print("Specify a model class in the config file!")
+        sys.exit()
+
     np.random.seed(config_global.get('random_seed', 1))
 
     logger = logging.getLogger(__name__)
@@ -29,12 +38,8 @@ def test_model(path_to_model, config_file_path):
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
 
-    if "webquestions" not in config:
-        print("Dataset location not in the config file!")
-        exit()
-
     webquestions = webquestions_io.WebQuestions(config['webquestions'])
-    trainablemodel = char_based.CharCNNModel(parameters=config.get('model', {}), logger=logger)
+    trainablemodel = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
     trainablemodel.load_from_file(path_to_model)
 
     print("Testing the model on silver data.")

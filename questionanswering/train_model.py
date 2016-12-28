@@ -7,6 +7,7 @@ import sys
 from datasets import webquestions_io
 import models
 
+
 @click.command()
 @click.argument('config_file_path', default="default_config.yaml")
 def train(config_file_path):
