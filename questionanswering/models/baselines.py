@@ -96,6 +96,7 @@ class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
         self.edge_vocabulary = [t for t, _ in edge_fdist.most_common(self.threshold)]
 
         input_set, targets = self.encode_data_for_training(data_with_targets)
+        self.logger.debug("Training on {}.".format(len(input_set)))
         self._model.fit(input_set, targets)
         self.logger.debug("Model training is finished.")
 

@@ -49,7 +49,9 @@ class WebQuestions(Dataset):
         targets = []
         for index in indices:
             graph_list = self._silver_graphs[index]
-            graph_list = graph_list[:self._p.get("max.silver.samples", 15)]
+            if len(graph_list) > self._p.get("max.silver.samples", 15):
+                graph_list = list(np.random.choice(graph_list,
+                                              self._p.get("max.silver.samples", 15), replace=False))
             negative_pool = [n_g for n_g in self._choice_graphs[index]
                              if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
             negative_pool_size = self._p.get("max.negative.samples", 30) - len(graph_list)
