@@ -3,6 +3,8 @@ import logging
 from collections import deque
 import tqdm
 import numpy as np
+import os
+import keras
 
 from wikidata import wdaccess
 from datasets import evaluation

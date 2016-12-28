@@ -2,10 +2,10 @@ import logging
 import click
 import numpy as np
 import yaml
+import sys
 
 from datasets import webquestions_io
-from models import baselines, char_based
-
+import models
 
 @click.command()
 @click.argument('config_file_path', default="default_config.yaml")
@@ -19,7 +19,15 @@ def train(config_file_path):
         config = yaml.load(config_file.read())
     print(config)
     config_global = config.get('global', {})
-    np.random.seed(config_global.get('random_seed', 1))
+    if "webquestions" not in config:
+        print("Dataset location not in the config file!")
+        sys.exit()
+
+    if "model" not in config and 'class' not in config['model']:
+        print("Specify a model class in the config file!")
+        sys.exit()
+
+    np.random.seed(config_global.get('random.seed', 1))
 
     logger = logging.getLogger(__name__)
     logger.setLevel(config['logger']['level'])
@@ -27,14 +35,9 @@ def train(config_file_path):
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
 
-    if "webquestions" not in config:
-        print("Dataset location not in the config file!")
-        exit()
-
     webquestions = webquestions_io.WebQuestions(config['webquestions'])
 
-    # trainablemodel = baselines.BagOfWordsModel(config.get('model', {}), logger=logger)
-    trainablemodel = char_based.CharCNNModel(parameters=config.get('model', {}), logger=logger)
+    trainablemodel = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
     trainablemodel.train(webquestions.get_training_samples(), validation_with_targets=webquestions.get_validation_samples())
 
     trainablemodel.test_on_silver(webquestions.get_validation_samples())

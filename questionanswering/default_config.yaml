@@ -1,9 +1,8 @@
 logger:
   level: DEBUG
 
-# global:
-
-# dataset:
+global:
+  random.seed: 1
 
 webquestions:
   f1.samples.threshold: 0.1
@@ -17,8 +16,8 @@ webquestions:
     train_choicegraphs: "../data/generated/webquestions.examples.train.choice_graphs.json"
 
 model:
-  class: BagOfWordsModel
-  threshold: 2000
+  class: CharCNNModel
+  threshold: 500
   models.save.path: "../trainedmodels/"
   max.sent.len: 70
   epochs: 40
