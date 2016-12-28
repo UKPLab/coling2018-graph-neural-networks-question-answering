@@ -5,7 +5,7 @@ from sklearn import linear_model
 
 from construction import graph
 import utils
-from . import QAModel, TrainableQAModel
+from .qamodel import QAModel, TrainableQAModel
 from wikidata import wdaccess
 import numpy as np
 

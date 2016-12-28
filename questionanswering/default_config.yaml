@@ -17,6 +17,7 @@ webquestions:
     train_choicegraphs: "../data/generated/webquestions.examples.train.choice_graphs.json"
 
 model:
+  class: BagOfWordsModel
   threshold: 2000
   models.save.path: "../trainedmodels/"
   max.sent.len: 70
