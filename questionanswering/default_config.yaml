@@ -20,6 +20,7 @@ model:
   threshold: 500
   models.save.path: "../trainedmodels/"
   max.sent.len: 70
+  edge.with.entity: False
   epochs: 40
   batch.size: 128
   emb.dim: 50

@@ -26,7 +26,9 @@ class CharCNNModel(KerasModel):
         return np.argsort(predictions)[::-1]
 
     def encode_data_instance(self, instance, **kwargs):
-        sentence_ids, edges_ids = input_to_indices.encode_by_character(instance, self._character2idx, wdaccess.property2label)
+        sentence_ids, edges_ids = input_to_indices.encode_by_character(instance, self._character2idx,
+                                                                       wdaccess.property2label,
+                                                                       edge_with_entity=self._p.get('edge.with.entity', False))
         sentence_ids = sequence.pad_sequences([sentence_ids], maxlen=self._p.get('max.sent.len', 70), padding='post', truncating='post', dtype="int32")
         edges_ids = sequence.pad_sequences(edges_ids, maxlen=self._p.get('max.sent.len', 70), padding='post', truncating='post', dtype="int32")
         return sentence_ids, edges_ids
@@ -77,7 +79,8 @@ class CharCNNModel(KerasModel):
         input_set, targets = data_with_targets
         sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_character(input_set, self._character2idx,
                                                                                     wdaccess.property2label,
-                                                                                    max_input_len=self._p.get('max.sent.len', 70))
+                                                                                    max_input_len=self._p.get('max.sent.len', 70),
+                                                                                    edge_with_entity=self._p.get('edge.with.entity', False))
         targets_as_one_hot = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets_as_one_hot
 
