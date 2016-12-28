@@ -130,7 +130,7 @@ class KerasModel(TrainableQAModel):
         self.logger.debug("Callbacks are initialized. Save models to: {}{}.kerasmodel".format(self._save_model_to, self._model_file_name))
 
         self._p['graph.choices'] = targets.shape[1]
-        self.logger.debug("graph.choices", self._p['graph.choices'])
+        self.logger.debug("graph.choices: {}".format(self._p['graph.choices']))
         self.logger.debug(self._p)
         self._model = self._get_keras_model()
         if validation_with_targets:
