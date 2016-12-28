@@ -3,6 +3,8 @@ import tqdm
 import utils
 import nltk
 
+from construction import graph
+
 unknown = ('#', '#', '#')
 all_zeroes = (0,)
 zero_character = '_zero'
@@ -67,9 +69,9 @@ def encode_by_character(graph_set, character2idx, property2label):
     sentence_ids = string_to_unigrams(sentence_str, character2idx)
     edges_ids = []
     for g in graph_set:
-        first_edge = g["edgeSet"][0] if 'edgeSet' in g else {}
+        first_edge = graph.get_graph_first_edge(g)
         property_label = property2label.get(first_edge.get('kbID', '')[:-1], utils.unknown_word)
-        property_label += " " + first_edge.get('type', '')
+        # property_label += " " + first_edge.get('type', '')
         edges_ids.append(string_to_unigrams(property_label, character2idx))
     return sentence_ids, edges_ids
 
