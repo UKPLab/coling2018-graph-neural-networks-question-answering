@@ -89,7 +89,7 @@ class CharCNNModel(KerasModel):
         fname_match = re.search(r"_(\d+)\.", path_to_model)
         self._model_number = int(fname_match.group(1)) if fname_match else 0
         self.logger.debug("Loading vocabulary from: character2idx_{}.json".format(self._model_number))
-        with open(self._save_model_to + "character2idx.json") as f:
+        with open(self._save_model_to + "character2idx_{}.json".format(self._model_number)) as f:
             self._character2idx = json.load(f)
         self._p['vocab.size'] = len(self._character2idx)
         self.logger.debug("Vocabulary size: {}.".format(len(self._character2idx)))

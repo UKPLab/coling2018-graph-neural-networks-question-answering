@@ -6,7 +6,7 @@ import nltk
 unknown = ('#', '#', '#')
 all_zeroes = (0,)
 zero_character = '_zero'
-unknown_character = '#'
+unknown_character = '_unknown'
 
 
 def encode_by_tokens(graphs, max_sent_len, max_property_len, word2idx, property2label, verbose=False):
