@@ -3,6 +3,7 @@ import nltk
 import tqdm
 from sklearn import linear_model
 
+from construction import graph
 import utils
 from . import QAModel, TrainableQAModel
 from wikidata import wdaccess
@@ -19,9 +20,8 @@ class LabelOverlapModel(QAModel):
         edge_entities = []
         tokens = instance[0].get("tokens", []) if instance else []
         for g_index, g in enumerate(instance):
-            first_edge = g["edgeSet"][0] if 'edgeSet' in g else {}
+            first_edge = graph.get_graph_first_edge(g)
             property_label = wdaccess.property2label.get(first_edge.get('kbID', '')[:-1], utils.unknown_word)
-            # property_label += " " + first_edge.get('type', '')
             edge_vectors.append(property_label.split())
             edge_entities.append(int(first_edge['rightkbID'][1:]))
         edge2idx = {e: i for i, e in enumerate(sorted(set(edge_entities), reverse=True))}
@@ -59,6 +59,7 @@ class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
         self.edge_vocabulary = []
         self.threshold = parameters['threshold'] if parameters else 1000
         self._model = linear_model.LogisticRegression()
+        self._type2idx = {k: i for i, k in enumerate(wdaccess.sparql_relation.keys())}
         super(BagOfWordsModel, self).__init__(**kwargs)
         self.logger.debug("Parameters: threshold={}".format(self.threshold))
 
@@ -66,16 +67,23 @@ class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
         tokens, edge_vectors, edge_entities = LabelOverlapModel.encode_data_instance(self, instance)
         tokens = set(tokens)
         tokens_encoded = [int(t in tokens) for t in self.question_vocabulary]
-        edges_encoded = [[int(t in edge_vector) for t in self.edge_vocabulary] for edge_vector in edge_vectors]
+        edges_encoded = deque()
+        for g_index, g in enumerate(instance):
+            first_edge = graph.get_graph_first_edge(g)
+            edge_type = [0]*len(self._type2idx)
+            edge_type[self._type2idx.get(first_edge.get('type', 'direct'), 0)] = 1
+            edge_vector = [int(t in edge_vectors[g_index]) for t in self.edge_vocabulary]
+            edge_vector += edge_type
+            edges_encoded.append(edge_vector)
         return tokens_encoded, edges_encoded, edge_entities
 
     def encode_data_for_training(self, data_with_targets, verbose=False):
         input_set, targets = data_with_targets
         input_encoded, targets_encoded = deque(), deque()
         for index, instance in enumerate(tqdm.tqdm(input_set, ascii=True, disable=(not verbose))):
-            tokens_encoded, edges_encoded, _ = self.encode_data_instance(instance)
+            tokens_encoded, edges_encoded, edge_entities = self.encode_data_instance(instance)
             for e_index, edge_encoding in enumerate(edges_encoded):
-                input_encoded.append(tokens_encoded + edge_encoding)
+                input_encoded.append(tokens_encoded + edge_encoding + [edge_entities[e_index]])
                 targets_encoded.append(1 if targets[index] == e_index else 0)
 
         return np.asarray(input_encoded, dtype='int8'), np.asarray(targets_encoded, dtype='int8')
@@ -94,8 +102,8 @@ class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
     def apply_on_instance(self, instance):
         tokens_encoded, edges_encoded, edge_entities = self.encode_data_instance(instance)
         input_encoded = []
-        for edge_encoding in edges_encoded:
-            input_encoded.append(tokens_encoded + edge_encoding)
+        for e_index, edge_encoding in enumerate(edges_encoded):
+            input_encoded.append(tokens_encoded + edge_encoding + [edge_entities[e_index]])
         predictions = self._model.predict_proba(input_encoded) if input_encoded else []
         predictions = [p[1] for p in predictions]
         return np.argsort(predictions)[::-1]

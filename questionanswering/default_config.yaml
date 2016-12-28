@@ -30,6 +30,6 @@ model:
   conv.width: 3
   dropout.sibling: 0.1
 
-wikidata: False
+wikidata: True
 
 
