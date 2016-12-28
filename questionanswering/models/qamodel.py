@@ -123,7 +123,8 @@ class KerasModel(TrainableQAModel):
         self.logger.debug('Data encoded for training.')
 
         callbacks = [
-            keras.callbacks.EarlyStopping(monitor="val_loss" if validation_with_targets else "loss", patience=5, verbose=1),
+            keras.callbacks.EarlyStopping(monitor="val_loss" if validation_with_targets else "loss",
+                                          patience=self._p.get("early.stopping", 5), verbose=1),
             keras.callbacks.ModelCheckpoint(self._save_model_to + self._model_file_name,
                                             monitor="val_loss" if validation_with_targets else "loss", save_best_only=True)
         ]

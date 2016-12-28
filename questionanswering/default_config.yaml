@@ -30,6 +30,7 @@ model:
   conv.size: 100
   conv.width: 3
   dropout.sibling: 0.1
+  early.stopping: 5
 
 wikidata: True
 
