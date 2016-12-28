@@ -7,7 +7,6 @@ from . import Dataset
 
 
 class WebQuestions(Dataset):
-
     def __init__(self, parameters, **kwargs):
         """
         An object class to access the webquestion dataset. The path to the dataset should point to a folder that
@@ -39,33 +38,52 @@ class WebQuestions(Dataset):
 
     def _get_samples(self, questions):
         indices = [q_obj['index'] for q_obj in questions
-                   if any(len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
+                   if all(len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
                           for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[q_obj['index']]
                    ]
-        return self._get_indexed_samples(indices)
+        return self._get_indexed_samples_separate(indices)
 
     def _get_indexed_samples(self, indices):
         graph_lists = []
         targets = []
         for index in indices:
             graph_list = self._silver_graphs[index]
-            if len(graph_list) > self._p.get("max.silver.samples", 15):
-                graph_list = list(np.random.choice(graph_list,
-                                              self._p.get("max.silver.samples", 15), replace=False))
             negative_pool = [n_g for n_g in self._choice_graphs[index]
                              if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
-            negative_pool_size = self._p.get("max.negative.samples", 30) - len(graph_list)
-            if negative_pool:
-                graph_list += [(n_g,) for n_g in np.random.choice(negative_pool,
-                                                                  negative_pool_size,
-                                                                  replace=len(negative_pool) < negative_pool_size)]
-            else:
-                graph_list += [({'edgeSet': []},)]*negative_pool_size
-            np.random.shuffle(graph_list)
-            target = np.argmax([g[1][2] if len(g) > 1 else 0.0 for g in graph_list])
-            graph_list = [el[0] for el in graph_list]
+            if len(graph_list) > self._p.get("max.silver.samples", 15):
+                graph_list = list(np.random.choice(graph_list,
+                                                   self._p.get("max.silver.samples", 15), replace=False))
+            graph_list, target = self._instance_with_negative(graph_list, negative_pool)
             graph_lists.append(graph_list)
             targets.append(target)
+        return graph_lists, np.asarray(targets, dtype='int32')
+
+    def _instance_with_negative(self, graph_list, negative_pool):
+        negative_pool_size = self._p.get("max.negative.samples", 30) - len(graph_list)
+        instance = graph_list[:]
+        if negative_pool:
+            instance += [(n_g,) for n_g in np.random.choice(negative_pool,
+                                                              negative_pool_size,
+                                                              replace=len(negative_pool) < negative_pool_size)]
+        else:
+            instance += [({'edgeSet': []},)] * negative_pool_size
+        np.random.shuffle(instance)
+        target = np.argmax([g[1][2] if len(g) > 1 else 0.0 for g in instance])
+        instance = [el[0] for el in instance]
+        return instance, target
+
+    def _get_indexed_samples_separate(self, indices):
+        graph_lists = []
+        targets = []
+        for index in indices:
+            graph_list = self._silver_graphs[index]
+            negative_pool = [n_g for n_g in self._choice_graphs[index]
+                             if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
+            negative_pool_size = self._p.get("max.negative.samples", 30) - 1
+            for g in graph_list:
+                instance, target = self._instance_with_negative([g], negative_pool)
+                graph_lists.append(instance)
+                targets.append(target)
         return graph_lists, np.asarray(targets, dtype='int32')
 
     def get_training_samples(self):
