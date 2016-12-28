@@ -96,7 +96,8 @@ class WebQuestions(Dataset):
         :return: a generation that continuously returns batch of training data.
         """
         indices = [q_obj['index'] for q_obj in self._questions_train
-                   if any(len(g) > 1 and g[1][2] > 0.5 for g in self._silver_graphs[q_obj['index']]) and
+                   if any(len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
+                          for g in self._silver_graphs[q_obj['index']]) and
                    self._choice_graphs[q_obj['index']]]
         for i in itertools.cycle(range(0, len(indices), batch_size)):
             batch_indices = indices[i:i + batch_size]
