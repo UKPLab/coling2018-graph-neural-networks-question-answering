@@ -55,7 +55,7 @@ class QAModel:
         graphs, targets = data_with_targets
         predicted_targets = [indices[0] for indices in self.apply_on_batch(graphs)]
         accuracy = np.sum(np.asarray(predicted_targets) == targets) / len(targets)
-        print("Accuarcy on silver tagets: {}".format(accuracy))
+        print("Accuracy on silver data: {}".format(accuracy))
 
     def apply_on_batch(self, data_batch):
         predicted_indices = deque()
