@@ -9,6 +9,14 @@ def get_graph_first_edge(g):
 
     :param g: a graph as a dictionary
     :return: an edge as a dictionary
+    >>> get_graph_first_edge({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': []}) == {'left':[0], 'right':[4,5,6]}
+    True
+    >>> get_graph_first_edge({})
+    {}
+    >>> get_graph_first_edge({'edgeSet':[]})
+    {}
+    >>> get_graph_first_edge({'edgeSet': [{'left':[0], 'right':[4,5,6]}, {'left':[0], 'right':[8]}], 'entities': []}) == {'left':[0], 'right':[4,5,6]}
+    True
     """
     return g["edgeSet"][0] if 'edgeSet' in g and g["edgeSet"] else {}
 
