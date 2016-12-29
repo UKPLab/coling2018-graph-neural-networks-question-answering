@@ -28,7 +28,7 @@ def encode_by_tokens(graph_set, word2idx, property2label):
 
 def encode_batch_by_tokens(graphs, word2idx, property2label, max_input_len=11, verbose=False):
     sentences_matrix = np.zeros((len(graphs), max_input_len), dtype="int32")
-    edges_matrix = np.zeros((len(graphs), max_input_len), dtype="int32")
+    edges_matrix = np.zeros((len(graphs), len(graphs[0]), max_input_len), dtype="int32")
 
     for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
         sentence_encoded, edges_encoded = encode_by_tokens(graph_set, word2idx, property2label)
