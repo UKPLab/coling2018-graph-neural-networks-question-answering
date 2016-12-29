@@ -34,7 +34,7 @@ class WordCNNModel(TwinsModel):
             else:
                 self._word2idx = input_to_indices.get_word_index([t for graphs in data_with_targets[0]
                                                                   for t in graphs[0].get('tokens', []) if graphs])
-                self.logger.debug('Character index created, size: {}'.format(len(self._word2idx)))
+                self.logger.debug('Word index created, size: {}'.format(len(self._word2idx)))
                 with open(self._save_model_to + "word2idx_{}.json".format(self._model_number), 'w') as out:
                     json.dump(self._word2idx, out, indent=2)
         self._p['vocab.size'] = len(self._word2idx)
