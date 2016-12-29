@@ -4,6 +4,7 @@ from collections import deque
 import tqdm
 import numpy as np
 import os
+import re
 import keras
 
 from wikidata import wdaccess
@@ -107,13 +108,17 @@ class KerasModel(TrainableQAModel):
         :return: a Keras model to be trained
         """
 
-    @abc.abstractmethod
     def load_from_file(self, path_to_model):
         """
         Load a Keras model from file.
 
         :param path_to_model: path to the model file.
         """
+        self.logger.debug("Loading model from file.")
+        self._model = keras.models.load_model(path_to_model)
+        fname_match = re.search(r"_(\d+)\.", path_to_model)
+        self._model_number = int(fname_match.group(1)) if fname_match else 0
+        self.logger.debug("Loaded successfully.")
 
     def train(self, data_with_targets, validation_with_targets=None):
         self.logger.debug('Training process started.')
@@ -148,3 +153,27 @@ class KerasModel(TrainableQAModel):
                                                nb_epoch=self._p.get("epochs", 200), batch_size=self._p.get("batch.size", 128),
                                                verbose=1, callbacks=callbacks)
         self.logger.debug("Model training is finished.")
+
+
+class TwinsModel(KerasModel):
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, **kwargs):
+        self._sibling_model = None
+        self._sibling_model_name = "sibiling_model"
+
+        super(TwinsModel, self).__init__(**kwargs)
+
+    def apply_on_instance(self, instance):
+        tokens_encoded, edges_encoded = self.encode_data_instance(instance)
+        sentence_embedding = self._sibling_model.predict_on_batch(tokens_encoded)[0]
+        edge_embeddings = self._sibling_model.predict_on_batch(edges_encoded)
+        predictions = np.dot(sentence_embedding, np.swapaxes(edge_embeddings, 0, 1))
+
+        return np.argsort(predictions)[::-1]
+
+    def load_from_file(self, path_to_model):
+        super(TwinsModel, self).load_from_file(self, path_to_model=path_to_model)
+
+        self._sibling_model = self._model.get_layer(name=self._sibling_model_name)
+        self.logger.debug("Sibling model: {}".format(self._sibling_model))

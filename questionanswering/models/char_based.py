@@ -6,12 +6,12 @@ import numpy as np
 import json
 import re
 
-from .qamodel import KerasModel
+from .qamodel import TwinsModel
 from . import input_to_indices
 from wikidata import wdaccess
 
 
-class CharCNNModel(KerasModel):
+class CharCNNModel(TwinsModel):
     def __init__(self, **kwargs):
         self._sibling_model = None
         self._character2idx = defaultdict(int)
@@ -42,7 +42,7 @@ class CharCNNModel(KerasModel):
                 json.dump(self._character2idx, out, indent=2)
         self._p['vocab.size'] = len(self._character2idx)
 
-        KerasModel.train(self, data_with_targets, validation_with_targets)
+        super(CharCNNModel, self).train(self, data_with_targets, validation_with_targets)
         self._sibling_model = self._model.get_layer(name="sibiling_model")
 
     def _get_keras_model(self):
@@ -57,7 +57,7 @@ class CharCNNModel(KerasModel):
         # semantic_vector = keras.layers.Dense(self._p['sem.layer.size'] * 3, activation='tanh')(sentence_vector)
         semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh', name='semantic_vector')(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
-        sibiling_model = keras.models.Model(input=[characters_input], output=[semantic_vector], name='sibiling_model')
+        sibiling_model = keras.models.Model(input=[characters_input], output=[semantic_vector], name=self._sibling_model_name)
         self.logger.debug("Sibling model is finished.")
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
         edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.sent.len'],), dtype='int32',
@@ -85,24 +85,18 @@ class CharCNNModel(KerasModel):
         return sentences_matrix, edges_matrix, targets_as_one_hot
 
     def load_from_file(self, path_to_model):
-        self.logger.debug("Loading model from file.")
-        self._model = keras.models.load_model(path_to_model)
-        self._sibling_model = self._model.get_layer(name="sibiling_model")
-        self.logger.debug("Sibling model: {}".format(self._sibling_model))
-        fname_match = re.search(r"_(\d+)\.", path_to_model)
-        self._model_number = int(fname_match.group(1)) if fname_match else 0
+        super(CharCNNModel, self).load_from_file(self, path_to_model=path_to_model)
+
         self.logger.debug("Loading vocabulary from: character2idx_{}.json".format(self._model_number))
         with open(self._save_model_to + "character2idx_{}.json".format(self._model_number)) as f:
             self._character2idx = json.load(f)
         self._p['vocab.size'] = len(self._character2idx)
         self.logger.debug("Vocabulary size: {}.".format(len(self._character2idx)))
-        self.logger.debug("Loaded successfully.")
 
 
-class YihModel(KerasModel):
+class YihModel(TwinsModel):
 
     def __init__(self, **kwargs):
-        self._sibling_model = None
         self._trigram2idx = defaultdict(int)
         super(YihModel, self).__init__(**kwargs)
 
@@ -112,11 +106,14 @@ class YihModel(KerasModel):
     def _get_keras_model(self):
         pass
 
-    def apply_on_instance(self, instance):
-        pass
-
     def encode_data_instance(self, instance):
         pass
 
     def load_from_file(self, path_to_model):
-        pass
+        super(YihModel, self).load_from_file(self, path_to_model=path_to_model)
+
+        self.logger.debug("Loading vocabulary from: character2idx_{}.json".format(self._model_number))
+        with open(self._save_model_to + "character2idx_{}.json".format(self._model_number)) as f:
+            self._character2idx = json.load(f)
+        self._p['vocab.size'] = len(self._character2idx)
+        self.logger.debug("Vocabulary size: {}.".format(len(self._character2idx)))

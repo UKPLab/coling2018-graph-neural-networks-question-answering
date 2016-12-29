@@ -27,7 +27,17 @@ def encode_by_tokens(graphs, max_sent_len, max_property_len, word2idx, property2
     return sentences_matrix, edges_matrix
 
 
-def encode_by_trigrams(graphs, trigram2idx, property2label, max_sent_len=70, max_property_len=70, verbose=False):
+def encode_by_trigram(graph_set, character2idx, property2label):
+    sentence_tokens = graph_set[0].get("tokens", [])
+    edges_ids = []
+    for g in graph_set:
+        first_edge = graph.get_graph_first_edge(g)
+        property_label = property2label.get(first_edge.get('kbID', '')[:-1], utils.unknown_word)
+        e_type = first_edge.get('type', 'direct')
+        edges_ids.append(string_to_unigrams(property_label, character2idx))
+
+
+def encode_batch_by_trigrams(graphs, trigram2idx, property2label, max_sent_len=70, max_property_len=70, verbose=False):
     graphs = [el for el in graphs if el]
     sentences_matrix = np.zeros((len(graphs), max_sent_len), dtype="int32")
     edges_matrix = np.zeros((len(graphs), len(graphs[0]),  max_property_len), dtype="int32")
@@ -53,8 +63,6 @@ def encode_batch_by_character(graphs, character2idx, property2label, max_input_l
     edges_matrix = np.zeros((len(graphs), len(graphs[0]),  max_input_len), dtype="int32")
     for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
         sentence_ids, edges_ids = encode_by_character(graph_set, character2idx, property2label, edge_with_entity)
-        if len(edges_ids) != edges_matrix.shape[1]:
-            print(index, len(edges_ids),edges_matrix.shape[1])
         assert len(edges_ids) == edges_matrix.shape[1]
         sentence_ids = sentence_ids[:max_input_len]
         sentences_matrix[index, :len(sentence_ids)] = sentence_ids
