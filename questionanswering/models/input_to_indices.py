@@ -109,6 +109,16 @@ def encode_by_character(graph_set, character2idx, property2label, edge_with_enti
 
 
 def normalize_string(input_string):
+    """
+    Normalize a string by setting it to lower case and removing any numbers.
+
+    :param input_string: string to normalize
+    :return: normalized string
+    >>> normalize_string("UpperCase")
+    'uppercase'
+    >>> normalize_string("He started in 1995")
+    'he started in 0'
+    """
     input_string = input_string.lower()
     input_string = re.sub(r"\d+", "0", input_string)
     return input_string
