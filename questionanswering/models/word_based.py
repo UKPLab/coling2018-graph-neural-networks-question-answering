@@ -45,7 +45,7 @@ class WordCNNModel(TwinsModel):
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
         tokens_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
-        if "word.embeddings" in self._p and self._embedding_matrix:
+        if "word.embeddings" in self._p:
             self.logger.debug("Using a pre-trained embedding matrix.")
             word_embeddings = keras.layers.Embedding(output_dim=self._embedding_matrix.shape[1],
                                                      input_dim=self._p['vocab.size'],
