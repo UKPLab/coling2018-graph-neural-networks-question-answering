@@ -27,33 +27,36 @@ def encode_by_tokens(graphs, max_sent_len, max_property_len, word2idx, property2
     return sentences_matrix, edges_matrix
 
 
-def encode_by_trigram(graph_set, character2idx, property2label):
+def encode_by_trigram(graph_set, trigram_vocabulary, property2label):
     sentence_tokens = graph_set[0].get("tokens", [])
-    edges_ids = []
+    sentence_trigrams = [set(string_to_trigrams(token)) for token in sentence_tokens]
+    sentence_encoded = [[int(t in trigrams) for t in trigram_vocabulary]
+                        for trigrams in sentence_trigrams]
+    edges_encoded = []
     for g in graph_set:
         first_edge = graph.get_graph_first_edge(g)
         property_label = property2label.get(first_edge.get('kbID', '')[:-1], utils.unknown_word)
         e_type = first_edge.get('type', 'direct')
-        edges_ids.append(string_to_unigrams(property_label, character2idx))
+        edge_trigrams = [set(string_to_trigrams(token)) for token in property_label.split()]
+        edge_encoded = [[int(t in trigrams) for t in trigram_vocabulary]
+                            for trigrams in edge_trigrams]
+        edges_encoded.append(edge_encoded)
+    return sentence_encoded, edges_encoded
 
 
-def encode_batch_by_trigrams(graphs, trigram2idx, property2label, max_sent_len=70, max_property_len=70, verbose=False):
+def encode_batch_by_trigrams(graphs, trigram_vocabulary, property2label, max_input_len=11, verbose=False):
     graphs = [el for el in graphs if el]
-    sentences_matrix = np.zeros((len(graphs), max_sent_len), dtype="int32")
-    edges_matrix = np.zeros((len(graphs), len(graphs[0]),  max_property_len), dtype="int32")
+    sentences_matrix = np.zeros((len(graphs), max_input_len, len(trigram_vocabulary)), dtype="int32")
+    edges_matrix = np.zeros((len(graphs), len(graphs[0]),  max_input_len, len(trigram_vocabulary)), dtype="int32")
 
     for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
-        tokens = graph_set[0].get("tokens", [])
-        trigrams = tokens_to_trigrams(tokens)
-        trigram_ids = [trigram2idx.get(t, trigram2idx[unknown]) for t in trigrams][:max_sent_len]
-        sentences_matrix[index, :len(trigram_ids)] = trigram_ids
-        for g_index, g in enumerate(graph_set):
-            if g["edgeSet"]:
-                property_label = property2label.get(g["edgeSet"][0].get('kbID', '')[:-1], utils.unknown_word)
-                property_label += " " + g["edgeSet"][0].get('type', '')
-                trigrams = tokens_to_trigrams(property_label.split())
-                edge_ids = [trigram2idx.get(t, trigram2idx[unknown]) for t in trigrams][:max_property_len]
-                edges_matrix[index, g_index, :len(edge_ids)] = edge_ids
+        sentence_encoded, edges_encoded = encode_by_trigram(graph_set, trigram_vocabulary, property2label)
+        assert len(edges_encoded) == edges_matrix.shape[1]
+        sentence_encoded = sentence_encoded[:max_input_len]
+        sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded
+        for i, edge_encoded in enumerate(edges_encoded):
+            edge_encoded = edge_encoded[:max_input_len]
+            edges_matrix[index, i, :len(edge_encoded)] = edge_encoded
 
     return sentences_matrix, edges_matrix
 
@@ -99,6 +102,19 @@ def normalize_string(input_string):
 def string_to_unigrams(input_string, character2idx):
     input_string = normalize_string(input_string)
     return [character2idx.get(c, character2idx[unknown_character]) for c in input_string]
+
+
+def string_to_trigrams(t):
+    """
+    Convert a token to a list of trigrams following the hashing technique.
+
+    :param t: a single token as a string
+    :return: list of triples of characters
+    >>> string_to_trigrams('who')
+    [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#')]
+    """
+    t = normalize_string(t)
+    return nltk.ngrams("#{}#".format(t), 3)
 
 
 def tokens_to_trigrams(tokens):

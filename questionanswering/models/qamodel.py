@@ -11,8 +11,7 @@ from wikidata import wdaccess
 from datasets import evaluation
 
 
-class QAModel:
-    __metaclass__ = abc.ABCMeta
+class QAModel(metaclass=abc.ABCMeta):
 
     def __init__(self, logger=None, **kwargs):
         if not logger:
@@ -69,8 +68,7 @@ class QAModel:
         raise NotImplementedError
 
 
-class TrainableQAModel(QAModel):
-    __metaclass__ = abc.ABCMeta
+class TrainableQAModel(QAModel, metaclass=abc.ABCMeta):
 
     def __init__(self, **kwargs):
         super(TrainableQAModel, self).__init__(**kwargs)
@@ -84,8 +82,7 @@ class TrainableQAModel(QAModel):
         raise NotImplementedError
 
 
-class KerasModel(TrainableQAModel):
-    __metaclass__ = abc.ABCMeta
+class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
     def __init__(self, parameters, **kwargs):
         self._p = parameters
@@ -155,8 +152,7 @@ class KerasModel(TrainableQAModel):
         self.logger.debug("Model training is finished.")
 
 
-class TwinsModel(KerasModel):
-    __metaclass__ = abc.ABCMeta
+class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
 
     def __init__(self, **kwargs):
         self._sibling_model = None
@@ -173,7 +169,7 @@ class TwinsModel(KerasModel):
         return np.argsort(predictions)[::-1]
 
     def load_from_file(self, path_to_model):
-        super(TwinsModel, self).load_from_file(self, path_to_model=path_to_model)
+        super(TwinsModel, self).load_from_file(path_to_model=path_to_model)
 
         self._sibling_model = self._model.get_layer(name=self._sibling_model_name)
         self.logger.debug("Sibling model: {}".format(self._sibling_model))

@@ -42,7 +42,7 @@ class CharCNNModel(TwinsModel):
                 json.dump(self._character2idx, out, indent=2)
         self._p['vocab.size'] = len(self._character2idx)
 
-        super(CharCNNModel, self).train(self, data_with_targets, validation_with_targets)
+        super(CharCNNModel, self).train(data_with_targets, validation_with_targets)
         self._sibling_model = self._model.get_layer(name="sibiling_model")
 
     def _get_keras_model(self):
@@ -85,7 +85,7 @@ class CharCNNModel(TwinsModel):
         return sentences_matrix, edges_matrix, targets_as_one_hot
 
     def load_from_file(self, path_to_model):
-        super(CharCNNModel, self).load_from_file(self, path_to_model=path_to_model)
+        super(CharCNNModel, self).load_from_file(path_to_model=path_to_model)
 
         self.logger.debug("Loading vocabulary from: character2idx_{}.json".format(self._model_number))
         with open(self._save_model_to + "character2idx_{}.json".format(self._model_number)) as f:
@@ -97,23 +97,67 @@ class CharCNNModel(TwinsModel):
 class YihModel(TwinsModel):
 
     def __init__(self, **kwargs):
-        self._trigram2idx = defaultdict(int)
+        self._trigram_vocabulary = []
         super(YihModel, self).__init__(**kwargs)
 
     def encode_data_for_training(self, data_with_targets):
-        pass
+        input_set, targets = data_with_targets
+        sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_trigrams(input_set, self._trigram_vocabulary,
+                                                                                    wdaccess.property2label,
+                                                                                    max_input_len=self._p.get('max.sent.len', 10), verbose=True)
+        targets_as_one_hot = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
+        return sentences_matrix, edges_matrix, targets_as_one_hot
+
+    def train(self, data_with_targets, validation_with_targets=None):
+        if not self._trigram_vocabulary:
+            self._trigram_vocabulary = list({t for graphs in data_with_targets[0]
+                                             for token in graphs[0].get('tokens')
+                                             for t in input_to_indices.string_to_trigrams(token) if graphs})
+            self.logger.debug('Trigram vocabulary created, size: {}'.format(len(self._trigram_vocabulary)))
+            with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number), 'w') as out:
+                json.dump(self._trigram_vocabulary, out, indent=2)
+        self._p['vocab.size'] = len(self._trigram_vocabulary)
+
+        super(YihModel, self).train(data_with_targets, validation_with_targets)
+        self._sibling_model = self._model.get_layer(name="sibiling_model")
 
     def _get_keras_model(self):
-        pass
+        self.logger.debug("Create keras model.")
+        word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32', name='sentence_input')
+        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(word_input)
+        sentence_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
+
+        semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh', name='semantic_vector')(sentence_vector)
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
+        sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._sibling_model_name)
+        self.logger.debug("Sibling model is finished.")
+        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32', name='sentence_input')
+        edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32',
+                                        name='edge_input')
+
+        sentence_vector = sibiling_model(sentence_input)
+        edge_vectors = keras.layers.TimeDistributed(sibiling_model)(edge_input)
+
+        main_output = keras.layers.Merge(mode=lambda i: K.batch_dot(i[0], i[1], axes=(1, 2)),
+                                         name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, edge_vectors])
+        main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
+        model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
+        self.logger.debug("Model structured is finished")
+        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+        self.logger.debug("Model is compiled")
+        return model
 
     def encode_data_instance(self, instance):
-        pass
+        sentence_encoded, edges_encoded = input_to_indices.encode_by_trigram(instance, self._trigram_vocabulary, wdaccess.property2label)
+        sentence_ids = sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
+        edges_ids = sequence.pad_sequences(edges_encoded, maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
+        return sentence_ids, edges_ids
 
     def load_from_file(self, path_to_model):
-        super(YihModel, self).load_from_file(self, path_to_model=path_to_model)
+        super(YihModel, self).load_from_file(path_to_model=path_to_model)
 
-        self.logger.debug("Loading vocabulary from: character2idx_{}.json".format(self._model_number))
-        with open(self._save_model_to + "character2idx_{}.json".format(self._model_number)) as f:
-            self._character2idx = json.load(f)
-        self._p['vocab.size'] = len(self._character2idx)
-        self.logger.debug("Vocabulary size: {}.".format(len(self._character2idx)))
+        self.logger.debug("Loading vocabulary from: trigram_vocabulary_{}.json".format(self._model_number))
+        with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number)) as f:
+            self._trigram_vocabulary = json.load(f)
+        self._p['vocab.size'] = len(self._trigram_vocabulary)
+        self.logger.debug("Vocabulary size: {}.".format(len(self._trigram_vocabulary)))
