@@ -12,17 +12,32 @@ zero_character = '_zero'
 unknown_character = '_unknown'
 
 
-def encode_by_tokens(graphs, max_sent_len, max_property_len, word2idx, property2label, verbose=False):
-    sentences_matrix = np.zeros((len(graphs), max_sent_len), dtype="int32")
-    edges_matrix = np.zeros((len(graphs), max_property_len), dtype="int32")
+def encode_by_tokens(graph_set, word2idx, property2label):
+    sentence_tokens = graph_set[0].get("tokens", [])
+    sentence_encoded = [utils.get_idx(t, word2idx) for t in sentence_tokens]
+    edges_encoded = []
+    for g in graph_set:
+        first_edge = graph.get_graph_first_edge(g)
+        property_label = property2label.get(first_edge.get('kbID', '')[:-1], utils.unknown_word)
+        e_type = first_edge.get('type', 'direct')
+        edge_ids = [utils.get_idx(t, word2idx) for t in property_label.split()]
+        edges_encoded.append(edge_ids)
 
-    for index, g in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
-        token_ids = [utils.get_idx(t, word2idx) for t in g.get("tokens", [])][:max_sent_len]
-        sentences_matrix[index, :len(token_ids)] = token_ids
-        if g["edgeSet"]:
-            property_label = property2label.get(g["edgeSet"][0]['kbID'][:-1], utils.unknown_word)
-            edge_ids = [utils.get_idx(t, word2idx) for t in property_label.split()][:max_property_len]
-            edges_matrix[index, :len(edge_ids)] = edge_ids
+    return sentence_encoded, edges_encoded
+
+
+def encode_batch_by_tokens(graphs, word2idx, property2label, max_input_len=11, verbose=False):
+    sentences_matrix = np.zeros((len(graphs), max_input_len), dtype="int32")
+    edges_matrix = np.zeros((len(graphs), max_input_len), dtype="int32")
+
+    for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
+        sentence_encoded, edges_encoded = encode_by_tokens(graph_set, word2idx, property2label)
+        assert len(edges_encoded) == edges_matrix.shape[1]
+        sentence_encoded = sentence_encoded[:max_input_len]
+        sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded
+        for i, edge_encoded in enumerate(edges_encoded):
+            edge_encoded = edge_encoded[:max_input_len]
+            edges_matrix[index, i, :len(edge_encoded)] = edge_encoded
 
     return sentences_matrix, edges_matrix
 
@@ -159,6 +174,20 @@ def get_character_index(sentences):
     character2idx[zero_character] = 0
     character2idx[unknown_character] = len(character2idx)
     return character2idx
+
+
+def get_word_index(tokens):
+    """
+    Create a character index from a list of sentences. Each sentence is a string.
+
+    :param sentences: list of strings
+    :return: character to index mapping
+    """
+    token_set = {normalize_string(token) for token in tokens}
+    word2idx = {t: i for i, t in enumerate(token_set, 1)}
+    word2idx[utils.all_zeroes] = 0
+    word2idx[utils.unknown_word] = len(word2idx)
+    return word2idx
 
 
 if __name__ == "__main__":

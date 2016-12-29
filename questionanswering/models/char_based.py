@@ -13,7 +13,6 @@ from wikidata import wdaccess
 
 class CharCNNModel(TwinsModel):
     def __init__(self, **kwargs):
-        self._sibling_model = None
         self._character2idx = defaultdict(int)
         super(CharCNNModel, self).__init__(**kwargs)
 
@@ -159,5 +158,6 @@ class YihModel(TwinsModel):
         self.logger.debug("Loading vocabulary from: trigram_vocabulary_{}.json".format(self._model_number))
         with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number)) as f:
             self._trigram_vocabulary = json.load(f)
+        self._trigram_vocabulary = [tuple(t) for t in self._trigram_vocabulary]
         self._p['vocab.size'] = len(self._trigram_vocabulary)
         self.logger.debug("Vocabulary size: {}.".format(len(self._trigram_vocabulary)))
