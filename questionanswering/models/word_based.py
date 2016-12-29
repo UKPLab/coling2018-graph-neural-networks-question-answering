@@ -5,6 +5,7 @@ from keras.preprocessing import sequence
 import numpy as np
 import json
 import re
+import utils
 
 from .qamodel import TwinsModel
 from . import input_to_indices
@@ -15,23 +16,27 @@ class WordCNNModel(TwinsModel):
 
     def __init__(self, **kwargs):
         self._word2idx = defaultdict(int)
+        self._embedding_matrix = None
         super(WordCNNModel, self).__init__(**kwargs)
 
     def encode_data_for_training(self, data_with_targets):
         input_set, targets = data_with_targets
         sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_tokens(input_set, self._word2idx,
-                                                                                   wdaccess.property2label,
-                                                                                   max_input_len=self._p.get('max.sent.len', 10), verbose=True)
+                                                                                 wdaccess.property2label,
+                                                                                 max_input_len=self._p.get('max.sent.len', 10), verbose=True)
         targets_as_one_hot = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets_as_one_hot
 
     def train(self, data_with_targets, validation_with_targets=None):
         if not self._word2idx:
-            self._word2idx = input_to_indices.get_word_index([t for graphs in data_with_targets[0]
-                                                              for t in graphs[0].get('tokens', []) if graphs])
-            self.logger.debug('Character index created, size: {}'.format(len(self._word2idx)))
-            with open(self._save_model_to + "word2idx_{}.json".format(self._model_number), 'w') as out:
-                json.dump(self._word2idx, out, indent=2)
+            if "word.embeddings" in self._p:
+                self._embedding_matrix, self._word2idx = utils.load(self._p['word.embeddings'])
+            else:
+                self._word2idx = input_to_indices.get_word_index([t for graphs in data_with_targets[0]
+                                                                  for t in graphs[0].get('tokens', []) if graphs])
+                self.logger.debug('Character index created, size: {}'.format(len(self._word2idx)))
+                with open(self._save_model_to + "word2idx_{}.json".format(self._model_number), 'w') as out:
+                    json.dump(self._word2idx, out, indent=2)
         self._p['vocab.size'] = len(self._word2idx)
 
         super(WordCNNModel, self).train(data_with_targets, validation_with_targets)
@@ -40,9 +45,16 @@ class WordCNNModel(TwinsModel):
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
         tokens_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
-        word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
-                                                      input_length=self._p['max.sent.len'],
-                                                      mask_zero=False, trainable=self._p['conv.size'])(tokens_input)
+        if "word.embeddings" in self._p and self._embedding_matrix:
+            self.logger.debug("Using a pre-trained embedding matrix.")
+            word_embeddings = keras.layers.Embedding(output_dim=self._embedding_matrix.shape[1],
+                                                     input_dim=self._p['vocab.size'],
+                                                     input_length=self._p['max.sent.len'],
+                                                     mask_zero=False, trainable=False)(tokens_input)
+        else:
+            word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
+                                                     input_length=self._p['max.sent.len'],
+                                                     mask_zero=False)(tokens_input)
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(word_embeddings)
         sentence_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
 
@@ -72,4 +84,17 @@ class WordCNNModel(TwinsModel):
         sentence_ids = sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
         edges_ids = sequence.pad_sequences(edges_encoded, maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
         return sentence_ids, edges_ids
+
+    def load_from_file(self, path_to_model):
+        super(WordCNNModel, self).load_from_file(path_to_model=path_to_model)
+
+        if "word.embeddings" in self._p:
+            self.logger.debug("Loading pre-trained word embeddings.")
+            self._embedding_matrix, self._word2idx = utils.load(self._p['word.embeddings'])
+        else:
+            self.logger.debug("Loading vocabulary from: word2idx_{}.json".format(self._model_number))
+            with open(self._save_model_to + "word2idx_{}.json".format(self._model_number)) as f:
+                self._word2idx = json.load(f)
+        self._p['vocab.size'] = len(self._word2idx)
+        self.logger.debug("Vocabulary size: {}.".format(len(self._word2idx)))
 

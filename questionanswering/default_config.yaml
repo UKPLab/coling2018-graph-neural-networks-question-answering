@@ -19,6 +19,7 @@ model:
   class: BagOfWordsModel
   threshold: 500
   models.save.path: "../trainedmodels/"
+  word.embeddings: "../resources/glove/glove50B.tsv"
   max.sent.len: 70
   edge.with.entity: False
   epochs: 40
