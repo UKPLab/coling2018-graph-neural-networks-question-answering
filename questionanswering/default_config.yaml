@@ -8,6 +8,7 @@ webquestions:
   f1.samples.threshold: 0.1
   max.silver.samples: 15
   max.negative.samples: 30
+  replace.entities: False
   path.to.dataset:
     train_train: "../data/input/webquestions.examples.train.train.json"
     train_validation: "../data/input/webquestions.examples.train.validation.json"

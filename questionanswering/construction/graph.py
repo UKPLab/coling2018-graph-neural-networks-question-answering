@@ -3,6 +3,32 @@ import nltk
 import copy
 
 
+def replace_first_entity(g):
+    """
+    Replaces an entity participating in the first relation in the graph with <e>
+
+    :param g: graph as a dictionary
+    :return: the original graph modified
+    >>> replace_first_entity({'edgeSet': [{'right': ['Nfl', 'Redskins']}], 'tokens': ['where', 'are', 'the', 'nfl', 'redskins', 'from', '?']}) == {'edgeSet': [{'right': ['Nfl', 'Redskins']}], 'tokens': ['where', 'are', 'the', '<e>', 'from', '?']}
+    True
+    """
+    tokens = g.get('tokens', [])
+    edge = get_graph_first_edge(g)
+    entity = {t.lower() for t in edge.get('right', [])}
+    new_tokens = []
+    previous_is_entity = False
+    for i, t in enumerate(tokens):
+        if t not in entity:
+            if previous_is_entity:
+                new_tokens.append("<e>")
+                previous_is_entity = False
+            new_tokens.append(t)
+        else:
+            previous_is_entity = True
+    g['tokens'] = new_tokens
+    return g
+
+
 def get_graph_first_edge(g):
     """
     Get the first edge of the graph or an empty edge if there is non

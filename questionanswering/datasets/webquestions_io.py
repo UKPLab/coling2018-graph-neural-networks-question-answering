@@ -4,7 +4,7 @@ import numpy as np
 import itertools
 
 from . import Dataset
-
+from construction import graph
 
 class WebQuestions(Dataset):
     def __init__(self, parameters, **kwargs):
@@ -33,6 +33,9 @@ class WebQuestions(Dataset):
         with open(path_to_dataset["train_choicegraphs"]) as f:
             self._choice_graphs = json.load(f)
             self._choice_graphs = [[g[0] for g in graph_set] for graph_set in self._choice_graphs]
+        if self._p.get("replace.entities", False):
+            self._choice_graphs = [[graph.replace_first_entity(g) for g in graph_set] for graph_set in self._choice_graphs]
+            self._silver_graphs = [[(graph.replace_first_entity(g[0]), g[1],) for g in graph_set] for graph_set in self._silver_graphs]
         assert len(self._dataset_tagged) == len(self._choice_graphs) == len(self._silver_graphs)
         super(WebQuestions, self).__init__(**kwargs)
 
