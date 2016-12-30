@@ -27,6 +27,7 @@ model:
   emb.dim: 50
   vocab.size: 0 #set automatically
   graph.choices: 10 #set automatically
+  semantic.layer.depth: 1
   sem.layer.size: 300
   conv.size: 100
   conv.width: 3

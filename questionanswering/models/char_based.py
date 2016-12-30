@@ -51,11 +51,12 @@ class CharCNNModel(TwinsModel):
                                                       input_length=self._p['max.sent.len'],
                                                       mask_zero=False)(characters_input)
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(character_embeddings)
-        sentence_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
-
-        # semantic_vector = keras.layers.Dense(self._p['sem.layer.size'] * 3, activation='tanh')(sentence_vector)
-        semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh', name='semantic_vector')(sentence_vector)
+        semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
+
+        for i in self._p.get("semantic.layer.depth", 1):
+            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh')(semantic_vector)
+
         sibiling_model = keras.models.Model(input=[characters_input], output=[semantic_vector], name=self._sibling_model_name)
         self.logger.debug("Sibling model is finished.")
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
@@ -124,10 +125,12 @@ class YihModel(TwinsModel):
         self.logger.debug("Create keras model.")
         word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32', name='sentence_input')
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(word_input)
-        sentence_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
-
-        semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh', name='semantic_vector')(sentence_vector)
+        semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
+
+        for i in self._p.get("semantic.layer.depth", 1):
+            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh')(semantic_vector)
+
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._sibling_model_name)
         self.logger.debug("Sibling model is finished.")
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32', name='sentence_input')
