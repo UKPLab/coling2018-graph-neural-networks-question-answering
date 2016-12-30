@@ -56,10 +56,10 @@ class WordCNNModel(TwinsModel):
                                                      input_length=self._p['max.sent.len'],
                                                      mask_zero=False)(tokens_input)
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(word_embeddings)
-        sentence_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
-
-        # semantic_vector = keras.layers.Dense(self._p['sem.layer.size'] * 3, activation='tanh')(sentence_vector)
-        semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh', name='semantic_vector')(sentence_vector)
+        semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
+        for i in range(self._p.get("sem.layer.depth", 1)):
+            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh')(semantic_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         sibiling_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._sibling_model_name)
         self.logger.debug("Sibling model is finished.")
