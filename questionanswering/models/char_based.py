@@ -54,7 +54,7 @@ class CharCNNModel(TwinsModel):
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
 
-        for i in self._p.get("semantic.layer.depth", 1):
+        for i in range(self._p.get("semantic.layer.depth", 1)):
             semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh')(semantic_vector)
 
         sibiling_model = keras.models.Model(input=[characters_input], output=[semantic_vector], name=self._sibling_model_name)
@@ -128,7 +128,7 @@ class YihModel(TwinsModel):
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
 
-        for i in self._p.get("semantic.layer.depth", 1):
+        for i in range(self._p.get("semantic.layer.depth", 1)):
             semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh')(semantic_vector)
 
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._sibling_model_name)
