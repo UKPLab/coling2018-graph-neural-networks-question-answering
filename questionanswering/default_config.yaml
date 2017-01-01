@@ -35,6 +35,8 @@ model:
   dropout.sibling: 0.1
   dropout.sibling.pooling: 0.1
   early.stopping: 5
+  twin.similarity: cos
+  sibling.activation: relu
 
 wikidata: True
 

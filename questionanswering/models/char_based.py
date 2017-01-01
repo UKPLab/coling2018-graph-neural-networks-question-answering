@@ -46,6 +46,7 @@ class CharCNNModel(TwinsModel):
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
+        # Sibling model
         characters_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
         character_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
                                                       input_length=self._p['max.sent.len'],
@@ -55,11 +56,14 @@ class CharCNNModel(TwinsModel):
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
 
         for i in range(self._p.get("sem.layer.depth", 1)):
-            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh')(semantic_vector)
+            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                                 activation=self._p.get("sibling.activation", 'tanh'))(semantic_vector)
 
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         sibiling_model = keras.models.Model(input=[characters_input], output=[semantic_vector], name=self._sibling_model_name)
         self.logger.debug("Sibling model is finished.")
+
+        # Twins model
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
         edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.sent.len'],), dtype='int32',
                                         name='edge_input')
@@ -67,8 +71,8 @@ class CharCNNModel(TwinsModel):
         sentence_vector = sibiling_model(sentence_input)
         edge_vectors = keras.layers.TimeDistributed(sibiling_model)(edge_input)
 
-        main_output = keras.layers.Merge(mode=lambda i: K.batch_dot(i[0], i[1], axes=(1, 2)),
-                                         name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, edge_vectors])
+        main_output = keras.layers.Merge(mode=self._p.get("twin.similarity", 'dot'), dot_axes=(1, 2),
+                                         name="edge_scores")([sentence_vector, edge_vectors])
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
         model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
         self.logger.debug("Model structured is finished")
@@ -124,13 +128,15 @@ class YihModel(TwinsModel):
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
+        # Sibling model
         word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32', name='sentence_input')
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(word_input)
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
 
         for i in range(self._p.get("sem.layer.depth", 1)):
-            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'], activation='tanh')(semantic_vector)
+            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                                 activation=self._p.get("sibling.activation", 'tanh'))(semantic_vector)
 
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._sibling_model_name)
@@ -138,12 +144,12 @@ class YihModel(TwinsModel):
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32', name='sentence_input')
         edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32',
                                         name='edge_input')
-
+        # Twins model
         sentence_vector = sibiling_model(sentence_input)
         edge_vectors = keras.layers.TimeDistributed(sibiling_model)(edge_input)
 
-        main_output = keras.layers.Merge(mode=lambda i: K.batch_dot(i[0], i[1], axes=(1, 2)),
-                                         name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, edge_vectors])
+        main_output = keras.layers.Merge(mode=self._p.get("twin.similarity", 'dot'), dot_axes=(1, 2),
+                                         name="edge_scores")([sentence_vector, edge_vectors])
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
         model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
         self.logger.debug("Model structured is finished")
