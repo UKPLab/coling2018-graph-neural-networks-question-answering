@@ -48,10 +48,8 @@ class WordCNNModel(TwinsModel):
         l2 = inputs[1]
         l1_dot = K.batch_dot(l1, l1, (1, 1))
         l2_dot = K.sum(l2 * l2, axis=-1)
-        l2_dot = K.permute_dimensions(l2_dot, [1, 0])
 
         denominator = K.sqrt(l1_dot * l2_dot)
-        denominator = K.permute_dimensions(denominator, [1, 0])
         denominator = K.maximum(denominator, K.epsilon())
         output = K.batch_dot(l1, l2, (1, 2)) / denominator
 
