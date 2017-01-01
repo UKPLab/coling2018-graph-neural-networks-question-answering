@@ -6,6 +6,7 @@ import numpy as np
 import json
 import re
 
+from . import keras_extensions
 from .qamodel import TwinsModel
 from . import input_to_indices
 from wikidata import wdaccess
@@ -71,8 +72,8 @@ class CharCNNModel(TwinsModel):
         sentence_vector = sibiling_model(sentence_input)
         edge_vectors = keras.layers.TimeDistributed(sibiling_model)(edge_input)
 
-        main_output = keras.layers.Merge(mode=self._p.get("twin.similarity", 'dot'), dot_axes=(1, 2),
-                                         name="edge_scores")([sentence_vector, edge_vectors])
+        main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
+                                         dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, edge_vectors])
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
         model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
         self.logger.debug("Model structured is finished")
@@ -148,8 +149,8 @@ class YihModel(TwinsModel):
         sentence_vector = sibiling_model(sentence_input)
         edge_vectors = keras.layers.TimeDistributed(sibiling_model)(edge_input)
 
-        main_output = keras.layers.Merge(mode=self._p.get("twin.similarity", 'dot'), dot_axes=(1, 2),
-                                         name="edge_scores")([sentence_vector, edge_vectors])
+        main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
+                                         dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, edge_vectors])
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
         model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
         self.logger.debug("Model structured is finished")
