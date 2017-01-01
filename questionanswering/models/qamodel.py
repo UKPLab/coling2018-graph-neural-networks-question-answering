@@ -166,7 +166,9 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
         edge_embeddings = self._sibling_model.predict_on_batch(edges_encoded)
         predictions = np.dot(sentence_embedding, np.swapaxes(edge_embeddings, 0, 1))
         if self._p.get("twin.similarity", "dot") == "cos":
-            predictions /= np.sqrt(np.sum(sentence_embedding*sentence_embedding) * np.sum(edge_embeddings*edge_embeddings, axis=-1))
+            denominator = np.sqrt(np.sum(sentence_embedding*sentence_embedding) * np.sum(edge_embeddings*edge_embeddings, axis=-1))
+            denominator = np.maximum(denominator, keras.backend._EPSILON)
+            predictions /= denominator
 
         return np.argsort(predictions)[::-1]
 
