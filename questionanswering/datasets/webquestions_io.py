@@ -44,7 +44,8 @@ class WebQuestions(Dataset):
                    if any(len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
                           for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[q_obj['index']]
                    ]
-        return self._get_indexed_samples_separate(indices)
+        return self._get_indexed_samples_separate(indices) \
+            if self._p.get('each.separate', False) else self._get_indexed_samples(indices)
 
     def _get_indexed_samples(self, indices):
         graph_lists = []

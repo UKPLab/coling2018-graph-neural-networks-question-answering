@@ -6,6 +6,7 @@ global:
 
 webquestions:
   f1.samples.threshold: 0.1
+  each.separate: False
   max.silver.samples: 15
   max.negative.samples: 30
   replace.entities: False
