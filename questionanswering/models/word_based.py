@@ -50,7 +50,6 @@ class WordCNNModel(TwinsModel):
                              K.batch_dot(l2, l2, (2, 2)))
         denominator = K.maximum(denominator, K.epsilon())
         output = K.batch_dot(l1, l2, (1, 2)) / denominator
-        output = K.expand_dims(output, 1)
         return output
 
     def _get_keras_model(self):
