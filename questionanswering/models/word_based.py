@@ -42,6 +42,17 @@ class WordCNNModel(TwinsModel):
         super(WordCNNModel, self).train(data_with_targets, validation_with_targets)
         self._sibling_model = self._model.get_layer(name="sibiling_model")
 
+    @staticmethod
+    def _keras_cosine(inputs):
+        l1 = inputs[0]
+        l2 = inputs[1]
+        denominator = K.sqrt(K.batch_dot(l1, l1, (1, 1)) *
+                             K.batch_dot(l2, l2, (2, 2)))
+        denominator = K.maximum(denominator, K.epsilon())
+        output = K.batch_dot(l1, l2, (1, 2)) / denominator
+        output = K.expand_dims(output, 1)
+        return output
+
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
         # Sibling model
@@ -76,8 +87,8 @@ class WordCNNModel(TwinsModel):
         sentence_vector = sibiling_model(sentence_input)
         edge_vectors = keras.layers.TimeDistributed(sibiling_model)(edge_input)
 
-        main_output = keras.layers.Merge(mode=self._p.get("twin.similarity", 'dot'), dot_axes=(1, 2),
-                                         name="edge_scores")([sentence_vector, edge_vectors])
+        main_output = keras.layers.Merge(mode=WordCNNModel._keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
+                                         dot_axes=(1, 2), name="edge_scores")([sentence_vector, edge_vectors])
 
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
         model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
