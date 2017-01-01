@@ -55,7 +55,7 @@ class WebQuestions(Dataset):
             negative_pool = [n_g for n_g in self._choice_graphs[index]
                              if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
             if len(graph_list) > self._p.get("max.silver.samples", 15):
-                graph_list = graph_list[:self._p.get("max.silver.samples", 15)]
+                graph_list = graph_list[:min(self._p.get("max.silver.samples", 15), self._p.get("max.negative.samples", 30))]
                 # graph_list = list(np.random.choice(graph_list,
                 #                                    self._p.get("max.silver.samples", 15), replace=False))
             graph_list, target = self._instance_with_negative(graph_list, negative_pool)
