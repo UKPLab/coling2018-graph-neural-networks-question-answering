@@ -9,7 +9,7 @@ webquestions:
   each.separate: False
   max.silver.samples: 15
   max.negative.samples: 30
-  target.dist: False
+  target.dist: True
   replace.entities: False
   path.to.dataset:
     train_train: "../data/input/webquestions.examples.train.train.json"
@@ -24,6 +24,7 @@ model:
   models.save.path: "../trainedmodels/"
   word.embeddings: "../resources/glove/glove50B.tsv"
   max.sent.len: 70
+  loss: klb
   edge.with.entity: False
   epochs: 40
   batch.size: 128

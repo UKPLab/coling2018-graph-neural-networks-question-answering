@@ -35,8 +35,10 @@ class WebQuestions(Dataset):
             self._choice_graphs = json.load(f)
             self._choice_graphs = [[g[0] for g in graph_set] for graph_set in self._choice_graphs]
         if self._p.get("replace.entities", False):
-            self._choice_graphs = [[graph.replace_first_entity(g) for g in graph_set] for graph_set in self._choice_graphs]
-            self._silver_graphs = [[(graph.replace_first_entity(g[0]), g[1],) for g in graph_set] for graph_set in self._silver_graphs]
+            self._choice_graphs = [[graph.replace_first_entity(g) for g in graph_set] for graph_set in
+                                   self._choice_graphs]
+            self._silver_graphs = [[(graph.replace_first_entity(g[0]), g[1],) for g in graph_set] for graph_set in
+                                   self._silver_graphs]
         assert len(self._dataset_tagged) == len(self._choice_graphs) == len(self._silver_graphs)
         super(WebQuestions, self).__init__(**kwargs)
 
@@ -56,7 +58,8 @@ class WebQuestions(Dataset):
             negative_pool = [n_g for n_g in self._choice_graphs[index]
                              if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
             if len(graph_list) > self._p.get("max.silver.samples", 15):
-                graph_list = graph_list[:min(self._p.get("max.silver.samples", 15), self._p.get("max.negative.samples", 30))]
+                graph_list = graph_list[
+                             :min(self._p.get("max.silver.samples", 15), self._p.get("max.negative.samples", 30))]
                 # graph_list = list(np.random.choice(graph_list,
                 #                                    self._p.get("max.silver.samples", 15), replace=False))
             graph_list, target = self._instance_with_negative(graph_list, negative_pool)
@@ -69,13 +72,13 @@ class WebQuestions(Dataset):
         instance = graph_list[:]
         if negative_pool:
             instance += [(n_g,) for n_g in np.random.choice(negative_pool,
-                                                              negative_pool_size,
-                                                              replace=len(negative_pool) < negative_pool_size)]
+                                                            negative_pool_size,
+                                                            replace=len(negative_pool) < negative_pool_size)]
         else:
             instance += [({'edgeSet': []},)] * negative_pool_size
         np.random.shuffle(instance)
         if self._p.get("target.dist", False):
-            target = [g[1][2] if len(g) > 1 else 0.0 for g in instance]
+            target = softmax([g[1][2] if len(g) > 1 else 0.0 for g in instance])
         else:
             target = np.argmax([g[1][2] if len(g) > 1 else 0.0 for g in instance])
         instance = [el[0] for el in instance]
@@ -182,6 +185,16 @@ def get_main_entity_from_question(question_object):
         entity_tokens = url.replace("http://www.freebase.com/view/en/", "").split("_")
         return [w.title() for w in entity_tokens], 'URL'
     return ()
+
+
+def softmax(x):
+    """
+    Compute softmax non-linearity on a vector
+
+    :param x: vector input
+    :return: vector output of the same dimension
+    """
+    return np.exp(x) / np.sum(np.exp(x))
 
 
 if __name__ == "__main__":

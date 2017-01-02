@@ -77,7 +77,7 @@ class CharCNNModel(TwinsModel):
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
         model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
         self.logger.debug("Model structured is finished")
-        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+        model.compile(optimizer='adam', loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
         self.logger.debug("Model is compiled")
         return model
 
@@ -154,7 +154,7 @@ class YihModel(TwinsModel):
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
         model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
         self.logger.debug("Model structured is finished")
-        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+        model.compile(optimizer='adam', loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
         self.logger.debug("Model is compiled")
         return model
 
