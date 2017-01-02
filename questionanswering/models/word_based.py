@@ -124,7 +124,7 @@ class WordSumModel(WordCNNModel):
                                                      input_length=self._p['max.sent.len'],
                                                      mask_zero=False)(tokens_input)
         semantic_vector = keras.layers.Lambda(lambda x: K.sum(x, axis=1),
-                                              output_shape=(self._p['max.sent.len'],))(word_embeddings) if self._p.get("emb.sum", False) else \
+                                              output_shape=word_embeddings.input_shape[1:])(word_embeddings) if self._p.get("emb.sum", False) else \
             keras.layers.GlobalMaxPooling1D()(word_embeddings)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
 
