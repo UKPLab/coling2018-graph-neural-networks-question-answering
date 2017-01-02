@@ -163,7 +163,7 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
         # Older model
-        tokens_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
+        tokens_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32')
         word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
                                                  input_length=self._p['max.sent.len'],
                                                  mask_zero=False)(tokens_input)
@@ -180,7 +180,7 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
         self.logger.debug("Older model is finished: {}.".format(older_model))
 
         # Younger model
-        tokens_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
+        tokens_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32')
         word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
                                                  input_length=self._p['max.sent.len'],
                                                  mask_zero=False)(tokens_input)
@@ -194,7 +194,7 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
 
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         younger_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._younger_model_name)
-        self.logger.debug("Younger model is finished: {}.".format(younger_model))
+        self.logger.debug("{} model is finished: {}.".format(self._younger_model_name, younger_model))
 
         # Brothers model
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')

@@ -6,6 +6,7 @@ import itertools
 from . import Dataset
 from construction import graph
 
+
 class WebQuestions(Dataset):
     def __init__(self, parameters, **kwargs):
         """
@@ -61,7 +62,7 @@ class WebQuestions(Dataset):
             graph_list, target = self._instance_with_negative(graph_list, negative_pool)
             graph_lists.append(graph_list)
             targets.append(target)
-        return graph_lists, np.asarray(targets, dtype='int32')
+        return graph_lists, np.asarray(targets)
 
     def _instance_with_negative(self, graph_list, negative_pool):
         negative_pool_size = self._p.get("max.negative.samples", 30) - len(graph_list)
@@ -73,7 +74,10 @@ class WebQuestions(Dataset):
         else:
             instance += [({'edgeSet': []},)] * negative_pool_size
         np.random.shuffle(instance)
-        target = np.argmax([g[1][2] if len(g) > 1 else 0.0 for g in instance])
+        if self._p.get("target.dist", False):
+            target = [g[1][2] if len(g) > 1 else 0.0 for g in instance]
+        else:
+            target = np.argmax([g[1][2] if len(g) > 1 else 0.0 for g in instance])
         instance = [el[0] for el in instance]
         return instance, target
 

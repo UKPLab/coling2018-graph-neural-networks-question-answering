@@ -9,6 +9,7 @@ webquestions:
   each.separate: False
   max.silver.samples: 15
   max.negative.samples: 30
+  target.dist: False
   replace.entities: False
   path.to.dataset:
     train_train: "../data/input/webquestions.examples.train.train.json"

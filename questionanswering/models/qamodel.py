@@ -182,7 +182,8 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
 class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
 
     def __init__(self, **kwargs):
-        self._older_model, self._younger_model = None, None
+        self._older_model = None
+        self._younger_model = None
         self._older_model_name = "older_model"
         self._younger_model_name = "younger_model"
 
