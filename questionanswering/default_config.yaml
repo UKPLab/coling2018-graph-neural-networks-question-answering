@@ -28,6 +28,7 @@ model:
   batch.size: 128
   emb.dim: 50
   emb.sum: True # Max if false
+  emb.train: False
   vocab.size: 0 #set automatically
   graph.choices: 10 #set automatically
   sem.layer.depth: 1
