@@ -25,8 +25,9 @@ class WordCNNModel(TwinsModel):
         sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_tokens(input_set, self._word2idx,
                                                                                  wdaccess.property2label,
                                                                                  max_input_len=self._p.get('max.sent.len', 10), verbose=True)
-        targets_as_one_hot = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
-        return sentences_matrix, edges_matrix, targets_as_one_hot
+        if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
+            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
+        return sentences_matrix, edges_matrix, targets
 
     def train(self, data_with_targets, validation_with_targets=None):
         if not self._word2idx:

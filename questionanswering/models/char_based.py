@@ -87,8 +87,9 @@ class CharCNNModel(TwinsModel):
                                                                                     wdaccess.property2label,
                                                                                     max_input_len=self._p.get('max.sent.len', 70),
                                                                                     edge_with_entity=self._p.get('edge.with.entity', False))
-        targets_as_one_hot = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
-        return sentences_matrix, edges_matrix, targets_as_one_hot
+        if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
+            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
+        return sentences_matrix, edges_matrix, targets
 
     def load_from_file(self, path_to_model):
         super(CharCNNModel, self).load_from_file(path_to_model=path_to_model)
@@ -111,8 +112,9 @@ class YihModel(TwinsModel):
         sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_trigrams(input_set, self._trigram_vocabulary,
                                                                                     wdaccess.property2label,
                                                                                     max_input_len=self._p.get('max.sent.len', 10), verbose=True)
-        targets_as_one_hot = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
-        return sentences_matrix, edges_matrix, targets_as_one_hot
+        if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
+            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
+        return sentences_matrix, edges_matrix, targets
 
     def train(self, data_with_targets, validation_with_targets=None):
         if not self._trigram_vocabulary:
