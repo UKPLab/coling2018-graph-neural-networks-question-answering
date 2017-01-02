@@ -7,7 +7,7 @@ import json
 import re
 import utils
 
-from .qamodel import TwinsModel
+from .qamodel import TwinsModel, BrothersModel
 from . import input_to_indices
 from wikidata import wdaccess
 from . import keras_extensions
@@ -157,3 +157,59 @@ class WordSumModel(WordCNNModel):
         self.logger.debug("Model is compiled")
         return model
 
+
+class WordCNNBrotherModel(BrothersModel, WordCNNModel):
+
+    def _get_keras_model(self):
+        self.logger.debug("Create keras model.")
+        # Older model
+        tokens_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
+        word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
+                                                 input_length=self._p['max.sent.len'],
+                                                 mask_zero=False)(tokens_input)
+        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(word_embeddings)
+        semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
+
+        for i in range(self._p.get("sem.layer.depth", 1)):
+            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                                 activation=self._p.get("sibling.activation", 'tanh'))(semantic_vector)
+
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
+        older_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._older_model_name)
+        self.logger.debug("Older model is finished.")
+
+        # Younger model
+        tokens_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
+        word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
+                                                 input_length=self._p['max.sent.len'],
+                                                 mask_zero=False)(tokens_input)
+        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(word_embeddings)
+        semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
+
+        for i in range(self._p.get("sem.layer.depth", 1)):
+            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                                 activation=self._p.get("sibling.activation", 'tanh'))(semantic_vector)
+
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
+        younger_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._younger_model_name)
+        self.logger.debug("Younger model is finished.")
+
+        # Brothers model
+        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
+        edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.sent.len'],), dtype='int32',
+                                        name='edge_input')
+
+        sentence_vector = older_model(sentence_input)
+        edge_vectors = keras.layers.TimeDistributed(younger_model)(edge_input)
+
+        main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
+                                         dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, edge_vectors])
+
+        main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
+        model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
+        self.logger.debug("Model structured is finished")
+        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+        self.logger.debug("Model is compiled")
+        return model
