@@ -194,7 +194,7 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
 
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         younger_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._younger_model_name)
-        self.logger.debug("{} model is finished: {}.".format(self._younger_model_name, younger_model))
+        self.logger.debug("Younger model is finished: {}.".format(younger_model))
 
         # Brothers model
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
@@ -202,7 +202,7 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
                                         name='edge_input')
 
         sentence_vector = older_model(sentence_input)
-        edge_vectors = keras.layers.TimeDistributed(younger_model)(edge_input)
+        edge_vectors = keras.layers.TimeDistributed(younger_model, name=self._younger_model_name)(edge_input)
 
         main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
                                          dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, edge_vectors])
@@ -217,6 +217,6 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
     def train(self, data_with_targets, validation_with_targets=None):
         WordCNNModel.train(self, data_with_targets, validation_with_targets)
         self._older_model = self._model.get_layer(name=self._older_model_name)
-        self._younger_model = self._model.get_layer(name=self._younger_model_name)
+        self._younger_model = self._model.get_layer(name=self._younger_model_name).layer
         self.logger.debug("Older model: {}".format(self._older_model))
         self.logger.debug("Younger model: {}".format(self._younger_model))
