@@ -41,7 +41,7 @@ class WordCNNModel(TwinsModel):
         self._p['vocab.size'] = len(self._word2idx)
 
         super(WordCNNModel, self).train(data_with_targets, validation_with_targets)
-        self._sibling_model = self._model.get_layer(name="sibiling_model")
+        self._sibling_model = self._model.get_layer(name=self._sibling_model_name)
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
@@ -213,3 +213,8 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
         model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         self.logger.debug("Model is compiled")
         return model
+
+    def train(self, data_with_targets, validation_with_targets=None):
+        WordCNNModel.train(self, data_with_targets, validation_with_targets)
+        self._older_model = self._model.get_layer(name=self._older_model_name)
+        self._younger_model = self._model.get_layer(name=self._younger_model_name)
