@@ -53,6 +53,7 @@ class WordCNNModel(TwinsModel):
             word_embeddings = keras.layers.Embedding(output_dim=self._embedding_matrix.shape[1],
                                                      input_dim=self._p['vocab.size'],
                                                      input_length=self._p['max.sent.len'],
+                                                     weights=self._embedding_matrix,
                                                      mask_zero=False, trainable=self._p.get("emb.train", False))(tokens_input)
         else:
             word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
@@ -122,6 +123,7 @@ class WordSumModel(WordCNNModel):
             word_embeddings = keras.layers.Embedding(output_dim=self._embedding_matrix.shape[1],
                                                      input_dim=self._p['vocab.size'],
                                                      input_length=self._p['max.sent.len'],
+                                                     weights=self._embedding_matrix,
                                                      mask_zero=False, trainable=self._p.get("emb.train", False))(tokens_input)
         else:
             word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
