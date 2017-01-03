@@ -33,6 +33,7 @@ class WordCNNModel(TwinsModel):
         if not self._word2idx:
             if "word.embeddings" in self._p:
                 self._embedding_matrix, self._word2idx = utils.load(self._p['word.embeddings'])
+                self.logger.debug('Word index loaded, size: {}'.format(len(self._word2idx)))
             else:
                 self._word2idx = input_to_indices.get_word_index([t for graphs in data_with_targets[0]
                                                                   for t in graphs[0].get('tokens', []) if graphs])
@@ -51,7 +52,7 @@ class WordCNNModel(TwinsModel):
         if "word.embeddings" in self._p:
             self.logger.debug("Using a pre-trained embedding matrix.")
             word_embeddings = keras.layers.Embedding(output_dim=self._embedding_matrix.shape[1],
-                                                     input_dim=self._p['vocab.size'],
+                                                     input_dim=self._embedding_matrix.shape[0],
                                                      input_length=self._p['max.sent.len'],
                                                      weights=self._embedding_matrix,
                                                      mask_zero=False, trainable=self._p.get("emb.train", False))(tokens_input)
@@ -121,7 +122,7 @@ class WordSumModel(WordCNNModel):
         if "word.embeddings" in self._p:
             self.logger.debug("Using a pre-trained embedding matrix.")
             word_embeddings = keras.layers.Embedding(output_dim=self._embedding_matrix.shape[1],
-                                                     input_dim=self._p['vocab.size'],
+                                                     input_dim=self._embedding_matrix.shape[0],
                                                      input_length=self._p['max.sent.len'],
                                                      weights=self._embedding_matrix,
                                                      mask_zero=False, trainable=self._p.get("emb.train", False))(tokens_input)
