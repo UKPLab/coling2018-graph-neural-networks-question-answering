@@ -51,14 +51,17 @@ class CharCNNModel(TwinsModel):
         characters_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
         character_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
                                                       input_length=self._p['max.sent.len'],
+                                                      init=self._p.get("emb.weight.init", 'uniform'),
                                                       mask_zero=False)(characters_input)
-        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(character_embeddings)
+        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
+                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(character_embeddings)
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
 
         for i in range(self._p.get("sem.layer.depth", 1)):
             semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
-                                                 activation=self._p.get("sibling.activation", 'tanh'))(semantic_vector)
+                                                 activation=self._p.get("sibling.activation", 'tanh'),
+                                                 init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
 
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         sibiling_model = keras.models.Model(input=[characters_input], output=[semantic_vector], name=self._sibling_model_name)
@@ -133,13 +136,15 @@ class YihModel(TwinsModel):
         self.logger.debug("Create keras model.")
         # Sibling model
         word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32', name='sentence_input')
-        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(word_input)
+        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
+                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(word_input)
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
 
         for i in range(self._p.get("sem.layer.depth", 1)):
             semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
-                                                 activation=self._p.get("sibling.activation", 'tanh'))(semantic_vector)
+                                                 activation=self._p.get("sibling.activation", 'tanh'),
+                                                 init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
 
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._sibling_model_name)

@@ -31,10 +31,12 @@ model:
   emb.dim: 50
   emb.sum: True # Max if false
   emb.train: False
+  emb.weight.init: uniform
   vocab.size: 0 #set automatically
   graph.choices: 10 #set automatically
   sem.layer.depth: 1
   sem.layer.size: 300
+  sibling.weight.init: glorot_uniform
   conv.size: 100
   conv.width: 3
   dropout.sibling: 0.1

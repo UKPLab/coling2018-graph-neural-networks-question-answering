@@ -57,14 +57,17 @@ class WordCNNModel(TwinsModel):
         else:
             word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
                                                      input_length=self._p['max.sent.len'],
+                                                     init=self._p.get("emb.weight.init", 'uniform'),
                                                      mask_zero=False)(tokens_input)
-        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(word_embeddings)
+        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
+                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(word_embeddings)
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
 
         for i in range(self._p.get("sem.layer.depth", 1)):
             semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
-                                                 activation=self._p.get("sibling.activation", 'tanh'))(semantic_vector)
+                                                 activation=self._p.get("sibling.activation", 'tanh'),
+                                                 init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
 
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         sibiling_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._sibling_model_name)
@@ -119,10 +122,11 @@ class WordSumModel(WordCNNModel):
             word_embeddings = keras.layers.Embedding(output_dim=self._embedding_matrix.shape[1],
                                                      input_dim=self._p['vocab.size'],
                                                      input_length=self._p['max.sent.len'],
-                                                     mask_zero=False, trainable=False)(tokens_input)
+                                                     mask_zero=False, trainable=self._p.get("emb.train", False))(tokens_input)
         else:
             word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
                                                      input_length=self._p['max.sent.len'],
+                                                     init=self._p.get("emb.weight.init", 'uniform'),
                                                      mask_zero=False)(tokens_input)
         if self._p.get("emb.sum", False):
             semantic_vector = keras.layers.Lambda(lambda x: K.sum(x, axis=1),
@@ -134,7 +138,8 @@ class WordSumModel(WordCNNModel):
 
         for i in range(self._p.get("sem.layer.depth", 1)):
             semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
-                                                 activation=self._p.get("sibling.activation", 'tanh'))(semantic_vector)
+                                                 activation=self._p.get("sibling.activation", 'tanh'),
+                                                 init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
 
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         sibiling_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._sibling_model_name)
@@ -167,14 +172,17 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
         tokens_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32')
         word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
                                                  input_length=self._p['max.sent.len'],
+                                                 init=self._p.get("emb.weight.init", 'uniform'),
                                                  mask_zero=False)(tokens_input)
-        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(word_embeddings)
+        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
+                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(word_embeddings)
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
 
         for i in range(self._p.get("sem.layer.depth", 1)):
             semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
-                                                 activation=self._p.get("sibling.activation", 'tanh'))(semantic_vector)
+                                                 activation=self._p.get("sibling.activation", 'tanh'),
+                                                 init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
 
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         older_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._older_model_name)
