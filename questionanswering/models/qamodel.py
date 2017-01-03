@@ -53,6 +53,8 @@ class QAModel(metaclass=abc.ABCMeta):
 
     def test_on_silver(self, data_with_targets, **kwargs):
         graphs, targets = data_with_targets
+        if targets and len(targets[0]) > 0:
+            targets = np.argmax(targets, axis=-1)
         predicted_targets = [indices[0] for indices in self.apply_on_batch(graphs)]
         accuracy = np.sum(np.asarray(predicted_targets) == targets) / len(targets)
         print("Accuracy on silver data: {}".format(accuracy))
@@ -124,11 +126,11 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         input_set, targets = encoded_for_training[:-1], encoded_for_training[-1]
         self.logger.debug('Data encoded for training.')
 
+        monitor_value = ("val_" if validation_with_targets else "") + self._p.get("monitor", "loss")
         callbacks = [
-            keras.callbacks.EarlyStopping(monitor="val_loss" if validation_with_targets else "loss",
-                                          patience=self._p.get("early.stopping", 5), verbose=1),
+            keras.callbacks.EarlyStopping(monitor=monitor_value, patience=self._p.get("early.stopping", 5), verbose=1),
             keras.callbacks.ModelCheckpoint(self._save_model_to + self._model_file_name,
-                                            monitor="val_loss" if validation_with_targets else "loss", save_best_only=True)
+                                            monitor=monitor_value, save_best_only=True)
         ]
         self.logger.debug("Callbacks are initialized. Save models to: {}{}.kerasmodel".format(self._save_model_to, self._model_file_name))
 
