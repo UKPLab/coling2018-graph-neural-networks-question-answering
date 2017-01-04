@@ -31,7 +31,7 @@ class QAModel(metaclass=abc.ABCMeta):
 
     def test(self, data_with_gold, verbose=False):
         graphs, gold_answers = data_with_gold
-        predicted_indices = self.apply_on_batch(graphs)
+        predicted_indices = self.apply_on_batch(graphs, verbose=verbose)
         successes = deque()
         avg_f1 = 0.0
         for i, sorted_indices in enumerate(tqdm.tqdm(predicted_indices, ascii=True, disable=(not verbose))):
@@ -59,9 +59,9 @@ class QAModel(metaclass=abc.ABCMeta):
         accuracy = np.sum(np.asarray(predicted_targets) == targets) / len(targets)
         print("Accuracy on silver data: {}".format(accuracy))
 
-    def apply_on_batch(self, data_batch):
+    def apply_on_batch(self, data_batch, verbose=False):
         predicted_indices = deque()
-        for instance in data_batch:
+        for instance in tqdm.tqdm(data_batch, ascii=True, disable=(not verbose)):
             predicted_indices.append(self.apply_on_instance(instance) if instance else [])
         return predicted_indices
 
