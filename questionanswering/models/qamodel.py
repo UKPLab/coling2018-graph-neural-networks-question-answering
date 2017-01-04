@@ -53,7 +53,7 @@ class QAModel(metaclass=abc.ABCMeta):
 
     def test_on_silver(self, data_with_targets, **kwargs):
         graphs, targets = data_with_targets
-        if len(targets) > 0 and len(targets[0]) > 0:
+        if len(targets) > 0 and not issubclass(type(targets[0]), np.integer):
             targets = np.argmax(targets, axis=-1)
         predicted_targets = [indices[0] for indices in self.apply_on_batch(graphs)]
         accuracy = np.sum(np.asarray(predicted_targets) == targets) / len(targets)
