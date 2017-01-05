@@ -39,6 +39,11 @@ class WebQuestions(Dataset):
                                    self._choice_graphs]
             self._silver_graphs = [[(graph.replace_first_entity(g[0]), g[1],) for g in graph_set] for graph_set in
                                    self._silver_graphs]
+
+        self._choice_graphs = [[graph.normalize_tokens(g) for g in graph_set] for graph_set in
+                               self._choice_graphs]
+        self._silver_graphs = [[(graph.normalize_tokens(g[0]), g[1],) for g in graph_set] for graph_set in
+                               self._silver_graphs]
         assert len(self._dataset_tagged) == len(self._choice_graphs) == len(self._silver_graphs)
         super(WebQuestions, self).__init__(**kwargs)
 
@@ -170,6 +175,7 @@ class WebQuestions(Dataset):
         :return: size of the training sample.
         """
         return len(self._get_sample_indices(self._questions_train))
+
 
 def get_answers_from_question(question_object):
     """

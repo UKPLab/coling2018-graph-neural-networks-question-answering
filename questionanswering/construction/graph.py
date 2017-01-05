@@ -1,6 +1,7 @@
 import itertools
 import nltk
 import copy
+import re
 
 
 def replace_first_entity(g):
@@ -26,6 +27,22 @@ def replace_first_entity(g):
         else:
             previous_is_entity = True
     g['tokens'] = new_tokens
+    return g
+
+
+def normalize_tokens(g):
+    """
+    Normalize a tokens of the graph by setting it to lower case and removing any numbers.
+
+    :param g: graph to normalize
+    :return: graph with normalized tokens
+    >>> normalize_tokens({'tokens':["Upper", "Case"]})
+    {'tokens': ['upper', 'case']}
+    >>> normalize_tokens({'tokens':["He", "started", "in", "1995"]})
+    {'tokens': ['he', 'started', 'in', '0']}
+    """
+    tokens = g.get('tokens', [])
+    g['tokens'] = [re.sub(r"\d+", "0", t.lower()) for t in tokens]
     return g
 
 

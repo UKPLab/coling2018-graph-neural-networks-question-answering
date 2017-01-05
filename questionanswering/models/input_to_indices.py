@@ -108,24 +108,7 @@ def encode_by_character(graph_set, character2idx, property2label, edge_with_enti
     return sentence_ids, edges_ids
 
 
-def normalize_string(input_string):
-    """
-    Normalize a string by setting it to lower case and removing any numbers.
-
-    :param input_string: string to normalize
-    :return: normalized string
-    >>> normalize_string("UpperCase")
-    'uppercase'
-    >>> normalize_string("He started in 1995")
-    'he started in 0'
-    """
-    input_string = input_string.lower()
-    input_string = re.sub(r"\d+", "0", input_string)
-    return input_string
-
-
 def string_to_unigrams(input_string, character2idx):
-    input_string = normalize_string(input_string)
     return [character2idx.get(c, character2idx[unknown_character]) for c in input_string]
 
 
@@ -138,7 +121,6 @@ def string_to_trigrams(t):
     >>> string_to_trigrams('who')
     [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#')]
     """
-    t = normalize_string(t)
     return nltk.ngrams("#{}#".format(t), 3)
 
 
@@ -179,7 +161,7 @@ def get_character_index(sentences):
     >>> len(get_character_index(['who played whom']))
     11
     """
-    character_set = {c for sent in sentences for c in normalize_string(sent)}
+    character_set = {c for sent in sentences for c in sent}
     character2idx = {c: i for i, c in enumerate(character_set, 1)}
     character2idx[zero_character] = 0
     character2idx[unknown_character] = len(character2idx)
@@ -193,7 +175,7 @@ def get_word_index(tokens):
     :param sentences: list of strings
     :return: character to index mapping
     """
-    token_set = {normalize_string(token) for token in tokens}
+    token_set = set(tokens)
     word2idx = {t: i for i, t in enumerate(token_set, 1)}
     word2idx[utils.all_zeroes] = 0
     word2idx[utils.unknown_word] = len(word2idx)

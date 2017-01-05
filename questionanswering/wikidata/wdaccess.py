@@ -296,7 +296,7 @@ def load_blacklist(path_to_list):
 def load_property_labels(path_to_property_labels):
     try:
         with open(path_to_property_labels) as infile:
-            return_map = {l.split("\t")[0] : l.split("\t")[1].strip() for l in infile.readlines()}
+            return_map = {l.split("\t")[0]: l.split("\t")[1].strip().lower() for l in infile.readlines()}
         return return_map
     except Exception as ex:
         logger.error("No list found. {}".format(ex))
