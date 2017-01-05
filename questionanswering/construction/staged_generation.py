@@ -104,6 +104,8 @@ def generate_without_gold(ungrounded_graph,
     :return: a list of generated grounded graphs
     """
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
+    wikidata_actions_restrict = wikidata_actions & stages.RESTRICT_ACTIONS
+    wikidata_actions_expand = wikidata_actions & stages.EXPAND_ACTIONS
     generated_graphs = []
     iterations = 0
     while pool:
@@ -114,16 +116,18 @@ def generate_without_gold(ungrounded_graph,
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
 
         logger.debug("Constructing with WikiData")
-        suggested_graphs = [el for f in wikidata_actions for el in f(g[0])]
+        suggested_graphs = [el for f in wikidata_actions_restrict for el in f(g[0])]
+        suggested_graphs += [el for s_g in suggested_graphs for f in wikidata_actions_expand for el in f(s_g)]
+
         logger.debug("Suggested graphs: {}".format(suggested_graphs))
         chosen_graphs = ground_without_gold(suggested_graphs)
+        logger.debug("Extending the pool with {} graphs.".format(len(chosen_graphs)))
+        pool.extend(chosen_graphs)
 
         logger.debug("Constructing without WikiData")
         extended_graphs = [(el, f_score, a) for s_g, f_score, a in chosen_graphs for f in non_linking_actions for el in f(s_g)]
         chosen_graphs.extend(extended_graphs)
 
-        logger.debug("Extending the pool with {} graphs.".format(len(chosen_graphs)))
-        pool.extend(chosen_graphs)
         logger.debug("Extending the generated with {} graphs.".format(len(chosen_graphs)))
         generated_graphs.extend(chosen_graphs)
         iterations += 1
