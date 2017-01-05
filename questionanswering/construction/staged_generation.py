@@ -119,7 +119,7 @@ def generate_without_gold(ungrounded_graph,
         chosen_graphs = ground_without_gold(suggested_graphs)
 
         logger.debug("Constructing without WikiData")
-        extended_graphs = [(el, f, a) for s_g, f, a in chosen_graphs for f in non_linking_actions for el in f(s_g)]
+        extended_graphs = [(el, f_score, a) for s_g, f_score, a in chosen_graphs for f in non_linking_actions for el in f(s_g)]
         chosen_graphs.extend(extended_graphs)
 
         logger.debug("Extending the pool with {} graphs.".format(len(chosen_graphs)))
