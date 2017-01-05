@@ -24,7 +24,7 @@ class WordCNNModel(TwinsModel):
         input_set, targets = data_with_targets
         sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_tokens(input_set, self._word2idx,
                                                                                  wdaccess.property2label,
-                                                                                 max_input_len=self._p.get('max.sent.len', 10), verbose=True)
+                                                                                 max_input_len=self._p.get('max.sent.len', 10), verbose=False)
         if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets
@@ -42,6 +42,7 @@ class WordCNNModel(TwinsModel):
         self._p['vocab.size'] = len(self._word2idx)
         super(WordCNNModel, self).prepare_model(train_tokens)
         self._sibling_model = self._model.get_layer(name=self._sibling_model_name)
+        self.logger.debug("Sibling model: {}".format(self._sibling_model))
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")

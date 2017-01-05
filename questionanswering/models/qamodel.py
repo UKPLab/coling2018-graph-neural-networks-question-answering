@@ -141,6 +141,7 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         if validation_with_targets:
             self.logger.debug("Start training with a validation sample.")
             encoded_validation = self.encode_data_for_training(validation_with_targets)
+            self.logger.debug('Validation data encoded for training.')
             callback_history = self._model.fit(list(input_set), targets,
                                                nb_epoch=self._p.get("epochs", 200),
                                                batch_size=self._p.get("batch.size", 128),
@@ -160,13 +161,10 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
         callbacks = self.init_callbacks(monitor_validation=validation_with_targets)
 
-        self.logger.debug(self._p)
-        assert "graph.choices" in self._p
-
-        self._model = self._get_keras_model()
         if validation_with_targets:
             self.logger.debug("Start training with a validation sample.")
             encoded_validation = self.encode_data_for_training(validation_with_targets)
+            self.logger.debug('Validation data encoded for training.')
             callback_history = self._model.fit_generator(self.data_for_training_generator(data_with_targets_generator),
                                                          nb_epoch=self._p.get("epochs", 200),
                                                          samples_per_epoch=self._p.get("samples.per.epoch", 1000),

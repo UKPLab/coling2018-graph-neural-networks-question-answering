@@ -43,6 +43,7 @@ class CharCNNModel(TwinsModel):
 
         super(CharCNNModel, self).prepare_model(train_tokens)
         self._sibling_model = self._model.get_layer(name="sibiling_model")
+        self.logger.debug("Sibling model: {}".format(self._sibling_model))
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
@@ -88,7 +89,8 @@ class CharCNNModel(TwinsModel):
         sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_character(input_set, self._character2idx,
                                                                                     wdaccess.property2label,
                                                                                     max_input_len=self._p.get('max.sent.len', 70),
-                                                                                    edge_with_entity=self._p.get('edge.with.entity', False))
+                                                                                    edge_with_entity=self._p.get('edge.with.entity', False),
+                                                                                    verbose=False)
         if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets
@@ -113,7 +115,7 @@ class YihModel(TwinsModel):
         input_set, targets = data_with_targets
         sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_trigrams(input_set, self._trigram_vocabulary,
                                                                                     wdaccess.property2label,
-                                                                                    max_input_len=self._p.get('max.sent.len', 10), verbose=True)
+                                                                                    max_input_len=self._p.get('max.sent.len', 10), verbose=False)
         if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets
@@ -130,6 +132,7 @@ class YihModel(TwinsModel):
 
         super(YihModel, self).prepare_model(train_tokens)
         self._sibling_model = self._model.get_layer(name="sibiling_model")
+        self.logger.debug("Sibling model: {}".format(self._sibling_model))
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
