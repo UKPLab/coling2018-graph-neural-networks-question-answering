@@ -6,6 +6,7 @@ import sys
 
 from datasets import webquestions_io
 import models
+from models.qamodel import KerasModel
 
 
 @click.command()
@@ -41,7 +42,8 @@ def train(config_file_path):
     config['model']['graph.choices'] = config['webquestions'].get("max.negative.samples", 30)
 
     trainablemodel = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
-
+    if isinstance(trainablemodel, KerasModel):
+        trainablemodel.prepare_model(webquestions.get_train_tokens())
     if config_global.get('train.generator', False):
         trainablemodel.train_on_generator(webquestions.get_training_generator(config['model'].get("batch.size", 128)),
                                           validation_with_targets=webquestions.get_validation_samples())

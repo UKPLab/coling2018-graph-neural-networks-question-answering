@@ -114,6 +114,14 @@ class WebQuestions(Dataset):
         """
         return self._get_samples(self._questions_train)
 
+    def get_train_tokens(self):
+        """
+        Generate a list of tokens that appear in the training data.
+
+        :return: list of lists of tokens
+        """
+        return [graphs[0][0].get('tokens', []) for graphs in self._silver_graphs if graphs]
+
     def get_validation_samples(self):
         """
         See the documentation for get_training_samples

@@ -116,6 +116,19 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         self._model_number = int(fname_match.group(1)) if fname_match else 0
         self.logger.debug("Loaded successfully.")
 
+    @abc.abstractmethod
+    def prepare_model(self, train_tokens):
+        """
+        Method that should override to init objects and parameters that are needed for the model training.
+        E.g. vocabulary index.
+
+        :param train_tokens:
+        """
+        self.logger.debug(self._p)
+        assert "graph.choices" in self._p
+
+        self._model = self._get_keras_model()
+
     def train(self, data_with_targets, validation_with_targets=None):
         self.logger.debug('Training process started.')
 
@@ -125,10 +138,6 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
         callbacks = self.init_callbacks(monitor_validation=validation_with_targets)
 
-        self.logger.debug(self._p)
-        assert "graph.choices" in self._p
-
-        self._model = self._get_keras_model()
         if validation_with_targets:
             self.logger.debug("Start training with a validation sample.")
             encoded_validation = self.encode_data_for_training(validation_with_targets)

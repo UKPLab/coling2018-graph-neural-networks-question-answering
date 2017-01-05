@@ -29,20 +29,18 @@ class WordCNNModel(TwinsModel):
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets
 
-    def train(self, data_with_targets, validation_with_targets=None):
+    def prepare_model(self, train_tokens):
         if not self._word2idx:
             if "word.embeddings" in self._p:
                 self._embedding_matrix, self._word2idx = utils.load(self._p['word.embeddings'])
                 self.logger.debug('Word index loaded, size: {}'.format(len(self._word2idx)))
             else:
-                self._word2idx = input_to_indices.get_word_index([t for graphs in data_with_targets[0]
-                                                                  for t in graphs[0].get('tokens', []) if graphs])
+                self._word2idx = input_to_indices.get_word_index([t for tokens in train_tokens for t in tokens])
                 self.logger.debug('Word index created, size: {}'.format(len(self._word2idx)))
                 with open(self._save_model_to + "word2idx_{}.json".format(self._model_number), 'w') as out:
                     json.dump(self._word2idx, out, indent=2)
         self._p['vocab.size'] = len(self._word2idx)
-
-        super(WordCNNModel, self).train(data_with_targets, validation_with_targets)
+        super(WordCNNModel, self).prepare_model(train_tokens)
         self._sibling_model = self._model.get_layer(name=self._sibling_model_name)
 
     def _get_keras_model(self):
@@ -226,8 +224,8 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
         self.logger.debug("Model is compiled")
         return model
 
-    def train(self, data_with_targets, validation_with_targets=None):
-        WordCNNModel.train(self, data_with_targets, validation_with_targets)
+    def prepare_model(self, train_tokens):
+        WordCNNModel.prepare_model(self, train_tokens)
         self._older_model = self._model.get_layer(name=self._older_model_name)
         self._younger_model = self._model.get_layer(name=self._younger_model_name).layer
         self.logger.debug("Older model: {}".format(self._older_model))

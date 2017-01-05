@@ -33,16 +33,15 @@ class CharCNNModel(TwinsModel):
         edges_ids = sequence.pad_sequences(edges_ids, maxlen=self._p.get('max.sent.len', 70), padding='post', truncating='post', dtype="int32")
         return sentence_ids, edges_ids
 
-    def train(self, data_with_targets, validation_with_targets=None):
+    def prepare_model(self, train_tokens):
         if not self._character2idx:
-            self._character2idx = input_to_indices.get_character_index(
-                [" ".join(graphs[0]['tokens']) for graphs in data_with_targets[0] if graphs])
+            self._character2idx = input_to_indices.get_character_index([" ".join(tokens) for tokens in train_tokens])
             self.logger.debug('Character index created, size: {}'.format(len(self._character2idx)))
             with open(self._save_model_to + "character2idx_{}.json".format(self._model_number), 'w') as out:
                 json.dump(self._character2idx, out, indent=2)
         self._p['vocab.size'] = len(self._character2idx)
 
-        super(CharCNNModel, self).train(data_with_targets, validation_with_targets)
+        super(CharCNNModel, self).prepare_model(train_tokens)
         self._sibling_model = self._model.get_layer(name="sibiling_model")
 
     def _get_keras_model(self):
@@ -119,17 +118,17 @@ class YihModel(TwinsModel):
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets
 
-    def train(self, data_with_targets, validation_with_targets=None):
+    def prepare_model(self, train_tokens):
         if not self._trigram_vocabulary:
-            self._trigram_vocabulary = list({t for graphs in data_with_targets[0]
-                                             for token in graphs[0].get('tokens')
-                                             for t in input_to_indices.string_to_trigrams(token) if graphs})
+            self._trigram_vocabulary = list({t for tokens in train_tokens
+                                             for token in tokens
+                                             for t in input_to_indices.string_to_trigrams(token)})
             self.logger.debug('Trigram vocabulary created, size: {}'.format(len(self._trigram_vocabulary)))
             with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number), 'w') as out:
                 json.dump(self._trigram_vocabulary, out, indent=2)
         self._p['vocab.size'] = len(self._trigram_vocabulary)
 
-        super(YihModel, self).train(data_with_targets, validation_with_targets)
+        super(YihModel, self).prepare_model(train_tokens)
         self._sibling_model = self._model.get_layer(name="sibiling_model")
 
     def _get_keras_model(self):
