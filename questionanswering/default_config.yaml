@@ -3,6 +3,7 @@ logger:
 
 global:
   random.seed: 1
+  train.generator: False
 
 webquestions:
   f1.samples.threshold: 0.1
@@ -34,6 +35,7 @@ model:
   emb.weight.init: uniform
   vocab.size: 0 #set automatically
   graph.choices: 10 #set automatically
+  samples.per.epoch: 1000 #set automatically
   sem.layer.depth: 1
   sem.layer.size: 300
   sibling.weight.init: glorot_uniform

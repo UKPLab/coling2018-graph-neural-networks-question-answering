@@ -43,12 +43,16 @@ class WebQuestions(Dataset):
         super(WebQuestions, self).__init__(**kwargs)
 
     def _get_samples(self, questions):
+        indices = self._get_sample_indices(questions)
+        return self._get_indexed_samples_separate(indices) \
+            if self._p.get('each.separate', False) else self._get_indexed_samples(indices)
+
+    def _get_sample_indices(self, questions):
         indices = [q_obj['index'] for q_obj in questions
                    if any(len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
                           for g in self._silver_graphs[q_obj['index']]) and self._choice_graphs[q_obj['index']]
                    ]
-        return self._get_indexed_samples_separate(indices) \
-            if self._p.get('each.separate', False) else self._get_indexed_samples(indices)
+        return indices
 
     def _get_indexed_samples(self, indices):
         graph_lists = []
@@ -127,10 +131,7 @@ class WebQuestions(Dataset):
         :param batch_size: The size of a batch to return at each step
         :return: a generation that continuously returns batch of training data.
         """
-        indices = [q_obj['index'] for q_obj in self._questions_train
-                   if any(len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
-                          for g in self._silver_graphs[q_obj['index']]) and
-                   self._choice_graphs[q_obj['index']]]
+        indices = self._get_sample_indices(self._questions_train)
         for i in itertools.cycle(range(0, len(indices), batch_size)):
             batch_indices = indices[i:i + batch_size]
             yield self._get_indexed_samples(batch_indices)
@@ -154,6 +155,13 @@ class WebQuestions(Dataset):
             gold_answers.append(gold_answer)
         return graph_lists, gold_answers
 
+    def get_train_sample_size(self):
+        """
+        Compute the size of the training sample with the current settings
+
+        :return: size of the training sample.
+        """
+        return len(self._get_sample_indices(self._questions_train))
 
 def get_answers_from_question(question_object):
     """

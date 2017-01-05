@@ -37,9 +37,17 @@ def train(config_file_path):
     logger.addHandler(ch)
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'])
+    config['model']['samples.per.epoch'] == webquestions.get_train_sample_size()
+    config['model']['graph.choices'] == config['webquestions'].get("max.negative.samples", 30)
 
     trainablemodel = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
-    trainablemodel.train(webquestions.get_training_samples(), validation_with_targets=webquestions.get_validation_samples())
+
+    if config_global.get('train.generator', False):
+        trainablemodel.train_on_generator(webquestions.get_training_generator(config['model'].get("batch.size", 128)),
+                                          validation_with_targets=webquestions.get_validation_samples())
+    else:
+        trainablemodel.train(webquestions.get_training_samples(),
+                             validation_with_targets=webquestions.get_validation_samples())
 
     trainablemodel.test_on_silver(webquestions.get_validation_samples())
 
@@ -47,6 +55,7 @@ def train(config_file_path):
         validation_graph_lists, validation_gold_answers = webquestions.get_validation_with_gold()
         print("Evaluate on {} validation questions.".format(len(validation_gold_answers)))
         trainablemodel.test((validation_graph_lists, validation_gold_answers), verbose=True)
+
 
 if __name__ == "__main__":
     train()

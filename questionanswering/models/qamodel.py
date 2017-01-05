@@ -12,7 +12,6 @@ from datasets import evaluation
 
 
 class QAModel(metaclass=abc.ABCMeta):
-
     def __init__(self, logger=None, **kwargs):
         if not logger:
             self.logger = logging.getLogger(__name__)
@@ -48,7 +47,7 @@ class QAModel(metaclass=abc.ABCMeta):
                     successes.append((i, f1, g))
                 avg_f1 += f1
         avg_f1 /= len(gold_answers)
-        print("Successful predictions: {} ({})".format(len(successes), len(successes)/len(gold_answers)))
+        print("Successful predictions: {} ({})".format(len(successes), len(successes) / len(gold_answers)))
         print("Average f1: {}".format(avg_f1))
 
     def test_on_silver(self, data_with_targets, **kwargs):
@@ -71,7 +70,6 @@ class QAModel(metaclass=abc.ABCMeta):
 
 
 class TrainableQAModel(QAModel, metaclass=abc.ABCMeta):
-
     def __init__(self, **kwargs):
         super(TrainableQAModel, self).__init__(**kwargs)
 
@@ -85,7 +83,6 @@ class TrainableQAModel(QAModel, metaclass=abc.ABCMeta):
 
 
 class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
-
     def __init__(self, parameters, **kwargs):
         self._p = parameters
         self._save_model_to = self._p['models.save.path']
@@ -126,36 +123,75 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         input_set, targets = encoded_for_training[:-1], encoded_for_training[-1]
         self.logger.debug('Data encoded for training.')
 
-        monitor_value = ("val_" if validation_with_targets else "") + self._p.get("monitor", "loss")
-        callbacks = [
-            keras.callbacks.EarlyStopping(monitor=monitor_value, patience=self._p.get("early.stopping", 5), verbose=1),
-            keras.callbacks.ModelCheckpoint(self._save_model_to + self._model_file_name,
-                                            monitor=monitor_value, save_best_only=True)
-        ]
-        self.logger.debug("Callbacks are initialized. Save models to: {}{}.kerasmodel".format(self._save_model_to, self._model_file_name))
+        callbacks = self.init_callbacks(monitor_validation=validation_with_targets)
 
-        self._p['graph.choices'] = targets.shape[1]
-        self.logger.debug("graph.choices: {}".format(self._p['graph.choices']))
         self.logger.debug(self._p)
+        assert "graph.choices" in self._p
+
         self._model = self._get_keras_model()
         if validation_with_targets:
             self.logger.debug("Start training with a validation sample.")
             encoded_validation = self.encode_data_for_training(validation_with_targets)
             callback_history = self._model.fit(list(input_set), targets,
-                                               nb_epoch=self._p.get("epochs", 200), batch_size=self._p.get("batch.size", 128),
+                                               nb_epoch=self._p.get("epochs", 200),
+                                               batch_size=self._p.get("batch.size", 128),
                                                verbose=1,
                                                validation_data=(list(encoded_validation[:-1]), encoded_validation[-1]),
                                                callbacks=callbacks)
         else:
             self.logger.debug("Start training without a validation sample.")
             callback_history = self._model.fit(list(input_set), targets,
-                                               nb_epoch=self._p.get("epochs", 200), batch_size=self._p.get("batch.size", 128),
+                                               nb_epoch=self._p.get("epochs", 200),
+                                               batch_size=self._p.get("batch.size", 128),
                                                verbose=1, callbacks=callbacks)
         self.logger.debug("Model training is finished.")
 
+    def train_on_generator(self, data_with_targets_generator, validation_with_targets=None):
+        self.logger.debug('Training process with a generator started.')
+
+        callbacks = self.init_callbacks(monitor_validation=validation_with_targets)
+
+        self.logger.debug(self._p)
+        assert "graph.choices" in self._p
+
+        self._model = self._get_keras_model()
+        if validation_with_targets:
+            self.logger.debug("Start training with a validation sample.")
+            encoded_validation = self.encode_data_for_training(validation_with_targets)
+            callback_history = self._model.fit_generator(self.data_for_training_generator(data_with_targets_generator),
+                                                         nb_epoch=self._p.get("epochs", 200),
+                                                         samples_per_epoch=self._p.get("samples.per.epoch", 1000),
+                                                         verbose=1,
+                                                         validation_data=(
+                                                             list(encoded_validation[:-1]), encoded_validation[-1]),
+                                                         callbacks=callbacks)
+        else:
+            self.logger.debug("Start training without a validation sample.")
+            callback_history = self._model.fit_generator(self.data_for_training_generator(data_with_targets_generator),
+                                                         nb_epoch=self._p.get("epochs", 200),
+                                                         samples_per_epoch=self._p.get("samples.per.epoch", 1000),
+                                                         verbose=1, callbacks=callbacks)
+        self.logger.debug("Model training is finished.")
+
+    def init_callbacks(self, monitor_validation=False):
+        monitor_value = ("val_" if monitor_validation else "") + self._p.get("monitor", "loss")
+        callbacks = [
+            keras.callbacks.EarlyStopping(monitor=monitor_value, patience=self._p.get("early.stopping", 5), verbose=1),
+            keras.callbacks.ModelCheckpoint(self._save_model_to + self._model_file_name,
+                                            monitor=monitor_value, save_best_only=True)
+        ]
+        self.logger.debug("Callbacks are initialized. Save models to: {}{}.kerasmodel".format(self._save_model_to,
+                                                                                              self._model_file_name))
+        return callbacks
+
+    def data_for_training_generator(self, data_with_targets_generator):
+        for data_with_targets in data_with_targets_generator:
+            encoded_for_training = self.encode_data_for_training(data_with_targets)
+            input_set, targets = encoded_for_training[:-1], encoded_for_training[-1]
+            yield list(input_set), targets
+
 
 class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
-
     def __init__(self, **kwargs):
         self._sibling_model = None
         self._sibling_model_name = "sibiling_model"
@@ -168,7 +204,8 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
         edge_embeddings = self._sibling_model.predict_on_batch(edges_encoded)
         predictions = np.dot(sentence_embedding, np.swapaxes(edge_embeddings, 0, 1))
         if self._p.get("twin.similarity", "dot") == "cos":
-            denominator = np.sqrt(np.sum(sentence_embedding*sentence_embedding) * np.sum(edge_embeddings*edge_embeddings, axis=-1))
+            denominator = np.sqrt(
+                np.sum(sentence_embedding * sentence_embedding) * np.sum(edge_embeddings * edge_embeddings, axis=-1))
             denominator = np.maximum(denominator, keras.backend.common._EPSILON)
             predictions /= denominator
 
@@ -182,7 +219,6 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
 
 
 class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
-
     def __init__(self, **kwargs):
         self._older_model = None
         self._younger_model = None
@@ -197,7 +233,8 @@ class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
         edge_embeddings = self._younger_model.predict_on_batch(edges_encoded)
         predictions = np.dot(sentence_embedding, np.swapaxes(edge_embeddings, 0, 1))
         if self._p.get("twin.similarity", "dot") == "cos":
-            denominator = np.sqrt(np.sum(sentence_embedding*sentence_embedding) * np.sum(edge_embeddings*edge_embeddings, axis=-1))
+            denominator = np.sqrt(
+                np.sum(sentence_embedding * sentence_embedding) * np.sum(edge_embeddings * edge_embeddings, axis=-1))
             denominator = np.maximum(denominator, keras.backend.common._EPSILON)
             predictions /= denominator
 
