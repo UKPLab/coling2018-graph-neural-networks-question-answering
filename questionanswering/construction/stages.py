@@ -113,10 +113,10 @@ EXPAND_ACTIONS = {last_relation_hop_up}  # Expand actions
 
 # This division is relevant for constructing all possible groundings without gold answers:
 # - WikiData actions need to be grounded in Wikidata in order to construct the next graph
-WIKIDATA_ACTIONS = {add_entity_and_relation}
+WIKIDATA_ACTIONS = {add_entity_and_relation, last_relation_hop_up}
 # - Non linking options just add options to the graph structure without checking if it is possible in WikiData.
 #   Hop-up is always possible anyway, temporal is possible most of the time.
-NON_LINKING_ACTIONS = {last_relation_temporal, last_relation_hop_up}
+NON_LINKING_ACTIONS = {last_relation_temporal}
 
 ARG_TYPES = ['argmax', 'argmin']
 
