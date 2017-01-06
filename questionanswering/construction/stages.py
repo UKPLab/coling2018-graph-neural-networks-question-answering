@@ -76,6 +76,7 @@ def add_entity_and_relation(g):
     new_graphs = []
     for linking in linkings:
         new_g = graph.copy_graph(g)
+        new_g['entities'] = entities
         new_edge = {'left': [0], 'right': entity[0], 'rightkbID': linking}
         new_g['edgeSet'].append(new_edge)
         new_graphs.append(new_g)
