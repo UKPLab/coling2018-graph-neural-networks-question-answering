@@ -7,7 +7,7 @@ import tqdm
 import json
 
 from datasets import webquestions_io
-from construction import staged_generation
+from construction import staged_generation, stages
 from wikidata import wdaccess
 
 np.random.seed(1)
@@ -36,6 +36,7 @@ def generate(config_file_path):
     ch = logging.StreamHandler()
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
+    # logging.basicConfig(level=config['logger']['level'])
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'])
 
@@ -45,7 +46,7 @@ def generate(config_file_path):
 
     logger.debug('Generating choice graphs')
     choice_graphs_sets = []
-    for i in tqdm.trange(len(webquestions_tokens)):
+    for i in tqdm.trange(100):
         ungrounded_graph = {'tokens': webquestions_tokens[i],
                             'edgeSet': [],
                             'entities': webquestions_entities[i][:config['generation'].get("max.num.entities", 1)]}

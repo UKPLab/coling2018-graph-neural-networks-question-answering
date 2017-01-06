@@ -36,8 +36,7 @@ sparql_relation_complex = """
         {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . }}
         UNION
         {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . }}
-        UNION
-        {GRAPH <http://wikidata.org/statements> { ?m ?p ?e2. ?m ?rv ?e1. }}}
+        }
         """
 
 sparql_entity_label = """
@@ -274,7 +273,7 @@ def query_wikidata(query, starts_with="http://www.wikidata.org/entity/", use_cac
         if starts_with:
             results = [r for r in results if all(r[b]['value'].startswith(starts_with) for b in r)]
         results = [{b: (r[b]['value'].replace(starts_with, "") if starts_with else r[b]['value']) for b in r} for r in results]
-        results = [r for r in results if not any(r[b][:-1] in property_blacklist for b in r)]
+        results = [r for r in results if all(r[b][:-1] in property_whitelist for b in r if b[0] == 'r')]
         if use_cache:
             query_cache[query] = results
         return results
@@ -359,6 +358,7 @@ def label_query_results(query_results, question_variable='e1'):
 RESOURCES_FOLDER = "../resources/"
 entity_map = load_entity_map(RESOURCES_FOLDER + "entity_map.tsv")
 property_blacklist = load_blacklist(RESOURCES_FOLDER + "property_blacklist.txt")
+property_whitelist = load_blacklist(RESOURCES_FOLDER + "property_whitelist.txt")
 property2label = load_property_labels(RESOURCES_FOLDER + "properties-with-labels.txt")
 
 if __name__ == "__main__":
