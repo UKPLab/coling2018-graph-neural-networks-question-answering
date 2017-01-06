@@ -25,6 +25,10 @@ def generate(config_file_path):
         print("Dataset location not in the config file!")
         sys.exit()
 
+    if "generation" not in config:
+        print("Generation parameters not in the config file!")
+        sys.exit()
+
     np.random.seed(config_global.get('random.seed', 1))
 
     logger = logging.getLogger(__name__)
@@ -44,12 +48,12 @@ def generate(config_file_path):
     for i in tqdm.trange(len(webquestions_tokens)):
         ungrounded_graph = {'tokens': webquestions_tokens[i],
                             'edgeSet': [],
-                            'entities': webquestions_entities[i][:config['generate'].get("max.num.entities", 1)]}
+                            'entities': webquestions_entities[i][:config['generation'].get("max.num.entities", 1)]}
         choice_graphs = staged_generation.generate_without_gold(ungrounded_graph)
         choice_graphs_sets.append(choice_graphs)
 
     logger.debug('Generation is finished')
-    with open(config['generate']["save.choice.to"], 'w') as out:
+    with open(config['generation']["save.choice.to"], 'w') as out:
         json.dump(choice_graphs_sets, out, sort_keys=True, indent=4)
 
     logger.debug("Query cache: {}".format(len(wdaccess.query_cache)))
