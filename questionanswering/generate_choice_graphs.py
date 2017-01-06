@@ -59,6 +59,8 @@ def generate(config_file_path):
     logger.debug("Query cache: {}".format(len(wdaccess.query_cache)))
     logger.debug("Number of answers covered: {}".format(
         sum(1 for graphs in choice_graphs_sets if len(graphs) > 0) / len(webquestions_tokens) ))
+    logger.debug("Average number of choices per question: {}".format(
+        np.mean([len(graphs) for graphs in choice_graphs_sets])))
 
 
 if __name__ == "__main__":
