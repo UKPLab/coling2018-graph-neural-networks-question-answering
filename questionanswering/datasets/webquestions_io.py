@@ -119,13 +119,13 @@ class WebQuestions(Dataset):
         """
         return self._get_samples(self._questions_train)
 
-    def get_train_tokens(self):
+    def get_dataset_tokens(self):
         """
         Generate a list of tokens that appear in the training data.
 
         :return: list of lists of tokens
         """
-        return [graphs[0][0].get('tokens', []) for graphs in self._silver_graphs if graphs]
+        return [[w for w, _, _ in q] for q in self._dataset_tagged]
 
     def get_validation_samples(self):
         """
@@ -175,6 +175,22 @@ class WebQuestions(Dataset):
         :return: size of the training sample.
         """
         return len(self._get_sample_indices(self._questions_train))
+
+    def get_dataset_size(self):
+        """
+        Get the size of the complete available dataset.
+
+        :return: size of the dataset.
+        """
+        return len(self._dataset_tagged)
+
+    def extract_question_entities(self):
+        """
+        Extracts from each question of the complete dataset a set of entities.
+
+        :return: a list of lists of ordered entities as lists of tokens
+        """
+        return [graph.extract_entities(tagged_question) for tagged_question in self._dataset_tagged]
 
 
 def get_answers_from_question(question_object):

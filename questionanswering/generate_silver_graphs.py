@@ -5,7 +5,7 @@ import numpy as np
 from construction import staged_generation
 import tqdm
 
-import wikidata
+from wikidata import wdaccess
 from construction import graph
 from datasets import webquestions_io
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     with open(data_folder + "webquestions.examples.train.silvergraphs.json", 'w') as out:
         json.dump(silver_dataset, out, sort_keys=True, indent=4)
 
-    print("Query cache: {}".format(len(wikidata.query_cache)))
+    print("Query cache: {}".format(len(wdaccess.query_cache)))
     print("Number of answers covered: {}".format(
         len([1 for graphs in silver_dataset if len(graphs) > 0 and any([g[1][2] > 0.0 for g in graphs])]) / len(webquestions) ))
     print("Average f1 of the silver data: {}".format(

@@ -5,6 +5,10 @@ global:
   random.seed: 1
   train.generator: False
 
+generation:
+  max.num.entities: 2
+  save.choice.to: "../data/generated/webquestions.examples.train.choice_graphs.extended.json"
+
 webquestions:
   f1.samples.threshold: 0.1
   each.separate: False
