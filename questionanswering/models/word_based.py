@@ -22,7 +22,7 @@ class WordCNNModel(TwinsModel):
 
     def encode_data_for_training(self, data_with_targets):
         input_set, targets = data_with_targets
-        sentences_matrix, edges_matrix = self.encode_batch_by_tokens(input_set, wdaccess.property2label, verbose=False)
+        sentences_matrix, edges_matrix = self.encode_batch_by_tokens(input_set, verbose=False)
         if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets
@@ -91,12 +91,12 @@ class WordCNNModel(TwinsModel):
         return model
 
     def encode_data_instance(self, instance):
-        sentence_encoded, edges_encoded = self.encode_by_tokens(instance, wdaccess.property2label)
+        sentence_encoded, edges_encoded = self.encode_by_tokens(instance)
         sentence_ids = sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
         edges_ids = sequence.pad_sequences(edges_encoded, maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
         return sentence_ids, edges_ids
 
-    def encode_by_tokens(self, graph_set, property2label):
+    def encode_by_tokens(self, graph_set):
         sentence_tokens = graph_set[0].get("tokens", [])
         sentence_encoded = [utils.get_idx(t, self._word2idx) for t in sentence_tokens]
         edges_encoded = []
@@ -108,12 +108,12 @@ class WordCNNModel(TwinsModel):
 
         return sentence_encoded, edges_encoded
 
-    def encode_batch_by_tokens(self, graphs, property2label, verbose=False):
+    def encode_batch_by_tokens(self, graphs, verbose=False):
         sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10)), dtype="int32")
         edges_matrix = np.zeros((len(graphs), len(graphs[0]), self._p.get('max.sent.len', 10)), dtype="int32")
 
         for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
-            sentence_encoded, edges_encoded = self.encode_by_tokens(graph_set, property2label)
+            sentence_encoded, edges_encoded = self.encode_by_tokens(graph_set)
             assert len(edges_encoded) == edges_matrix.shape[1]
             sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
             sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded

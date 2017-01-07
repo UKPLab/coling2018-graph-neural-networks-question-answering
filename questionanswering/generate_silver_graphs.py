@@ -20,15 +20,15 @@ if __name__ == "__main__":
 
     data_folder = "../data/"
 
-    with open(data_folder + "webquestions.examples.train.json") as f:
+    with open(data_folder + "input/webquestions.examples.train.json") as f:
         webquestions = json.load(f)
-    # webquestions = webquestions[:100]
+    webquestions = webquestions[:100]
     logging.debug('Loaded WebQuestions, size: {}'.format(len(webquestions)))
 
-    with open(data_folder + "webquestions.examples.train.utterances.tagged.json") as f:
+    with open(data_folder + "generated/webquestions.examples.train.utterances.tagged.json") as f:
         webquestions_utterances_alltagged = json.load(f)
     logger.debug('Loaded preprocessed data.')
-    # webquestions_utterances_alltagged = webquestions_utterances_alltagged[:100]
+    webquestions_utterances_alltagged = webquestions_utterances_alltagged[:100]
     assert len(webquestions) == len(webquestions_utterances_alltagged)
 
     webquestions_entities = [graph.extract_entities(webquestions_utterances_alltagged[i]) for i in range(len(webquestions))]
@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     logger.debug("Silver dataset size: {}".format(len(silver_dataset)))
 
-    with open(data_folder + "webquestions.examples.train.silvergraphs.json", 'w') as out:
+    with open(data_folder + "generated/webquestions.examples.train.silvergraphs.json", 'w') as out:
         json.dump(silver_dataset, out, sort_keys=True, indent=4)
 
     print("Query cache: {}".format(len(wdaccess.query_cache)))
