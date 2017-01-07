@@ -21,7 +21,7 @@ class LabelOverlapModel(QAModel):
         tokens = instance[0].get("tokens", []) if instance else []
         for g_index, g in enumerate(instance):
             first_edge = graph.get_graph_first_edge(g)
-            property_label = wdaccess.property2label.get(first_edge.get('kbID', '')[:-1], utils.unknown_word)
+            property_label = wdaccess.property2label.get(first_edge.get('kbID', '')[:-1], utils.unknown_el)
             edge_vectors.append(property_label.split())
             edge_entities.append(int(first_edge['rightkbID'][1:]))
         edge2idx = {e: i for i, e in enumerate(sorted(set(edge_entities), reverse=True))}

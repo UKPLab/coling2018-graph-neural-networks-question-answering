@@ -10,11 +10,13 @@ import numpy as np
 import logging
 import re
 
+from models.char_based import tokens_to_trigrams
+
 logger = logging.getLogger()
 logger.setLevel(logging.ERROR)
 
 all_zeroes = "ALL_ZERO"
-unknown_word = "_UNKNOWN"
+unknown_el = "_UNKNOWN"
 
 special_tokens = {"&ndash;": "–",
                   "&mdash;": "—",
@@ -47,7 +49,7 @@ def load(path):
     rare_w_ids = list(range(idx-101,idx-1))
     unknown_emb = np.average(embeddings[rare_w_ids,:], axis=0)
     embeddings = np.append(embeddings, [unknown_emb], axis=0)
-    word2idx[unknown_word] = idx
+    word2idx[unknown_el] = idx
     idx += 1
 
     logger.debug("Loaded: {}".format(embeddings.shape))
@@ -63,7 +65,7 @@ def get_idx(word, word2idx):
     :param word2idx: dictionary constructed from an embeddings file
     :return: integer index of the word
     """
-    unknown_idx = word2idx[unknown_word]
+    unknown_idx = word2idx[unknown_el]
     word = word.strip()
     if word in word2idx:
         return word2idx[word]
@@ -80,3 +82,49 @@ def get_idx(word, word2idx):
     if no_digits in word2idx:
         return word2idx[no_digits]
     return unknown_idx
+
+
+def get_trigram_index(sentences):
+    """
+    Create a trigram index from the list of tokenized sentences.
+
+    :param sentences: list of list of tokens
+    :return: trigram to index mapping
+    >>> len(get_trigram_index([['who', 'played', 'whom']]))
+    11
+    """
+    trigram_set = {t for tokens in sentences for t in tokens_to_trigrams(tokens)}
+    trigram2idx = {t: i for i, t in enumerate(trigram_set, 1)}
+    trigram2idx[utils.all_zeroes] = 0
+    trigram2idx[utils.unknown_el] = len(trigram2idx)
+    return trigram2idx
+
+
+def get_character_index(sentences):
+    """
+    Create a character index from a list of sentences. Each sentence is a string.
+
+    :param sentences: list of strings
+    :return: character to index mapping
+    >>> len(get_character_index(['who played whom']))
+    11
+    """
+    character_set = {c for sent in sentences for c in sent}
+    character2idx = {c: i for i, c in enumerate(character_set, 1)}
+    character2idx[utils.all_zeroes] = 0
+    character2idx[utils.unknown_el] = len(character2idx)
+    return character2idx
+
+
+def get_word_index(tokens):
+    """
+    Create a character index from a list of sentences. Each sentence is a string.
+
+    :param tokens: list of strings
+    :return: character to index mapping
+    """
+    token_set = set(tokens)
+    word2idx = {t: i for i, t in enumerate(token_set, 1)}
+    word2idx[utils.all_zeroes] = 0
+    word2idx[utils.unknown_el] = len(word2idx)
+    return word2idx

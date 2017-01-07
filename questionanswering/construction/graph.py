@@ -3,6 +3,45 @@ import nltk
 import copy
 import re
 
+import utils
+
+
+def get_property_str_representation(edge, property2label, use_placeholder=False):
+    """
+    Construct a string representation of a lable using the property to label mapping.
+
+    :param edge: edge to translate
+    :param property2label: property id to label mapping
+    :param use_placeholder: if an entity should be included or just a placeholder
+    :return: a string representation of an edge
+    >>> get_property_str_representation({'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}, {'P17': "country"})
+    'country Iceland'
+    >>> get_property_str_representation({'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}, {'P17': "country"}, use_placeholder=True)
+    'country <e>'
+    """
+    property_label = property2label.get(edge.get('kbID', '')[:-1], utils.unknown_el)
+    e_type = edge.get('type', 'direct')
+    entity_name = "<e>" if use_placeholder else " ".join(edge.get('right', []))
+    property_label = ("{0} {1}" if e_type == 'direct' else "{1} {0}").format(property_label, entity_name)
+    return property_label
+
+
+def add_string_representations_to_edges(g, property2label, use_placeholder=False):
+    """
+    To each edge in the graph add its string representation as a label.
+
+    :param g: graph as a distionary with an 'edgeSet'
+    :param property2label: properties to labels mapping
+    :param use_placeholder: if a placeholder should be used for entities or not
+    :return: the orginal graph
+    >>> add_string_representations_to_edges({'edgeSet': [{'kbID':'P17v', 'right': ['Nfl', 'Redskins'], 'type':'reverse'}], 'tokens': ['where', 'are', 'the', 'nfl', 'redskins', 'from', '?']}, {'P17': "country"})['edgeSet'][0]['label']
+    'Nfl Redskins country'
+    """
+    for edge in g.get('edgeSet', []):
+        edge_label = get_property_str_representation(edge, property2label, use_placeholder)
+        edge['label'] = edge_label
+    return g
+
 
 def replace_first_entity(g):
     """
@@ -160,4 +199,5 @@ if __name__ == "__main__":
     # Testing
     import doctest
     print(doctest.testmod())
+
 
