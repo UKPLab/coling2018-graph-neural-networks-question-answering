@@ -1,15 +1,18 @@
-from collections import defaultdict
-import keras
-from keras import backend as K
-from keras.preprocessing import sequence
-import numpy as np
 import json
-import re
+from collections import defaultdict
 
+import keras
+import nltk
+import numpy as np
+import tqdm
+from keras.preprocessing import sequence
+
+import utils
+from construction import graph
+from construction.graph import get_property_str_representation
+from wikidata import wdaccess
 from . import keras_extensions
 from .qamodel import TwinsModel
-from . import input_to_indices
-from wikidata import wdaccess
 
 
 class CharCNNModel(TwinsModel):
@@ -26,16 +29,14 @@ class CharCNNModel(TwinsModel):
         return np.argsort(predictions)[::-1]
 
     def encode_data_instance(self, instance, **kwargs):
-        sentence_ids, edges_ids = input_to_indices.encode_by_character(instance, self._character2idx,
-                                                                       wdaccess.property2label,
-                                                                       edge_with_entity=self._p.get('edge.with.entity', False))
+        sentence_ids, edges_ids = self.encode_by_character(instance)
         sentence_ids = sequence.pad_sequences([sentence_ids], maxlen=self._p.get('max.sent.len', 70), padding='post', truncating='post', dtype="int32")
         edges_ids = sequence.pad_sequences(edges_ids, maxlen=self._p.get('max.sent.len', 70), padding='post', truncating='post', dtype="int32")
         return sentence_ids, edges_ids
 
     def prepare_model(self, train_tokens):
         if not self._character2idx:
-            self._character2idx = input_to_indices.get_character_index([" ".join(tokens) for tokens in train_tokens])
+            self._character2idx = utils.get_character_index([" ".join(tokens) for tokens in train_tokens])
             self.logger.debug('Character index created, size: {}'.format(len(self._character2idx)))
             with open(self._save_model_to + "character2idx_{}.json".format(self._model_number), 'w') as out:
                 json.dump(self._character2idx, out, indent=2)
@@ -86,14 +87,34 @@ class CharCNNModel(TwinsModel):
 
     def encode_data_for_training(self, data_with_targets):
         input_set, targets = data_with_targets
-        sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_character(input_set, self._character2idx,
-                                                                                    wdaccess.property2label,
-                                                                                    max_input_len=self._p.get('max.sent.len', 70),
-                                                                                    edge_with_entity=self._p.get('edge.with.entity', False),
-                                                                                    verbose=False)
+        sentences_matrix, edges_matrix = self.encode_batch_by_character(input_set, verbose=False)
         if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets
+
+    def encode_batch_by_character(self, graphs, verbose=False):
+        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 70)), dtype="int32")
+        edges_matrix = np.zeros((len(graphs), len(graphs[0]),  self._p.get('max.sent.len', 70)), dtype="int32")
+        for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
+            sentence_ids, edges_ids = self.encode_by_character(graph_set)
+            assert len(edges_ids) == edges_matrix.shape[1]
+            sentence_ids = sentence_ids[:self._p.get('max.sent.len', 70)]
+            sentences_matrix[index, :len(sentence_ids)] = sentence_ids
+            # edges_ids = [edges_ids] # What was that??
+            for i, edge_ids in enumerate(edges_ids):
+                edge_ids = edge_ids[:self._p.get('max.sent.len', 70)]
+                edges_matrix[index, i, :len(edge_ids)] = edge_ids
+        return sentences_matrix, edges_matrix
+
+    def encode_by_character(self, graph_set):
+        sentence_str = " ".join(graph_set[0].get("tokens", []))
+        sentence_ids = string_to_unigrams(sentence_str, self._character2idx)
+        edges_ids = []
+        for g in graph_set:
+            first_edge = graph.get_graph_first_edge(g)
+            property_label = first_edge.get('label', '')
+            edges_ids.append(string_to_unigrams(property_label, self._character2idx))
+        return sentence_ids, edges_ids
 
     def load_from_file(self, path_to_model):
         super(CharCNNModel, self).load_from_file(path_to_model=path_to_model)
@@ -113,9 +134,7 @@ class YihModel(TwinsModel):
 
     def encode_data_for_training(self, data_with_targets):
         input_set, targets = data_with_targets
-        sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_trigrams(input_set, self._trigram_vocabulary,
-                                                                                    wdaccess.property2label,
-                                                                                    max_input_len=self._p.get('max.sent.len', 10), verbose=False)
+        sentences_matrix, edges_matrix = self.encode_batch_by_trigrams(input_set, verbose=False)
         if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets
@@ -124,7 +143,7 @@ class YihModel(TwinsModel):
         if not self._trigram_vocabulary:
             self._trigram_vocabulary = list({t for tokens in train_tokens
                                              for token in tokens
-                                             for t in input_to_indices.string_to_trigrams(token)})
+                                             for t in string_to_trigrams(token)})
             self.logger.debug('Trigram vocabulary created, size: {}'.format(len(self._trigram_vocabulary)))
             with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number), 'w') as out:
                 json.dump(self._trigram_vocabulary, out, indent=2)
@@ -168,10 +187,41 @@ class YihModel(TwinsModel):
         return model
 
     def encode_data_instance(self, instance):
-        sentence_encoded, edges_encoded = input_to_indices.encode_by_trigram(instance, self._trigram_vocabulary, wdaccess.property2label)
+        sentence_encoded, edges_encoded = self.encode_by_trigram(instance)
         sentence_ids = sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
         edges_ids = sequence.pad_sequences(edges_encoded, maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
         return sentence_ids, edges_ids
+
+    def encode_by_trigram(self, graph_set):
+        sentence_tokens = graph_set[0].get("tokens", [])
+        sentence_trigrams = [set(string_to_trigrams(token)) for token in sentence_tokens]
+        sentence_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
+                            for trigrams in sentence_trigrams]
+        edges_encoded = []
+        for g in graph_set:
+            first_edge = graph.get_graph_first_edge(g)
+            property_label = first_edge.get('label', '')
+            edge_trigrams = [set(string_to_trigrams(token)) for token in property_label.split()]
+            edge_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
+                            for trigrams in edge_trigrams]
+            edges_encoded.append(edge_encoded)
+        return sentence_encoded, edges_encoded
+
+    def encode_batch_by_trigrams(self, graphs, verbose=False):
+        graphs = [el for el in graphs if el]
+        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int32")
+        edges_matrix = np.zeros((len(graphs), len(graphs[0]),  self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int32")
+
+        for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
+            sentence_encoded, edges_encoded = self.encode_by_trigram(graph_set)
+            assert len(edges_encoded) == edges_matrix.shape[1]
+            sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
+            sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded
+            for i, edge_encoded in enumerate(edges_encoded):
+                edge_encoded = edge_encoded[:self._p.get('max.sent.len', 10)]
+                edges_matrix[index, i, :len(edge_encoded)] = edge_encoded
+
+        return sentences_matrix, edges_matrix
 
     def load_from_file(self, path_to_model):
         super(YihModel, self).load_from_file(path_to_model=path_to_model)
@@ -182,3 +232,31 @@ class YihModel(TwinsModel):
         self._trigram_vocabulary = [tuple(t) for t in self._trigram_vocabulary]
         self._p['vocab.size'] = len(self._trigram_vocabulary)
         self.logger.debug("Vocabulary size: {}.".format(len(self._trigram_vocabulary)))
+
+
+def string_to_unigrams(input_string, character2idx):
+    return [character2idx.get(c, character2idx[utils.unknown_el]) for c in input_string]
+
+
+def string_to_trigrams(t):
+    """
+    Convert a token to a list of trigrams following the hashing technique.
+
+    :param t: a single token as a string
+    :return: list of triples of characters
+    >>> string_to_trigrams('who')
+    [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#')]
+    """
+    return nltk.ngrams("#{}#".format(t), 3)
+
+
+def tokens_to_trigrams(tokens):
+    """
+    Convert a list of tokens to a list of trigrams following the hashing technique.
+
+    :param tokens: list of tokens
+    :return: list of triples of characters
+    >>> tokens_to_trigrams(['who', 'played', 'bond'])
+    [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#'), ('#', 'p', 'l'), ('p', 'l', 'a'), ('l', 'a', 'y'), ('a', 'y', 'e'), ('y', 'e', 'd'), ('e', 'd', '#'), ('#', 'b', 'o'), ('b', 'o', 'n'), ('o', 'n', 'd'), ('n', 'd', '#')]
+    """
+    return [trigram for t in tokens for trigram in nltk.ngrams("#{}#".format(t), 3)]

@@ -1,14 +1,16 @@
 from collections import defaultdict
 import keras
+import tqdm
 from keras import backend as K
 from keras.preprocessing import sequence
 import numpy as np
 import json
 import re
 import utils
+from construction import graph
+from construction.graph import get_property_str_representation
 
 from .qamodel import TwinsModel, BrothersModel
-from . import input_to_indices
 from wikidata import wdaccess
 from . import keras_extensions
 
@@ -22,9 +24,7 @@ class WordCNNModel(TwinsModel):
 
     def encode_data_for_training(self, data_with_targets):
         input_set, targets = data_with_targets
-        sentences_matrix, edges_matrix = input_to_indices.encode_batch_by_tokens(input_set, self._word2idx,
-                                                                                 wdaccess.property2label,
-                                                                                 max_input_len=self._p.get('max.sent.len', 10), verbose=False)
+        sentences_matrix, edges_matrix = self.encode_batch_by_tokens(input_set, wdaccess.property2label, verbose=False)
         if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets
@@ -35,7 +35,7 @@ class WordCNNModel(TwinsModel):
                 self._embedding_matrix, self._word2idx = utils.load(self._p['word.embeddings'])
                 self.logger.debug('Word index loaded, size: {}'.format(len(self._word2idx)))
             else:
-                self._word2idx = input_to_indices.get_word_index([t for tokens in train_tokens for t in tokens])
+                self._word2idx = utils.get_word_index([t for tokens in train_tokens for t in tokens])
                 self.logger.debug('Word index created, size: {}'.format(len(self._word2idx)))
                 with open(self._save_model_to + "word2idx_{}.json".format(self._model_number), 'w') as out:
                     json.dump(self._word2idx, out, indent=2)
@@ -93,10 +93,37 @@ class WordCNNModel(TwinsModel):
         return model
 
     def encode_data_instance(self, instance):
-        sentence_encoded, edges_encoded = input_to_indices.encode_by_tokens(instance, self._word2idx, wdaccess.property2label)
+        sentence_encoded, edges_encoded = self.encode_by_tokens(instance, wdaccess.property2label)
         sentence_ids = sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
         edges_ids = sequence.pad_sequences(edges_encoded, maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
         return sentence_ids, edges_ids
+
+    def encode_by_tokens(self, graph_set, property2label):
+        sentence_tokens = graph_set[0].get("tokens", [])
+        sentence_encoded = [utils.get_idx(t, self._word2idx) for t in sentence_tokens]
+        edges_encoded = []
+        for g in graph_set:
+            first_edge = graph.get_graph_first_edge(g)
+            property_label = first_edge.get('label', '')
+            edge_ids = [utils.get_idx(t, self._word2idx) for t in property_label.split()]
+            edges_encoded.append(edge_ids)
+
+        return sentence_encoded, edges_encoded
+
+    def encode_batch_by_tokens(self, graphs, property2label, verbose=False):
+        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10)), dtype="int32")
+        edges_matrix = np.zeros((len(graphs), len(graphs[0]), self._p.get('max.sent.len', 10)), dtype="int32")
+
+        for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
+            sentence_encoded, edges_encoded = self.encode_by_tokens(graph_set, property2label)
+            assert len(edges_encoded) == edges_matrix.shape[1]
+            sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
+            sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded
+            for i, edge_encoded in enumerate(edges_encoded):
+                edge_encoded = edge_encoded[:self._p.get('max.sent.len', 10)]
+                edges_matrix[index, i, :len(edge_encoded)] = edge_encoded
+
+        return sentences_matrix, edges_matrix
 
     def load_from_file(self, path_to_model):
         super(WordCNNModel, self).load_from_file(path_to_model=path_to_model)
