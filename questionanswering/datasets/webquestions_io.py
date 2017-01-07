@@ -17,9 +17,10 @@ class WebQuestions(Dataset):
         :param path_to_dataset: path to the data set location
         """
         # TODO: Tests needed!
+        super(WebQuestions, self).__init__(**kwargs)
         self._p = parameters
         path_to_dataset = self._p["path.to.dataset"]
-        self.logger("Loading data")
+        self.logger.debug("Loading data")
         # Load the train questions
         with open(path_to_dataset["train_train"]) as f:
             self._questions_train = json.load(f)
@@ -37,23 +38,22 @@ class WebQuestions(Dataset):
             self._choice_graphs = json.load(f)
             self._choice_graphs = [[g[0] for g in graph_set] for graph_set in self._choice_graphs]
         if self._p.get("replace.entities", False):
-            self.logger("replacing entities in questions")
+            self.logger.debug("replacing entities in questions")
             self._choice_graphs = [[graph.replace_first_entity(g) for g in graph_set] for graph_set in
                                    self._choice_graphs]
             self._silver_graphs = [[(graph.replace_first_entity(g[0]), g[1],) for g in graph_set] for graph_set in
                                    self._silver_graphs]
-        self.logger("Normalizing tokens")
+        self.logger.debug("Normalizing tokens")
         self._choice_graphs = [[graph.normalize_tokens(g) for g in graph_set] for graph_set in
                                self._choice_graphs]
         self._silver_graphs = [[(graph.normalize_tokens(g[0]), g[1],) for g in graph_set] for graph_set in
                                self._silver_graphs]
-        self.logger("Constructing string representations for entities")
+        self.logger.debug("Constructing string representations for entities")
         self._choice_graphs = [[graph.add_string_representations_to_edges(g, wdaccess.property2label, self._p.get("replace.entities", False)) for g in graph_set]
                                for graph_set in self._choice_graphs]
         self._silver_graphs = [[(graph.add_string_representations_to_edges(g[0], wdaccess.property2label, self._p.get("replace.entities", False)), g[1],) for g in graph_set]
                                for graph_set in self._silver_graphs]
         assert len(self._dataset_tagged) == len(self._choice_graphs) == len(self._silver_graphs)
-        super(WebQuestions, self).__init__(**kwargs)
 
     def _get_samples(self, questions):
         indices = self._get_sample_indices(questions)

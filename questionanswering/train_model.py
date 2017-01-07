@@ -37,7 +37,7 @@ def train(config_file_path):
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
 
-    webquestions = webquestions_io.WebQuestions(config['webquestions'])
+    webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
     config['model']['samples.per.epoch'] = webquestions.get_train_sample_size()
     config['model']['graph.choices'] = config['webquestions'].get("max.negative.samples", 30)
 
