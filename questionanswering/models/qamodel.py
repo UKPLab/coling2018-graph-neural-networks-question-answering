@@ -50,11 +50,11 @@ class QAModel(metaclass=abc.ABCMeta):
         print("Successful predictions: {} ({})".format(len(successes), len(successes) / len(gold_answers)))
         print("Average f1: {}".format(avg_f1))
 
-    def test_on_silver(self, data_with_targets, **kwargs):
+    def test_on_silver(self, data_with_targets, verbose=False):
         graphs, targets = data_with_targets
         if len(targets) > 0 and not issubclass(type(targets[0]), np.integer):
             targets = np.argmax(targets, axis=-1)
-        predicted_targets = [indices[0] for indices in self.apply_on_batch(graphs)]
+        predicted_targets = [indices[0] for indices in self.apply_on_batch(graphs, verbose)]
         accuracy = np.sum(np.asarray(predicted_targets) == targets) / len(targets)
         print("Accuracy on silver data: {}".format(accuracy))
 
