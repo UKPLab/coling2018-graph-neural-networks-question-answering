@@ -107,7 +107,7 @@ def last_relation_temporal(g):
 # This division of actions is relevant for grounding with gold answers:
 # - Restrict action limit the set of answers and should be applied
 #   to a graph that has groundings
-RESTRICT_ACTIONS = {add_entity_and_relation, last_relation_temporal}
+RESTRICT_ACTIONS = {add_entity_and_relation}
 # - Expand actions change graph to extract another set of answers and should be
 #   applied to a graph that has empty denotation
 EXPAND_ACTIONS = {last_relation_hop_up}  # Expand actions
@@ -117,7 +117,7 @@ EXPAND_ACTIONS = {last_relation_hop_up}  # Expand actions
 WIKIDATA_ACTIONS = {add_entity_and_relation, last_relation_hop_up}
 # - Non linking options just add options to the graph structure without checking if it is possible in WikiData.
 #   Hop-up is always possible anyway, temporal is possible most of the time.
-NON_LINKING_ACTIONS = {last_relation_temporal}
+NON_LINKING_ACTIONS = set()
 
 ARG_TYPES = ['argmax', 'argmin']
 
