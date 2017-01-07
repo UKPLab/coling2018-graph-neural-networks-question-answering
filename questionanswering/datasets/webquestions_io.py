@@ -133,7 +133,7 @@ class WebQuestions(Dataset):
 
         :return: list of lists of tokens
         """
-        return [[w for w, _, _ in q] for q in self._dataset_tagged]
+        return [[w for w, _, _ in q] for q in self._dataset_tagged] + [e.get('label', '').split() for graph_set in self._choice_graphs for g in graph_set for e in g.get('edgeSet',[])]
 
     def get_validation_samples(self):
         """
