@@ -9,8 +9,8 @@
 import numpy as np
 import logging
 import re
+import nltk
 
-from models.char_based import tokens_to_trigrams
 
 logger = logging.getLogger()
 logger.setLevel(logging.ERROR)
@@ -95,10 +95,20 @@ def get_trigram_index(sentences):
     """
     trigram_set = {t for tokens in sentences for t in tokens_to_trigrams(tokens)}
     trigram2idx = {t: i for i, t in enumerate(trigram_set, 1)}
-    trigram2idx[utils.all_zeroes] = 0
-    trigram2idx[utils.unknown_el] = len(trigram2idx)
+    trigram2idx[all_zeroes] = 0
+    trigram2idx[unknown_el] = len(trigram2idx)
     return trigram2idx
 
+def tokens_to_trigrams(tokens):
+    """
+    Convert a list of tokens to a list of trigrams following the hashing technique.
+
+    :param tokens: list of tokens
+    :return: list of triples of characters
+    >>> tokens_to_trigrams(['who', 'played', 'bond'])
+    [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#'), ('#', 'p', 'l'), ('p', 'l', 'a'), ('l', 'a', 'y'), ('a', 'y', 'e'), ('y', 'e', 'd'), ('e', 'd', '#'), ('#', 'b', 'o'), ('b', 'o', 'n'), ('o', 'n', 'd'), ('n', 'd', '#')]
+    """
+    return [trigram for t in tokens for trigram in nltk.ngrams("#{}#".format(t), 3)]
 
 def get_character_index(sentences):
     """
@@ -111,8 +121,8 @@ def get_character_index(sentences):
     """
     character_set = {c for sent in sentences for c in sent}
     character2idx = {c: i for i, c in enumerate(character_set, 1)}
-    character2idx[utils.all_zeroes] = 0
-    character2idx[utils.unknown_el] = len(character2idx)
+    character2idx[all_zeroes] = 0
+    character2idx[unknown_el] = len(character2idx)
     return character2idx
 
 
@@ -125,6 +135,6 @@ def get_word_index(tokens):
     """
     token_set = set(tokens)
     word2idx = {t: i for i, t in enumerate(token_set, 1)}
-    word2idx[utils.all_zeroes] = 0
-    word2idx[utils.unknown_el] = len(word2idx)
+    word2idx[all_zeroes] = 0
+    word2idx[unknown_el] = len(word2idx)
     return word2idx

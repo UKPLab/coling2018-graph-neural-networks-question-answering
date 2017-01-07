@@ -9,8 +9,6 @@ from keras.preprocessing import sequence
 
 import utils
 from construction import graph
-from construction.graph import get_property_str_representation
-from wikidata import wdaccess
 from . import keras_extensions
 from .qamodel import TwinsModel
 
@@ -248,15 +246,3 @@ def string_to_trigrams(t):
     [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#')]
     """
     return nltk.ngrams("#{}#".format(t), 3)
-
-
-def tokens_to_trigrams(tokens):
-    """
-    Convert a list of tokens to a list of trigrams following the hashing technique.
-
-    :param tokens: list of tokens
-    :return: list of triples of characters
-    >>> tokens_to_trigrams(['who', 'played', 'bond'])
-    [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#'), ('#', 'p', 'l'), ('p', 'l', 'a'), ('l', 'a', 'y'), ('a', 'y', 'e'), ('y', 'e', 'd'), ('e', 'd', '#'), ('#', 'b', 'o'), ('b', 'o', 'n'), ('o', 'n', 'd'), ('n', 'd', '#')]
-    """
-    return [trigram for t in tokens for trigram in nltk.ngrams("#{}#".format(t), 3)]

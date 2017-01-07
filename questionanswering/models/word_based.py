@@ -5,10 +5,8 @@ from keras import backend as K
 from keras.preprocessing import sequence
 import numpy as np
 import json
-import re
 import utils
 from construction import graph
-from construction.graph import get_property_str_representation
 
 from .qamodel import TwinsModel, BrothersModel
 from wikidata import wdaccess
