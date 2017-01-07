@@ -46,7 +46,7 @@ def generate(config_file_path):
 
     logger.debug('Generating choice graphs')
     choice_graphs_sets = []
-    for i in tqdm.trange(100):
+    for i in tqdm.trange(len(webquestions_tokens)):
         ungrounded_graph = {'tokens': webquestions_tokens[i],
                             'edgeSet': [],
                             'entities': webquestions_entities[i][:config['generation'].get("max.num.entities", 1)]}
