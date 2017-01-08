@@ -38,7 +38,7 @@ def generate(config_file_path):
     logger.addHandler(ch)
     # logging.basicConfig(level=config['logger']['level'])
 
-    webquestions = webquestions_io.WebQuestions(config['webquestions'])
+    webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
 
     logger.debug('Extracting entities.')
     webquestions_entities = webquestions.extract_question_entities()
