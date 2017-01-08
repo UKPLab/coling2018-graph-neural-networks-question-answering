@@ -6,6 +6,34 @@ import re
 import utils
 
 
+def if_graph_adheres(g, allowed_extensions=set()):
+    """
+    Test if teh given graphs only uses the allowed extensions.
+
+    :param g: graphs a dictionary with an edgeSet
+    :param allowed_extensions: a set of allowed extensions
+    :return: True if graph uses only allowed extensions, false otherwise
+    >>> test_conditions_on_graph({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}]}, allowed_extensions=set())
+    True
+    >>> test_conditions_on_graph({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'v-structure'}]}, allowed_extensions=set())
+    False
+    >>> test_conditions_on_graph({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland']}, {'kbID':'P31v'}]}, allowed_extensions=set())
+    False
+    """
+    allowed_extensions = set(allowed_extensions)
+    if 'v-structure' not in allowed_extensions and 'v-structure' in {e.get('type', "direct") for e in g.get('edgeSet', [])}:
+        return False
+    if 'temporal' not in allowed_extensions and any('argmax' in e or 'argmin' in e for e in g.get('edgeSet', [])):
+        return False
+    if 'hopUp' not in allowed_extensions and any('hopUp' in e for e in g.get('edgeSet', [])):
+        return False
+    if 'qualifier_rel' not in allowed_extensions and any(e.get('kbID', "").endswith('q') for e in g.get('edgeSet', [])):
+        return False
+    if 'multi_rel' not in allowed_extensions and len(g.get('edgeSet', [])) > 1:
+        return False
+    return True
+
+
 def get_property_str_representation(edge, property2label, use_placeholder=False):
     """
     Construct a string representation of a lable using the property to label mapping.
