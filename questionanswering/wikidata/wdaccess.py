@@ -24,37 +24,37 @@ sparql_select = """
         SELECT DISTINCT %queryvariables% WHERE
         """
 
-sparql_relation = {
-    "direct": "{GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . %restriction% }}",
-
-    "reverse": "{GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . %restriction% }}",
-
-    "v-structure": "{GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}",
-}
-
-sparql_relation_complex = """
-        {
-        {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . }}
-        UNION
-        {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . }}
-        }
-        """
-
 # sparql_relation = {
-#     "direct": "{GRAPH <http://wikidata.org/statements> { ?e1 ?rd ?m . ?m ?p ?e2 . %restriction% }}",
+#     "direct": "{GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . %restriction% }}",
 #
-#     "reverse": "{GRAPH <http://wikidata.org/statements> { ?e2 ?rr ?m . ?m ?p ?e1 . %restriction% }}",
+#     "reverse": "{GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . %restriction% }}",
 #
-#     "v-structure": "{GRAPH <http://wikidata.org/statements> { ?m ?rv ?e2 . ?m ?p ?e1 . %restriction% }}",
+#     "v-structure": "{GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}",
 # }
 #
 # sparql_relation_complex = """
 #         {
-#         {GRAPH <http://wikidata.org/statements> { ?e1 ?rd ?m . ?m ?p ?e2 . }}
+#         {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . }}
 #         UNION
-#         {GRAPH <http://wikidata.org/statements> { ?e2 ?rr ?m . ?m ?p ?e1 . }}
+#         {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . }}
 #         }
 #         """
+
+sparql_relation = {
+    "direct": "{GRAPH <http://wikidata.org/statements> { ?e1 ?rd ?m . ?m ?p ?e2 . %restriction% }}",
+
+    "reverse": "{GRAPH <http://wikidata.org/statements> { ?e2 ?rr ?m . ?m ?p ?e1 . %restriction% }}",
+
+    "v-structure": "{GRAPH <http://wikidata.org/statements> { ?m ?rv ?e2 . ?m ?p ?e1 . %restriction% }}",
+}
+
+sparql_relation_complex = """
+        {
+        {GRAPH <http://wikidata.org/statements> { ?e1 ?rd ?m . ?m ?p ?e2 . }}
+        UNION
+        {GRAPH <http://wikidata.org/statements> { ?e2 ?rr ?m . ?m ?p ?e1 . }}
+        }
+        """
 # sparql_relation_complex = """
 #         {
 #         {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . }}
