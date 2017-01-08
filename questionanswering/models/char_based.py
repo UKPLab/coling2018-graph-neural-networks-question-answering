@@ -28,8 +28,8 @@ class CharCNNModel(TwinsModel):
 
     def encode_data_instance(self, instance, **kwargs):
         sentence_ids, edges_ids = self.encode_by_character(instance)
-        sentence_ids = sequence.pad_sequences([sentence_ids], maxlen=self._p.get('max.sent.len', 70), padding='post', truncating='post', dtype="int32")
-        edges_ids = sequence.pad_sequences(edges_ids, maxlen=self._p.get('max.sent.len', 70), padding='post', truncating='post', dtype="int32")
+        sentence_ids = sequence.pad_sequences([sentence_ids], maxlen=self._p.get('max.sent.len', 70), padding='post', truncating='post', dtype="int16")
+        edges_ids = sequence.pad_sequences(edges_ids, maxlen=self._p.get('max.sent.len', 70), padding='post', truncating='post', dtype="int16")
         return sentence_ids, edges_ids
 
     def prepare_model(self, train_tokens):
@@ -47,7 +47,7 @@ class CharCNNModel(TwinsModel):
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
         # Sibling model
-        characters_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
+        characters_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int16', name='sentence_input')
         character_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
                                                       input_length=self._p['max.sent.len'],
                                                       init=self._p.get("emb.weight.init", 'uniform'),
@@ -67,8 +67,8 @@ class CharCNNModel(TwinsModel):
         self.logger.debug("Sibling model is finished.")
 
         # Twins model
-        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32', name='sentence_input')
-        edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.sent.len'],), dtype='int32',
+        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int16', name='sentence_input')
+        edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.sent.len'],), dtype='int16',
                                         name='edge_input')
 
         sentence_vector = sibiling_model(sentence_input)
@@ -91,8 +91,8 @@ class CharCNNModel(TwinsModel):
         return sentences_matrix, edges_matrix, targets
 
     def encode_batch_by_character(self, graphs, verbose=False):
-        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 70)), dtype="int32")
-        edges_matrix = np.zeros((len(graphs), len(graphs[0]),  self._p.get('max.sent.len', 70)), dtype="int32")
+        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 70)), dtype="int16")
+        edges_matrix = np.zeros((len(graphs), len(graphs[0]),  self._p.get('max.sent.len', 70)), dtype="int16")
         for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
             sentence_ids, edges_ids = self.encode_by_character(graph_set)
             assert len(edges_ids) == edges_matrix.shape[1]
@@ -154,7 +154,7 @@ class YihModel(TwinsModel):
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
         # Sibling model
-        word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32', name='sentence_input')
+        word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='int8', name='sentence_input')
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
                                                      init=self._p.get("sibling.weight.init", 'glorot_uniform'))(word_input)
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
@@ -168,8 +168,8 @@ class YihModel(TwinsModel):
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._sibling_model_name)
         self.logger.debug("Sibling model is finished.")
-        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32', name='sentence_input')
-        edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32',
+        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size'],), dtype='int8', name='sentence_input')
+        edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.sent.len'],  self._p['vocab.size'],), dtype='int8',
                                         name='edge_input')
         # Twins model
         sentence_vector = sibiling_model(sentence_input)
@@ -207,8 +207,8 @@ class YihModel(TwinsModel):
 
     def encode_batch_by_trigrams(self, graphs, verbose=False):
         graphs = [el for el in graphs if el]
-        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int32")
-        edges_matrix = np.zeros((len(graphs), len(graphs[0]),  self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int32")
+        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
+        edges_matrix = np.zeros((len(graphs), len(graphs[0]),  self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
 
         for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
             sentence_encoded, edges_encoded = self.encode_by_trigram(graph_set)
