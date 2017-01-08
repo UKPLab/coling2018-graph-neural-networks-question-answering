@@ -154,7 +154,7 @@ class YihModel(TwinsModel):
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
         # Sibling model
-        word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='int8', name='sentence_input')
+        word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32', name='sentence_input')
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
                                                      init=self._p.get("sibling.weight.init", 'glorot_uniform'))(word_input)
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
@@ -168,8 +168,8 @@ class YihModel(TwinsModel):
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._sibling_model_name)
         self.logger.debug("Sibling model is finished.")
-        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size'],), dtype='int8', name='sentence_input')
-        edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.sent.len'],  self._p['vocab.size'],), dtype='int8',
+        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32', name='sentence_input')
+        edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32',
                                         name='edge_input')
         # Twins model
         sentence_vector = sibiling_model(sentence_input)
