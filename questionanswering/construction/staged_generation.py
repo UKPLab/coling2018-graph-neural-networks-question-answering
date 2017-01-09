@@ -43,9 +43,11 @@ def generate_with_gold(ungrounded_graph, gold_answers):
                 logger.debug("Extending the pool.")
                 pool.extend(chosen_graphs)
             else:
+                g = label_entities(g)
                 logger.debug("Extending the generated graph set: {}".format(g))
                 generated_graphs.append(g)
         else:
+            g = label_entities(g)
             logger.debug("Extending the generated graph set: {}".format(g))
             generated_graphs.append(g)
     logger.debug("Iterations {}".format(iterations))
@@ -123,6 +125,8 @@ def generate_without_gold(ungrounded_graph,
         chosen_graphs = ground_without_gold(suggested_graphs)
         logger.debug("Extending the pool with {} graphs.".format(len(chosen_graphs)))
         pool.extend(chosen_graphs)
+        logger.debug("Label entities")
+        chosen_graphs = [label_entities(g) for g in chosen_graphs]
 
         logger.debug("Constructing without WikiData")
         extended_graphs = [(el, f_score, a) for s_g, f_score, a in chosen_graphs for f in non_linking_actions for el in f(s_g)]
@@ -188,6 +192,22 @@ def apply_grounding(g, grounding):
             edge['type'] = 'v-structure'
 
     return grounded
+
+
+def label_entities(g):
+    """
+    Label all the entities in the given graph that participate in relations with their canonical names.
+
+    :param g: a graph as a dictionary with an 'edgeSet'
+    :return: the original graph with added labels.
+    """
+    for edge in g.get('edgeSet', []):
+        entitykbID = edge.get('rightkbID')
+        if entitykbID and 'canonical_right' not in edge:
+            entity_label = wdaccess.label_entity(entitykbID)
+            if entity_label:
+                edge['canonical_right'] = entity_label
+    return g
 
 
 if __name__ == "__main__":

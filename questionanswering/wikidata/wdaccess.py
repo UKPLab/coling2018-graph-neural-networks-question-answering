@@ -274,6 +274,28 @@ def label_query(entity, limit=10):
     return query
 
 
+def main_label_query(entity):
+    """
+    Construct a WikiData query to retrieve the main entity label for the given entity id.
+
+    :param entity: entity kbID
+    :return: a WikiData query
+    >>> query_wikidata(main_label_query("Q36"), starts_with=None)
+    [{'label0': 'Poland'}]
+    """
+    query = sparql_prefix
+    query += sparql_select
+    query += "{"
+    sparql_label_entity_inst = sparql_label_entity.replace("?e2", "e:" + entity)
+    sparql_label_entity_inst = sparql_label_entity_inst.replace("?label", "?label" + str(0))
+    sparql_label_entity_inst = sparql_label_entity_inst.replace("skos:altLabel", "")
+    query += sparql_label_entity_inst
+    query += "}"
+    query = query.replace("%queryvariables%", "?label" + str(0))
+    query += sparql_close.format(1)
+    return query
+
+
 query_cache = {}
 
 
@@ -363,7 +385,16 @@ def map_query_results(query_results, question_variable='e1'):
 
 
 def label_entity(entity):
-    return query_wikidata(label_query(entity), starts_with="", use_cache=True)
+    """
+    Retrieve the main label of the given entity. None is returned if no label could be found.
+
+    :param entity: entity KB ID
+    :return: entity label as a string
+    """
+    results = query_wikidata(main_label_query(entity), starts_with="", use_cache=True)
+    if results and 'label0' in results[0]:
+        return results[0]['label0']
+    return None
 
 
 def label_query_results(query_results, question_variable='e1'):
