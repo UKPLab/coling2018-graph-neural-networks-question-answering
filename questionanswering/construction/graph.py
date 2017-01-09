@@ -49,7 +49,7 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     """
     property_label = property2label.get(edge.get('kbID', '')[:-1], utils.unknown_el)
     e_type = edge.get('type', 'direct')
-    e_arg = 'argmax' if 'argmax' in edge else 'argmin' if 'argmin' in edge else ""
+    e_arg = '<argmax>' if 'argmax' in edge else '<argmin>' if 'argmin' in edge else ""
     entity_name = "<e>" if use_placeholder \
         else edge["canonical_right"] if "canonical_right" in edge \
         else " ".join(edge.get('right', []))
