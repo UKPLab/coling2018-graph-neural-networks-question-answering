@@ -36,7 +36,7 @@ def if_graph_adheres(g, allowed_extensions=set()):
 
 def get_property_str_representation(edge, property2label, use_placeholder=False):
     """
-    Construct a string representation of a lable using the property to label mapping.
+    Construct a string representation of a label using the property to label mapping.
 
     :param edge: edge to translate
     :param property2label: property id to label mapping
@@ -49,8 +49,12 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     """
     property_label = property2label.get(edge.get('kbID', '')[:-1], utils.unknown_el)
     e_type = edge.get('type', 'direct')
-    entity_name = "<e>" if use_placeholder else " ".join(edge.get('right', []))
-    property_label = ("{0} {1}" if e_type == 'direct' else "{1} {0}").format(property_label, entity_name)
+    e_arg = 'argmax' if 'argmax' in edge else 'argmin' if 'argmin' in edge else ""
+    entity_name = "<e>" if use_placeholder \
+        else edge["canonical_right"] if "canonical_right" in edge \
+        else " ".join(edge.get('right', []))
+    property_label = ("{2} {0} {1}" if e_type == 'direct' else "{2} {1} {0}").format(
+        property_label, entity_name, e_arg)
     return property_label
 
 
