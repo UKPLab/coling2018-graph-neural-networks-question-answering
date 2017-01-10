@@ -13,11 +13,11 @@ def if_graph_adheres(g, allowed_extensions=set()):
     :param g: graphs a dictionary with an edgeSet
     :param allowed_extensions: a set of allowed extensions
     :return: True if graph uses only allowed extensions, false otherwise
-    >>> test_conditions_on_graph({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}]}, allowed_extensions=set())
+    >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}]}, allowed_extensions=set())
     True
-    >>> test_conditions_on_graph({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'v-structure'}]}, allowed_extensions=set())
+    >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'v-structure'}]}, allowed_extensions=set())
     False
-    >>> test_conditions_on_graph({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland']}, {'kbID':'P31v'}]}, allowed_extensions=set())
+    >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland']}, {'kbID':'P31v'}]}, allowed_extensions=set())
     False
     """
     allowed_extensions = set(allowed_extensions)
