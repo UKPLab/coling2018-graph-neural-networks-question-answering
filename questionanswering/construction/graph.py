@@ -58,11 +58,15 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     >>> get_property_str_representation({'hopUp': 'P17v', 'kbID': 'P140v', 'left': [0], 'right': ['Russia'], \
     'rightkbID': 'Q159', 'type': 'reverse'}, {'P17': "country", 'P140': 'religion'}, use_placeholder=True)
     '<x> country <e> religion'
+    >>> get_property_str_representation({'hopUp': None, 'kbID': 'P140v', 'left': [0], 'right': ['Russia'], \
+    'rightkbID': 'Q159', 'type': 'reverse'}, {'P17': "country", 'P140': 'religion'}, use_placeholder=True)
+    '<e> religion'
     """
     property_label = property2label.get(edge.get('kbID', '')[:-1], utils.unknown_el)
     e_type = edge.get('type', 'direct')
     e_arg = '<argmax> ' if 'argmax' in edge else '<argmin> ' if 'argmin' in edge else ""
-    hopUp_label = "<x> {} ".format(property2label.get(edge['hopUp'][:-1], utils.unknown_el)) if 'hopUp' in edge else ""
+    hopUp_label = "<x> {} ".format(property2label.get(edge['hopUp'][:-1], utils.unknown_el)) \
+        if 'hopUp' in edge and edge['hopUp'] else ""
     entity_name = "<e>" if use_placeholder \
         else edge["canonical_right"] if "canonical_right" in edge \
         else " ".join(edge.get('right', []))
