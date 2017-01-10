@@ -158,9 +158,6 @@ def load_config(config_file_path):
     if "webquestions" not in config:
         print("Dataset location not in the config file!")
         sys.exit()
-    if "generation" not in config:
-        print("Generation parameters not in the config file!")
-        sys.exit()
     if "wikidata" not in config:
         print("Wikidata parameters not in the config file!")
         sys.exit()

@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 
 import click
 import numpy as np
@@ -17,6 +18,9 @@ np.random.seed(1)
 def generate(config_file_path):
 
     config = utils.load_config(config_file_path)
+    if "generation" not in config:
+        print("Generation parameters not in the config file!")
+        sys.exit()
     config_global = config.get('global', {})
     np.random.seed(config_global.get('random.seed', 1))
 
