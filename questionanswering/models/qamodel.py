@@ -1,22 +1,20 @@
 import abc
-import logging
 from collections import deque
 import tqdm
 import numpy as np
 import os
 import re
 import keras
+from utils import Loggable
 
 from wikidata import wdaccess
 from datasets import evaluation
 
 
-class QAModel(metaclass=abc.ABCMeta):
-    def __init__(self, logger=None, **kwargs):
-        if not logger:
-            self.logger = logging.getLogger(__name__)
-        else:
-            self.logger = logger
+class QAModel(Loggable, metaclass=abc.ABCMeta):
+
+    def __init__(self, **kwargs):
+        super(QAModel, self).__init__(**kwargs)
 
     @abc.abstractmethod
     def encode_data_instance(self, instance):

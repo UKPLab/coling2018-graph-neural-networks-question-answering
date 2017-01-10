@@ -4,13 +4,21 @@ import re
 import nltk
 from SPARQLWrapper import SPARQLWrapper, JSON
 
-logger = logging.getLogger(__name__)
+wdaccess_p = {
+    'wikidata_url': "http://knowledgebase:8890/sparql",
+    'timeout': 40,
+    'global_result_limit': 500,
+    'logger': logging.getLogger(__name__),
+    'relation_qualifiers': False
+}
+
+logger = wdaccess_p['logger']
 logger.setLevel(logging.ERROR)
 
-sparql = SPARQLWrapper("http://knowledgebase:8890/sparql")
+sparql = SPARQLWrapper(wdaccess_p.get('wikidata_url', "http://knowledgebase:8890/sparql"))
 sparql.setReturnFormat(JSON)
 sparql.setMethod("GET")
-sparql.setTimeout(40)
+sparql.setTimeout(wdaccess_p.get('timeout', 40))
 GLOBAL_RESULT_LIMIT = 500
 
 
@@ -24,7 +32,7 @@ sparql_select = """
         SELECT DISTINCT %queryvariables% WHERE
         """
 
-sparql_relation = {
+sparql_relation_with_qualifiers = {
     "direct": "{GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . %restriction% }}",
 
     "reverse": "{GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . %restriction% }}",
@@ -32,7 +40,7 @@ sparql_relation = {
     "v-structure": "{GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}",
 }
 
-sparql_relation_complex = """
+sparql_relation_complex_with_qualifiers = """
         {
         {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . }}
         UNION
@@ -40,21 +48,21 @@ sparql_relation_complex = """
         }
         """
 
-# sparql_relation = {
-#     "direct": "{GRAPH <http://wikidata.org/statements> { ?e1 ?rd ?m . ?m ?p ?e2 . %restriction% }}",
-#
-#     "reverse": "{GRAPH <http://wikidata.org/statements> { ?e2 ?rr ?m . ?m ?p ?e1 . %restriction% }}",
-#
-#     "v-structure": "{GRAPH <http://wikidata.org/statements> { ?m ?rv ?e2 . ?m ?p ?e1 . %restriction% }}",
-# }
-#
-# sparql_relation_complex = """
-#         {
-#         {GRAPH <http://wikidata.org/statements> { ?e1 ?rd ?m . ?m ?p ?e2 . }}
-#         UNION
-#         {GRAPH <http://wikidata.org/statements> { ?e2 ?rr ?m . ?m ?p ?e1 . }}
-#         }
-#         """
+sparql_relation = {
+    "direct": "{GRAPH <http://wikidata.org/statements> { ?e1 ?rd ?m . ?m ?p ?e2 . %restriction% }}",
+
+    "reverse": "{GRAPH <http://wikidata.org/statements> { ?e2 ?rr ?m . ?m ?p ?e1 . %restriction% }}",
+
+    "v-structure": "{GRAPH <http://wikidata.org/statements> { ?m ?rv ?e2 . ?m ?p ?e1 . %restriction% }}",
+}
+
+sparql_relation_complex = """
+        {
+        {GRAPH <http://wikidata.org/statements> { ?e1 ?rd ?m . ?m ?p ?e2 . }}
+        UNION
+        {GRAPH <http://wikidata.org/statements> { ?e2 ?rr ?m . ?m ?p ?e1 . }}
+        }
+        """
 # sparql_relation_complex = """
 #         {
 #         {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . }}
@@ -148,9 +156,9 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
     query += "{"
     for i, edge in enumerate(g.get('edgeSet', [])):
         if 'type' in edge:
-            sparql_relation_inst = sparql_relation[edge['type']]
+            sparql_relation_inst = (sparql_relation_with_qualifiers if wdaccess_p.get("relation_qualifiers", False) else sparql_relation)[edge['type']]
         else:
-            sparql_relation_inst = sparql_relation_complex
+            sparql_relation_inst = (sparql_relation_complex_with_qualifiers if wdaccess_p.get("relation_qualifiers", False) else sparql_relation_complex)
 
         if 'kbID' in edge:
             sparql_relation_inst = re.sub(r"\?r[drv]", "e:" + edge['kbID'], sparql_relation_inst)

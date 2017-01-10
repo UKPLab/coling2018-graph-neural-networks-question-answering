@@ -1,10 +1,12 @@
 import click
+import utils
 import yaml
 import numpy as np
 import logging
 import sys
 
 import models
+from wikidata import wdaccess
 from datasets import webquestions_io
 
 
@@ -18,18 +20,8 @@ def test_model(path_to_model, config_file_path):
     :param config_file_path:
     :return:
     """
-    with open(config_file_path, 'r') as config_file:
-        config = yaml.load(config_file.read())
-    print(config)
+    config = utils.load_config(config_file_path)
     config_global = config.get('global', {})
-    if "webquestions" not in config:
-        print("Dataset location not in the config file!")
-        sys.exit()
-
-    if "model" not in config and 'class' not in config['model']:
-        print("Specify a model class in the config file!")
-        sys.exit()
-
     np.random.seed(config_global.get('random_seed', 1))
 
     logger = logging.getLogger(__name__)
@@ -38,6 +30,8 @@ def test_model(path_to_model, config_file_path):
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
 
+    wdaccess.wdaccess_p['relation_qualifiers'] = config['wikidata'].get('qualifiers', False)
+
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
     trainablemodel = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
     trainablemodel.load_from_file(path_to_model)
@@ -45,7 +39,7 @@ def test_model(path_to_model, config_file_path):
     print("Testing the model on silver data.")
     trainablemodel.test_on_silver(webquestions.get_validation_samples())
 
-    if config.get("wikidata", False):
+    if config['wikidata'].get('evaluate', False):
         print("Testing the model on gold answers.")
         validation_graph_lists, validation_gold_answers = webquestions.get_validation_with_gold()
         print("Evaluate on {} validation questions.".format(len(validation_gold_answers)))

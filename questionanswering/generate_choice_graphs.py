@@ -1,13 +1,12 @@
+import json
 import logging
+
 import click
 import numpy as np
-import yaml
-import sys
 import tqdm
-import json
-
+from construction import staged_generation
 from datasets import webquestions_io
-from construction import staged_generation, stages
+import utils
 from wikidata import wdaccess
 
 np.random.seed(1)
@@ -17,18 +16,8 @@ np.random.seed(1)
 @click.argument('config_file_path', default="default_config.yaml")
 def generate(config_file_path):
 
-    with open(config_file_path, 'r') as config_file:
-        config = yaml.load(config_file.read())
-    print(config)
+    config = utils.load_config(config_file_path)
     config_global = config.get('global', {})
-    if "webquestions" not in config:
-        print("Dataset location not in the config file!")
-        sys.exit()
-
-    if "generation" not in config:
-        print("Generation parameters not in the config file!")
-        sys.exit()
-
     np.random.seed(config_global.get('random.seed', 1))
 
     logger = logging.getLogger(__name__)
@@ -37,6 +26,8 @@ def generate(config_file_path):
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
     # logging.basicConfig(level=config['logger']['level'])
+
+    wdaccess.wdaccess_p['relation_qualifiers'] = config['wikidata'].get('qualifiers', False)
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
 

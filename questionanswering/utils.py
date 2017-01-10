@@ -5,12 +5,14 @@
 #
 
 # Embeddings and vocabulary utility methods
+import sys
 
+import abc
 import numpy as np
 import logging
 import re
 import nltk
-
+import yaml
 
 logger = logging.getLogger()
 logger.setLevel(logging.ERROR)
@@ -138,3 +140,28 @@ def get_word_index(tokens):
     word2idx[all_zeroes] = 0
     word2idx[unknown_el] = len(word2idx)
     return word2idx
+
+
+class Loggable(metaclass=abc.ABCMeta):
+
+    def __init__(self, logger=None, **kwargs):
+        if not logger:
+            self.logger = logging.getLogger(__name__)
+        else:
+            self.logger = logger
+
+
+def load_config(config_file_path):
+    with open(config_file_path, 'r') as config_file:
+        config = yaml.load(config_file.read())
+    print(config)
+    if "webquestions" not in config:
+        print("Dataset location not in the config file!")
+        sys.exit()
+    if "generation" not in config:
+        print("Generation parameters not in the config file!")
+        sys.exit()
+    if "wikidata" not in config:
+        print("Wikidata parameters not in the config file!")
+        sys.exit()
+    return config

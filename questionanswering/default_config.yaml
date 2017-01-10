@@ -53,6 +53,8 @@ model:
   twin.similarity: cos
   sibling.activation: relu
 
-wikidata: True
+wikidata:
+    evaluate: True
+    qualifiers: False
 
 

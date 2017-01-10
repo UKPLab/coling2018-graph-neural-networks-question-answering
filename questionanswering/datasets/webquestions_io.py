@@ -3,12 +3,12 @@ import json
 import numpy as np
 import itertools
 
-from . import Dataset
+from utils import Loggable
 from construction import graph
 from wikidata import wdaccess
 
 
-class WebQuestions(Dataset):
+class WebQuestions(Loggable):
     def __init__(self, parameters, **kwargs):
         """
         An object class to access the webquestion dataset. The path to the dataset should point to a folder that
