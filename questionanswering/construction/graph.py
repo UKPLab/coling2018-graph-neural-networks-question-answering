@@ -46,14 +46,23 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     'country Iceland'
     >>> get_property_str_representation({'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}, {'P17': "country"}, use_placeholder=True)
     'country <e>'
+    >>> get_property_str_representation({'kbID': 'P31v', 'left': [0],  'right': ['Australia'], \
+   'rightkbID': 'Q408', 'type': 'reverse'}, {'P31': "instance of"}, use_placeholder=True)
+    '<e> instance of'
+    >>> get_property_str_representation({'argmin': 'time', 'kbID': 'P17s', 'left': [0], 'right': ['IC'], \
+    'rightkbID': 'Q189', 'canonical_right': 'Iceland', 'type': 'direct'}, {'P17': "country"}, use_placeholder=False)
+    '<argmin> country Iceland'
+    >>> get_property_str_representation({'hopUp': 'P131v', 'kbID': 'P69s', 'left': [0], 'right': ['Missouri'], \
+    'rightkbID': 'Q189', 'type': 'direct'}, {'P39': "country", 'P131': 'located in'}, use_placeholder=True)
+    'educated at <x> located in <e> '
     """
     property_label = property2label.get(edge.get('kbID', '')[:-1], utils.unknown_el)
     e_type = edge.get('type', 'direct')
-    e_arg = '<argmax>' if 'argmax' in edge else '<argmin>' if 'argmin' in edge else ""
+    e_arg = '<argmax> ' if 'argmax' in edge else '<argmin> ' if 'argmin' in edge else ""
     entity_name = "<e>" if use_placeholder \
         else edge["canonical_right"] if "canonical_right" in edge \
         else " ".join(edge.get('right', []))
-    property_label = ("{2} {0} {1}" if e_type == 'direct' else "{2} {1} {0}").format(
+    property_label = ("{2}{0} {1}" if e_type == 'direct' else "{2}{1} {0}").format(
         property_label, entity_name, e_arg)
     return property_label
 
