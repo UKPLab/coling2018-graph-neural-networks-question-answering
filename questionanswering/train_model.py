@@ -42,8 +42,6 @@ def train(config_file_path):
         results_logger.addHandler(fh)
         results_logger.info(str(config))
 
-    wdaccess.wdaccess_p['relation_qualifiers'] = config['wikidata'].get('qualifiers', False)
-
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
     config['model']['samples.per.epoch'] = webquestions.get_train_sample_size()
     config['model']['graph.choices'] = config['webquestions'].get("max.negative.samples", 30)

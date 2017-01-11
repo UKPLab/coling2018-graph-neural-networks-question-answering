@@ -30,8 +30,6 @@ def test_model(path_to_model, config_file_path):
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
 
-    wdaccess.wdaccess_p['relation_qualifiers'] = config['wikidata'].get('qualifiers', False)
-
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
     trainablemodel = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
     trainablemodel.load_from_file(path_to_model)

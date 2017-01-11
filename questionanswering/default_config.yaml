@@ -61,6 +61,4 @@ model:
 
 wikidata:
     evaluate: True
-    qualifiers: False
-
 
