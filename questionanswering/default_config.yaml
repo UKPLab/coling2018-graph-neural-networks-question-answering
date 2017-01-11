@@ -3,7 +3,10 @@ logger:
 
 global:
   random.seed: 1
+
+training:
   train.generator: False
+  log.results: "../data/training.log"
 
 generation:
   max.num.entities: 2

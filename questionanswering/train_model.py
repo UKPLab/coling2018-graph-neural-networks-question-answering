@@ -2,8 +2,8 @@ import logging
 import click
 import numpy as np
 import utils
-import yaml
 import sys
+import os
 
 from datasets import webquestions_io
 import models
@@ -20,6 +20,9 @@ def train(config_file_path):
     :return:
     """
     config = utils.load_config(config_file_path)
+    if "training" not in config:
+        print("Dataset location not in the config file!")
+        sys.exit()
 
     config_global = config.get('global', {})
     np.random.seed(config_global.get('random.seed', 1))
@@ -30,6 +33,15 @@ def train(config_file_path):
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
 
+    results_logger = None
+    if 'log.results' in config['training']:
+        results_logger = logging.getLogger("results_logger")
+        results_logger.setLevel(logging.INFO)
+        fh = logging.FileHandler(filename=config['training']['log.results'])
+        fh.setLevel(logging.INFO)
+        results_logger.addHandler(fh)
+        results_logger.info(str(config))
+
     wdaccess.wdaccess_p['relation_qualifiers'] = config['wikidata'].get('qualifiers', False)
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
@@ -39,19 +51,27 @@ def train(config_file_path):
     trainablemodel = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
     if isinstance(trainablemodel, KerasModel):
         trainablemodel.prepare_model(webquestions.get_dataset_tokens())
-    if config_global.get('train.generator', False):
+    if config['training'].get('train.generator', False):
         trainablemodel.train_on_generator(webquestions.get_training_generator(config['model'].get("batch.size", 128)),
                                           validation_with_targets=webquestions.get_validation_samples())
     else:
         trainablemodel.train(webquestions.get_training_samples(),
                              validation_with_targets=webquestions.get_validation_samples())
 
-    trainablemodel.test_on_silver(webquestions.get_validation_samples())
+    accuracy_on_silver = trainablemodel.test_on_silver(webquestions.get_validation_samples())
+    print("Accuracy on silver data: {}".format(accuracy_on_silver))
+    if results_logger:
+        results_logger.info("Accuracy on silver data: {}".format(accuracy_on_silver))
 
     if config['wikidata'].get('evaluate', False):
         validation_graph_lists, validation_gold_answers = webquestions.get_validation_with_gold()
         print("Evaluate on {} validation questions.".format(len(validation_gold_answers)))
-        trainablemodel.test((validation_graph_lists, validation_gold_answers), verbose=True)
+        successes, avg_metrics = trainablemodel.test((validation_graph_lists, validation_gold_answers), verbose=True)
+        print("Successful predictions: {} ({})".format(len(successes), len(successes) / len(validation_gold_answers)))
+        print("Average f1: {:.4},{:.4},{:.4}".format(*avg_metrics))
+        if results_logger:
+            results_logger.info("Successful predictions: {} ({})".format(len(successes), len(successes) / len(validation_gold_answers)))
+            results_logger.info("Average f1: {:.4},{:.4},{:.4}".format(*avg_metrics))
 
 
 if __name__ == "__main__":

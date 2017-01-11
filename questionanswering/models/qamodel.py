@@ -30,7 +30,7 @@ class QAModel(Loggable, metaclass=abc.ABCMeta):
         graphs, gold_answers = data_with_gold
         predicted_indices = self.apply_on_batch(graphs, verbose=verbose)
         successes = deque()
-        avg_f1 = 0.0
+        avg_metrics = np.zeros(3)
         for i, sorted_indices in enumerate(tqdm.tqdm(predicted_indices, ascii=True, disable=(not verbose))):
             sorted_indices = deque(sorted_indices)
             if sorted_indices:
@@ -40,13 +40,12 @@ class QAModel(Loggable, metaclass=abc.ABCMeta):
                     g = graphs[i][index]
                     retrieved_answers = wdaccess.query_graph_denotations(g)
                 retrieved_answers = wdaccess.map_query_results(retrieved_answers)
-                _, _, f1 = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers[i], retrieved_answers)
-                if f1:
-                    successes.append((i, f1, g))
-                avg_f1 += f1
-        avg_f1 /= len(gold_answers)
-        print("Successful predictions: {} ({})".format(len(successes), len(successes) / len(gold_answers)))
-        print("Average f1: {}".format(avg_f1))
+                metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers[i], retrieved_answers)
+                if metrics[-1]:
+                    successes.append((i, metrics[-1], g))
+                avg_metrics += metrics
+        avg_metrics /= len(gold_answers)
+        return successes, avg_metrics
 
     def test_on_silver(self, data_with_targets, verbose=False):
         graphs, targets = data_with_targets
@@ -54,7 +53,7 @@ class QAModel(Loggable, metaclass=abc.ABCMeta):
             targets = np.argmax(targets, axis=-1)
         predicted_targets = [indices[0] for indices in self.apply_on_batch(graphs, verbose)]
         accuracy = np.sum(np.asarray(predicted_targets) == targets) / len(targets)
-        print("Accuracy on silver data: {}".format(accuracy))
+        return accuracy
 
     def apply_on_batch(self, data_batch, verbose=False):
         predicted_indices = deque()
@@ -163,6 +162,7 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
             self.logger.debug("Start training with a validation sample.")
             encoded_validation = self.encode_data_for_training(validation_with_targets)
             self.logger.debug('Validation data encoded for training.')
+            self.logger.debug('Validating on {} samples.'.format(len(encoded_validation[-1])))
             callback_history = self._model.fit_generator(self.data_for_training_generator(data_with_targets_generator),
                                                          nb_epoch=self._p.get("epochs", 200),
                                                          samples_per_epoch=self._p.get("samples.per.epoch", 1000),

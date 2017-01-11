@@ -37,13 +37,16 @@ def test_model(path_to_model, config_file_path):
     trainablemodel.load_from_file(path_to_model)
 
     print("Testing the model on silver data.")
-    trainablemodel.test_on_silver(webquestions.get_validation_samples())
+    accuracy_on_silver = trainablemodel.test_on_silver(webquestions.get_validation_samples())
+    print("Accuracy on silver data: {}".format(accuracy_on_silver))
 
     if config['wikidata'].get('evaluate', False):
         print("Testing the model on gold answers.")
         validation_graph_lists, validation_gold_answers = webquestions.get_validation_with_gold()
         print("Evaluate on {} validation questions.".format(len(validation_gold_answers)))
-        trainablemodel.test((validation_graph_lists, validation_gold_answers), verbose=True)
+        successes, avg_metrics = trainablemodel.test((validation_graph_lists, validation_gold_answers), verbose=True)
+        print("Successful predictions: {} ({})".format(len(successes), len(successes) / len(validation_gold_answers)))
+        print("Average f1: {:.4},{:.4},{:.4}".format(*avg_metrics))
 
 
 if __name__ == "__main__":
