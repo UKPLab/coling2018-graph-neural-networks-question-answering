@@ -71,7 +71,7 @@ def train(config_file_path):
         print("Average f1: {:.4},{:.4},{:.4}".format(*avg_metrics))
         if results_logger:
             results_logger.info("Successful predictions: {} ({})".format(len(successes), len(successes) / len(validation_gold_answers)))
-            results_logger.info("Average f1: {:.4},{:.4},{:.4}".format(*avg_metrics))
+            results_logger.info("Average prec, rec, f1: {:.4}, {:.4}, {:.4}".format(*avg_metrics))
 
 
 if __name__ == "__main__":
