@@ -21,7 +21,7 @@ def train(config_file_path):
     """
     config = utils.load_config(config_file_path)
     if "training" not in config:
-        print("Dataset location not in the config file!")
+        print("Training parameters not in the config file!")
         sys.exit()
 
     config_global = config.get('global', {})
