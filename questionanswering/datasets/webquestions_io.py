@@ -42,6 +42,7 @@ class WebQuestions(Loggable):
             np.mean([len(graphs) for graphs in self._choice_graphs])))
         self.logger.debug("Removing graphs that use disallowed extensions")
         self._choice_graphs = [[g for g in graph_set if graph.if_graph_adheres(g, allowed_extensions=self._p.get("extensions", set()))] for graph_set in self._choice_graphs]
+        self._silver_graphs = [[g for g in graph_set if graph.if_graph_adheres(g[0], allowed_extensions=self._p.get("extensions", set()))] for graph_set in self._silver_graphs]
         self.logger.debug("Average number of choices per question: {}".format(
             np.mean([len(graphs) for graphs in self._choice_graphs])))
 
