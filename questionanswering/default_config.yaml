@@ -10,7 +10,10 @@ training:
 
 generation:
   max.num.entities: 2
+  questions: "../data/input/webquestions.examples.train.json"
   save.choice.to: "../data/generated/webquestions.examples.train.choice_graphs.extended.json"
+  save.silver.to: "../data/generated/webquestions.examples.train.silvergraphs.200.json"
+  take_first: 200
 
 webquestions:
   f1.samples.threshold: 0.1

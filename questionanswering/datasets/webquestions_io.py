@@ -136,6 +136,14 @@ class WebQuestions(Loggable):
         """
         return self._get_samples(self._questions_train)
 
+    def get_question_tokens(self):
+        """
+        Generate a list of tokens that appear in question in teh complete dataset.
+
+        :return: list of lists of tokens
+        """
+        return [[w for w, _, _ in q] for q in self._dataset_tagged]
+
     def get_dataset_tokens(self):
         """
         Generate a list of tokens that appear in the training data.

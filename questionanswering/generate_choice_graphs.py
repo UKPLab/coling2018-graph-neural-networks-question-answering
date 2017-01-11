@@ -10,8 +10,6 @@ from datasets import webquestions_io
 import utils
 from wikidata import wdaccess
 
-np.random.seed(1)
-
 
 @click.command()
 @click.argument('config_file_path', default="default_config.yaml")
@@ -37,7 +35,7 @@ def generate(config_file_path):
 
     logger.debug('Extracting entities.')
     webquestions_entities = webquestions.extract_question_entities()
-    webquestions_tokens = webquestions.get_dataset_tokens()
+    webquestions_tokens = webquestions.get_question_tokens()
 
     logger.debug('Generating choice graphs')
     choice_graphs_sets = []
