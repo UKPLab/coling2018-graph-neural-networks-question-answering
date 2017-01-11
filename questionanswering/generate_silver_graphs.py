@@ -31,11 +31,11 @@ def generate(config_file_path):
     wdaccess.wdaccess_p['relation_qualifiers'] = config['wikidata'].get('qualifiers', False)
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
-    logging.debug('Loaded WebQuestions, size: {}'.format(webquestions.get_dataset_size()))
+    logger.debug('Loaded WebQuestions, size: {}'.format(webquestions.get_dataset_size()))
 
     with open(config['generation']['questions']) as f:
         webquestions_questions = json.load(f)
-    logging.debug('Loaded WebQuestions original training questions, size: {}'.format(len(webquestions_questions)))
+    logger.debug('Loaded WebQuestions original training questions, size: {}'.format(len(webquestions_questions)))
     assert len(webquestions_questions) == webquestions.get_dataset_size()
 
     logger.debug('Extracting entities.')
@@ -51,7 +51,7 @@ def generate(config_file_path):
         ungrounded_graph = {'tokens': webquestions_tokens[i],
                             'edgeSet': [],
                             'entities': [webquestions_io.get_main_entity_from_question(webquestions_questions[i])] + webquestions_entities[i]}
-        logger.info("Generating from: {}".format(ungrounded_graph))
+        logger.log(level=0, msg="Generating from: {}".format(ungrounded_graph))
         gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
         generated_graphs = staged_generation.generate_with_gold(ungrounded_graph, gold_answers)
         silver_dataset.append(generated_graphs)
