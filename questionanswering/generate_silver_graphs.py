@@ -8,7 +8,6 @@ import sys
 
 import utils
 from wikidata import wdaccess
-from construction import graph
 from datasets import webquestions_io
 
 
@@ -27,7 +26,7 @@ def generate(config_file_path):
     ch = logging.StreamHandler()
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
-    logging.basicConfig(level=logging.ERROR)
+    # logging.basicConfig(level=logging.ERROR)
 
     wdaccess.wdaccess_p['relation_qualifiers'] = config['wikidata'].get('qualifiers', False)
 
@@ -46,7 +45,7 @@ def generate(config_file_path):
     silver_dataset = []
     len_webquestion = webquestions.get_dataset_size()
     if 'take_first' in config['generation']:
-        print("Taking the first {} questions.", config['generation']['take_first'])
+        print("Taking the first {} questions.".format(config['generation']['take_first']))
         len_webquestion = config['generation']['take_first']
     for i in tqdm.trange(len_webquestion):
         ungrounded_graph = {'tokens': webquestions_tokens[i],
