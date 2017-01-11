@@ -138,19 +138,21 @@ class WebQuestions(Loggable):
 
     def get_question_tokens(self):
         """
-        Generate a list of tokens that appear in question in teh complete dataset.
+        Generate a list of tokens that appear in question in the complete dataset.
 
         :return: list of lists of tokens
         """
         return [[w for w, _, _ in q] for q in self._dataset_tagged]
 
-    def get_dataset_tokens(self):
+    def get_training_tokens(self):
         """
-        Generate a list of tokens that appear in the training data.
+        Generate a list of tokens that appear in the training data i the questions and in the edge labels.
 
         :return: list of lists of tokens
         """
-        return [[w for w, _, _ in q] for q in self._dataset_tagged] + [e.get('label', '').split() for graph_set in self._choice_graphs for g in graph_set for e in g.get('edgeSet',[])]
+        return [[w for w, _, _ in self._dataset_tagged[i]] +
+                [w for g in self._choice_graphs[i] for e in g.get('edgeSet', []) for w in e.get('label', '').split()]
+                for i in self._get_sample_indices(self._questions_val)]
 
     def get_validation_samples(self):
         """

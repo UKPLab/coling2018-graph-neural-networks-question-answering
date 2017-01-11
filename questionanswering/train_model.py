@@ -50,7 +50,7 @@ def train(config_file_path):
 
     trainablemodel = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
     if isinstance(trainablemodel, KerasModel):
-        trainablemodel.prepare_model(webquestions.get_dataset_tokens())
+        trainablemodel.prepare_model(webquestions.get_training_tokens())
     if config['training'].get('train.generator', False):
         trainablemodel.train_on_generator(webquestions.get_training_generator(config['model'].get("batch.size", 128)),
                                           validation_with_targets=webquestions.get_validation_samples())
