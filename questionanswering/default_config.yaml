@@ -37,6 +37,7 @@ model:
   models.save.path: "../trainedmodels/"
   word.embeddings: "../resources/glove/glove50B.tsv"
   max.sent.len: 70
+  max.graph.size: 3
   loss: kld
   edge.with.entity: False
   epochs: 40

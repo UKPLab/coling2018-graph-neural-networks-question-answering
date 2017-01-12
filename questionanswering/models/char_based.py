@@ -10,7 +10,7 @@ from keras.preprocessing import sequence
 import utils
 from construction import graph
 from . import keras_extensions
-from .qamodel import TwinsModel
+from .qamodel import TwinsModel, BrothersModel
 
 
 class CharCNNModel(TwinsModel):
@@ -41,8 +41,6 @@ class CharCNNModel(TwinsModel):
         self._p['vocab.size'] = len(self._character2idx)
 
         super(CharCNNModel, self).prepare_model(train_tokens)
-        self._sibling_model = self._model.get_layer(name="sibiling_model")
-        self.logger.debug("Sibling model: {}".format(self._sibling_model))
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
@@ -138,6 +136,10 @@ class YihModel(TwinsModel):
         return sentences_matrix, edges_matrix, targets
 
     def prepare_model(self, train_tokens):
+        self.extract_vocabulary(train_tokens)
+        super(YihModel, self).prepare_model(train_tokens)
+
+    def extract_vocabulary(self, train_tokens):
         if not self._trigram_vocabulary:
             self._trigram_vocabulary = list({t for tokens in train_tokens
                                              for token in tokens
@@ -146,10 +148,6 @@ class YihModel(TwinsModel):
             with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number), 'w') as out:
                 json.dump(self._trigram_vocabulary, out, indent=2)
         self._p['vocab.size'] = len(self._trigram_vocabulary)
-
-        super(YihModel, self).prepare_model(train_tokens)
-        self._sibling_model = self._model.get_layer(name="sibiling_model")
-        self.logger.debug("Sibling model: {}".format(self._sibling_model))
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
@@ -230,6 +228,101 @@ class YihModel(TwinsModel):
         self._trigram_vocabulary = [tuple(t) for t in self._trigram_vocabulary]
         self._p['vocab.size'] = len(self._trigram_vocabulary)
         self.logger.debug("Vocabulary size: {}.".format(len(self._trigram_vocabulary)))
+
+
+class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
+
+    def prepare_model(self, train_tokens):
+        YihModel.extract_vocabulary(self, train_tokens)
+        super(TrigramCNNEdgeSumModel, self).prepare_model(train_tokens)
+
+    def _get_keras_model(self):
+        self.logger.debug("Create keras model.")
+        # Sibling model
+        word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32', name='sentence_input')
+        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
+                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(word_input)
+        semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
+
+        for i in range(self._p.get("sem.layer.depth", 1)):
+            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                                 activation=self._p.get("sibling.activation", 'tanh'),
+                                                 init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
+
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
+        sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._older_model_name)
+        self.logger.debug("Sibling model is finished.")
+
+        #Graph Model
+        edge_input = keras.layers.Input(shape=(self._p['max.graph.size'], self._p['max.sent.len'],
+                                               self._p['vocab.size'],), dtype='float32', name='edge_input')
+        edge_vectors = keras.layers.TimeDistributed(sibiling_model)(edge_input)
+        graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
+        graph_model = keras.models.Model(input=[edge_input], output=[graph_vector], name=self._younger_model_name)
+
+        # Twins model
+        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32', name='sentence_input')
+        graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
+                                               self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32', name='graph_input')
+        sentence_vector = sibiling_model(sentence_input)
+        graph_vectors = keras.layers.TimeDistributed(graph_model)(graph_input)
+
+        main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
+                                         dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
+        main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
+        model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
+        self.logger.debug("Model structured is finished")
+        model.compile(optimizer='adam', loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
+        self.logger.debug("Model is compiled")
+        return model
+
+    def encode_data_instance(self, instance):
+        sentence_encoded, graphs_encoded = self.encode_by_trigram(instance)
+        sentence_ids = sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
+        graph_matrix = np.zeros((len(graphs_encoded), self._p.get('max.graph.size', 3),
+                                 self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
+        for i, graph_encoded in enumerate(graphs_encoded):
+            graph_encoded = graph_encoded[:self._p.get('max.graph.size', 3)]
+            for j, edge_encoded in enumerate(graph_encoded):
+                edge_encoded = edge_encoded[:self._p.get('max.sent.len', 10)]
+                graph_matrix[i, j, :len(edge_encoded)] = edge_encoded
+        return sentence_ids, graph_matrix
+
+    def encode_by_trigram(self, graph_set):
+        sentence_tokens = graph_set[0].get("tokens", [])
+        sentence_trigrams = [set(string_to_trigrams(token)) for token in sentence_tokens]
+        sentence_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
+                            for trigrams in sentence_trigrams]
+        graphs_encoded = []
+        for g in graph_set:
+            edges_encoded = []
+            for edge in g.get('edgeSet', []):
+                property_label = edge.get('label', '')
+                edge_trigrams = [set(string_to_trigrams(token)) for token in property_label.split()]
+                edge_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
+                                for trigrams in edge_trigrams]
+                edges_encoded.append(edge_encoded)
+            graphs_encoded.append(edges_encoded)
+        return sentence_encoded, graphs_encoded
+
+    def encode_batch_by_trigrams(self, graphs, verbose=False):
+        graphs = [el for el in graphs if el]
+        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
+        graph_matrix = np.zeros((len(graphs), len(graphs[0]), self._p.get('max.graph.size', 3),
+                                 self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
+
+        for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
+            sentence_encoded, graphs_encoded = self.encode_by_trigram(graph_set)
+            assert len(graphs_encoded) == graph_matrix.shape[1]
+            sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
+            sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded
+            for i, graph_encoded in enumerate(graphs_encoded):
+                graph_encoded = graph_encoded[:self._p.get('max.graph.size', 3)]
+                for j, edge_encoded in enumerate(graph_encoded):
+                    edge_encoded = edge_encoded[:self._p.get('max.sent.len', 10)]
+                    graph_matrix[index, i, j, :len(edge_encoded)] = edge_encoded
+        return sentences_matrix, graph_matrix
 
 
 def string_to_unigrams(input_string, character2idx):

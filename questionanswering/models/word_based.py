@@ -28,6 +28,10 @@ class WordCNNModel(TwinsModel):
         return sentences_matrix, edges_matrix, targets
 
     def prepare_model(self, train_tokens):
+        self.extract_vocabualry(train_tokens)
+        super(WordCNNModel, self).prepare_model(train_tokens)
+
+    def extract_vocabualry(self, train_tokens):
         if not self._word2idx:
             if "word.embeddings" in self._p:
                 self._embedding_matrix, self._word2idx = utils.load(self._p['word.embeddings'])
@@ -38,9 +42,6 @@ class WordCNNModel(TwinsModel):
                 with open(self._save_model_to + "word2idx_{}.json".format(self._model_number), 'w') as out:
                     json.dump(self._word2idx, out, indent=2)
         self._p['vocab.size'] = len(self._word2idx)
-        super(WordCNNModel, self).prepare_model(train_tokens)
-        self._sibling_model = self._model.get_layer(name=self._sibling_model_name)
-        self.logger.debug("Sibling model: {}".format(self._sibling_model))
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
@@ -251,8 +252,5 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
         return model
 
     def prepare_model(self, train_tokens):
-        WordCNNModel.prepare_model(self, train_tokens)
-        self._older_model = self._model.get_layer(name=self._older_model_name)
-        self._younger_model = self._model.get_layer(name=self._younger_model_name).layer
-        self.logger.debug("Older model: {}".format(self._older_model))
-        self.logger.debug("Younger model: {}".format(self._younger_model))
+        WordCNNModel.extract_vocabualry(self, train_tokens)
+        super(BrothersModel, self).prepare_model(train_tokens)

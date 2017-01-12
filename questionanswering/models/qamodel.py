@@ -203,6 +203,12 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
 
         super(TwinsModel, self).__init__(**kwargs)
 
+    @abc.abstractmethod
+    def prepare_model(self, train_tokens):
+        super(TwinsModel, self).prepare_model(train_tokens)
+        self._sibling_model = self._model.get_layer(name="sibiling_model")
+        self.logger.debug("Sibling model: {}".format(self._sibling_model))
+
     def apply_on_instance(self, instance):
         tokens_encoded, edges_encoded = self.encode_data_instance(instance)
         sentence_embedding = self._sibling_model.predict_on_batch(tokens_encoded)[0]
@@ -231,6 +237,14 @@ class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
         self._younger_model_name = "younger_model"
 
         super(BrothersModel, self).__init__(**kwargs)
+
+    @abc.abstractmethod
+    def prepare_model(self, train_tokens):
+        super(BrothersModel, self).prepare_model(train_tokens)
+        self._older_model = self._model.get_layer(name=self._older_model_name)
+        self._younger_model = self._model.get_layer(name=self._younger_model_name).layer
+        self.logger.debug("Older model: {}".format(self._older_model))
+        self.logger.debug("Younger model: {}".format(self._younger_model))
 
     def apply_on_instance(self, instance):
         tokens_encoded, edges_encoded = self.encode_data_instance(instance)
