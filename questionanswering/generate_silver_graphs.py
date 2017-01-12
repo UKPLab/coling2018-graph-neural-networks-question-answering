@@ -48,11 +48,13 @@ def generate(config_file_path):
         print("Taking the first {} questions.".format(config['generation']['take_first']))
         len_webquestion = config['generation']['take_first']
     for i in tqdm.trange(len_webquestion):
-        url_entity = [webquestions_io.get_main_entity_from_question(webquestions_questions[i])] \
-            if config['generation'].get('include_url_entities', False) else []
+        question_entities = webquestions_entities[i]
+        if config['generation'].get('include_url_entities', False):
+            url_entity = webquestions_io.get_main_entity_from_question(webquestions_questions[i])
+            question_entities = [url_entity] + [(e, t) for e, t in question_entities if e != url_entity[0]]
         ungrounded_graph = {'tokens': webquestions_tokens[i],
                             'edgeSet': [],
-                            'entities': url_entity + webquestions_entities[i]}
+                            'entities': question_entities}
         logger.log(level=0, msg="Generating from: {}".format(ungrounded_graph))
         gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
         generated_graphs = staged_generation.generate_with_gold(ungrounded_graph, gold_answers)
