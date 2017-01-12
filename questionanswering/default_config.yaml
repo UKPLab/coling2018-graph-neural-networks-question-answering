@@ -14,7 +14,7 @@ generation:
   save.choice.to: "../data/generated/webquestions.examples.train.choice_graphs.extended.json"
   save.silver.to: "../data/generated/webquestions.examples.train.silvergraphs.200.json"
   take_first: 200
-  include_url_entities: False
+  include_url_entities: True
 
 webquestions:
   f1.samples.threshold: 0.1
@@ -51,6 +51,7 @@ model:
   samples.per.epoch: 1000 #set automatically
   sem.layer.depth: 1
   sem.layer.size: 300
+  graph.sum: max
   sibling.weight.init: glorot_uniform
   conv.size: 100
   conv.width: 3
