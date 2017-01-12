@@ -240,7 +240,7 @@ class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def prepare_model(self, train_tokens):
-        super(BrothersModel, self).prepare_model(train_tokens)
+        KerasModel.prepare_model(self, train_tokens)
         self._older_model = self._model.get_layer(name=self._older_model_name)
         self._younger_model = self._model.get_layer(name=self._younger_model_name).layer
         self.logger.debug("Older model: {}".format(self._older_model))

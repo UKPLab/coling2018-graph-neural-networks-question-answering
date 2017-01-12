@@ -6,6 +6,7 @@ import nltk
 import numpy as np
 import tqdm
 from keras.preprocessing import sequence
+from keras import backend as K
 
 import utils
 from construction import graph
@@ -234,7 +235,7 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
 
     def prepare_model(self, train_tokens):
         YihModel.extract_vocabulary(self, train_tokens)
-        super(TrigramCNNEdgeSumModel, self).prepare_model(train_tokens)
+        BrothersModel.prepare_model(self, train_tokens)
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
@@ -260,18 +261,19 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
         edge_vectors = keras.layers.TimeDistributed(sibiling_model)(edge_input)
         graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
         graph_model = keras.models.Model(input=[edge_input], output=[graph_vector], name=self._younger_model_name)
+        self.logger.debug("Graph model is finished: {}".format(graph_model))
 
         # Twins model
-        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32', name='sentence_input')
+        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
         graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
-                                               self._p['max.sent.len'],  self._p['vocab.size'],), dtype='float32', name='graph_input')
+                                               self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='graph_input')
         sentence_vector = sibiling_model(sentence_input)
         graph_vectors = keras.layers.TimeDistributed(graph_model)(graph_input)
 
         main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
                                          dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
-        model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
+        model = keras.models.Model(input=[sentence_input, graph_input], output=[main_output])
         self.logger.debug("Model structured is finished")
         model.compile(optimizer='adam', loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
         self.logger.debug("Model is compiled")

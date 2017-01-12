@@ -253,4 +253,4 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
 
     def prepare_model(self, train_tokens):
         WordCNNModel.extract_vocabualry(self, train_tokens)
-        super(BrothersModel, self).prepare_model(train_tokens)
+        BrothersModel.prepare_model(self, train_tokens)
