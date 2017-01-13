@@ -76,7 +76,7 @@ sparql_close_order = " ORDER BY {} LIMIT 1"
 sparql_close = " LIMIT {}"
 
 # TODO: Additional?: given name
-HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361"]
+HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361", "P1445", "P179"]
 
 sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
 sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
@@ -138,7 +138,7 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
             sparql_relation_inst = re.sub(r"\?r[drv]", "e:" + edge['kbID'], sparql_relation_inst)
         else:
             sparql_relation_inst = sparql_relation_inst.replace("?r", "?r" + str(i))
-            variables.extend(["?r{}{}".format(i, t[0]) for t in sparql_relation] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
+            variables.extend(["?r{}{}".format(i, t[0]) for t in ['direct', 'reverse']] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
 
         if 'hopUp' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", sparql_entity_abstract)
@@ -202,7 +202,7 @@ def get_free_variables(g, include_relations=True, include_entities=True):
     free_variables = []
     for i, edge in enumerate(g.get('edgeSet', [])):
         if include_relations and 'kbID' not in edge:
-            free_variables.extend(["?r{}{}".format(i, t[0]) for t in sparql_relation] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
+            free_variables.extend(["?r{}{}".format(i, t[0]) for t in ['direct', 'reverse']] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
         if include_entities and 'rightkbID' not in edge:
             free_variables.append("?e2" + str(i))
     return free_variables
@@ -359,7 +359,7 @@ def map_query_results(query_results, question_variable='e1'):
     ['barack obama', 'q235234']
     """
     answers = [r[question_variable] for r in query_results]
-    answers = [a for a in answers if '-' not in a]
+    answers = [a for a in answers if '-' not in a and a[0] in 'pqPQ']  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
     answers = [[e.lower() for e in entity_map.get(a, [a])] for a in answers]
     # TODO: what to do about further inconsistencies
     # answers = [[e.lower() for e in entity_map.get(a, [l.get('label0') for l in query_wikidata(label_query(a), starts_with="", use_cache=True)])] for a in answers]
@@ -390,7 +390,7 @@ def label_query_results(query_results, question_variable='e1'):
     [['barack obama', 'barack hussein obama ii', 'obama', 'barack hussein obama', 'barack obama ii', 'barry obama'], ['james i of scotland', 'james i, king of scots']]
     """
     answers = [r[question_variable] for r in query_results]
-    answers = [a for a in answers if '-' not in a]  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
+    answers = [a for a in answers if '-' not in a and a[0] in 'pqPQ']  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
     answers = [[l.get('label0').lower() for l in query_wikidata(label_query(a), starts_with="", use_cache=True)] for a in answers]
     return answers
 
