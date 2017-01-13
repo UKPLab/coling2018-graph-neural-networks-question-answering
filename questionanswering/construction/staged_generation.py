@@ -80,9 +80,9 @@ def ground_with_gold(input_graphs, gold_answers):
     """
     grounded_graphs = find_groundings(input_graphs)
     retrieved_answers = [wdaccess.query_graph_denotations(s_g) for s_g in grounded_graphs]
+    retrieved_answers = [wdaccess.map_query_results(answer_set) for answer_set in retrieved_answers]
     logger.debug(
         "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
-    retrieved_answers = [wdaccess.map_query_results(answer_set) for answer_set in retrieved_answers]
 
     evaluation_results = [evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers[i]) for i in
                           range(len(grounded_graphs))]

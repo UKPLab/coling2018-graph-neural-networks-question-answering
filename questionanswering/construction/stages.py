@@ -66,20 +66,16 @@ def add_entity_and_relation(g):
     if len(g.get('entities', [])) == 0:
         return []
     entities = copy.copy(g.get('entities', []))
-    linkings = []
-    entity = None
-    while entities and not linkings:
+    new_graphs = []
+    while entities:
         entity = entities.pop(0)
         linkings = entity_linking.link_entity(entity)
-    if not (linkings and entity):
-        return []
-    new_graphs = []
-    for linking in linkings:
-        new_g = graph.copy_graph(g)
-        new_g['entities'] = entities
-        new_edge = {'left': [0], 'right': entity[0], 'rightkbID': linking}
-        new_g['edgeSet'].append(new_edge)
-        new_graphs.append(new_g)
+        for linking in linkings:
+            new_g = graph.copy_graph(g)
+            new_g['entities'] = entities[:]
+            new_edge = {'left': [0], 'right': entity[0], 'rightkbID': linking}
+            new_g['edgeSet'].append(new_edge)
+            new_graphs.append(new_g)
 
     return new_graphs
 
