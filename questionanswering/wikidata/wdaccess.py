@@ -356,7 +356,7 @@ def map_query_results(query_results, question_variable='e1'):
     :param question_variable: the variable to extract
     :return: list of answers as entity labels or an original id if no canonical label was found.
     >>> map_query_results([{'e1':'Q76'}, {'e1':'Q235234'}])
-    ['barack obama', 'q235234']
+    [['barack obama'], ['q235234']]
     """
     answers = [r[question_variable] for r in query_results]
     answers = [a for a in answers if '-' not in a and a[0] in 'pqPQ']  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
