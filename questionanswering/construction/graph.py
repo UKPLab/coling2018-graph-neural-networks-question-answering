@@ -196,8 +196,6 @@ def extract_entities_from_tagged(annotated_tokens, tags):
         vertices.append(current_vertex)
     return vertices
 
-lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
-
 
 def extract_entities(tokens_ne_pos):
     """
@@ -227,7 +225,6 @@ def extract_entities(tokens_ne_pos):
             ne_vertices.append((nn, 'NNP'))
     for nn in nns:
         if not any(n in v for n in nn for v, _ in vertices + ne_vertices):
-            nn = [lemmatizer.lemmatize(n) for n in nn]
             vertices.append((nn, 'NN'))
     ne_vertices = [([w.title() for w in ne], pos) for ne, pos in ne_vertices]
     return ne_vertices + vertices

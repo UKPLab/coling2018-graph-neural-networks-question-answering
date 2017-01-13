@@ -1,6 +1,9 @@
 import nltk
 
-from . import wdaccess
+from wikidata import wdaccess
+
+
+lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
 
 
 def possible_subentities(entity_tokens, entity_type):
@@ -13,7 +16,11 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(["Nfl", "Redskins"], "ORGANIZATION")
     [('NFL',), ('Nfl',), ('Redskins',)]
     >>> possible_subentities(["senator"], "NN")
-    []
+    [('Senator',)]
+    >>> possible_subentities(["awards"], "NN")
+    [('Awards',), ('award',)]
+    >>> possible_subentities(["star", "wars"], "NN")
+    [('Star', 'Wars'), ('star', 'war'), ('star',), ('wars',), ('war',)]
     >>> possible_subentities(["Grand", "Bahama", "Island"], "LOCATION")
     [('Grand', 'Bahama'), ('Bahama', 'Island'), ('Grand',), ('Bahama',), ('Island',)]
     >>> possible_subentities(["Dmitri", "Mendeleev"], "PERSON")
@@ -28,6 +35,9 @@ def possible_subentities(entity_tokens, entity_type):
     [('Names', 'Of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('OF',), ('WALT',), ('Names',), ('Of',), ('Walt',), ('Disney',)]
     """
     new_entities = []
+    entity_lemmas = []
+    if entity_type is "NN":
+        entity_lemmas = [lemmatizer.lemmatize(n) for n in entity_tokens]
     if entity_type is "PERSON":
         if len(entity_tokens) > 2:
             new_entities.append((entity_tokens[0], entity_tokens[-1]))
@@ -40,8 +50,13 @@ def possible_subentities(entity_tokens, entity_type):
                 new_entities.append(new_entity)
         if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP']:
             new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 5])
+        if entity_type in ['NN']:
+            new_entities.append(tuple([ne.title() for ne in entity_tokens]))
+            if entity_lemmas != entity_tokens:
+                new_entities.append(tuple(entity_lemmas))
         if len(entity_tokens) > 1:
             new_entities.extend([(ne,) for ne in entity_tokens])
+            new_entities.extend([(ne,) for ne in entity_lemmas if ne not in entity_tokens])
     return new_entities
 
 
