@@ -239,35 +239,20 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
-        # Sibling model
-        word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32', name='sentence_input')
-        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
-                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(word_input)
-        semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
-        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
-
-        for i in range(self._p.get("sem.layer.depth", 1)):
-            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
-                                                 activation=self._p.get("sibling.activation", 'tanh'),
-                                                 init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
-
-        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
-        sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._older_model_name)
-        self.logger.debug("Sibling model is finished.")
 
         #Graph Model
         edge_input = keras.layers.Input(shape=(self._p['max.graph.size'], self._p['max.sent.len'],
                                                self._p['vocab.size'],), dtype='float32', name='edge_input')
-        edge_vectors = keras.layers.TimeDistributed(sibiling_model)(edge_input)
+        edge_vectors = keras.layers.TimeDistributed(self._get_sibling_model())(edge_input)
         graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
-        graph_model = keras.models.Model(input=[edge_input], output=[graph_vector], name=self._younger_model_name)
+        graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
         self.logger.debug("Graph model is finished: {}".format(graph_model))
 
         # Twins model
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
         graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
                                                self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='graph_input')
-        sentence_vector = sibiling_model(sentence_input)
+        sentence_vector = self._get_sibling_model()(sentence_input)
         graph_vectors = keras.layers.TimeDistributed(graph_model, name=self._younger_model_name)(graph_input)
 
         main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
@@ -278,6 +263,25 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
         model.compile(optimizer='adam', loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
         self.logger.debug("Model is compiled")
         return model
+
+    def _get_sibling_model(self):
+        # Sibling model
+        word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32',
+                                        name='sentence_input')
+        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
+                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(
+            word_input)
+        semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
+        for i in range(self._p.get("sem.layer.depth", 1)):
+            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                                 activation=self._p.get("sibling.activation", 'tanh'),
+                                                 init=self._p.get("sibling.weight.init", 'glorot_uniform'))(
+                semantic_vector)
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
+        sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._older_model_name)
+        self.logger.debug("Sibling model is finished.")
+        return sibiling_model
 
     def encode_data_instance(self, instance):
         sentence_encoded, graphs_encoded = self.encode_by_trigram(instance)
