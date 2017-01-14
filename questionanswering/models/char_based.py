@@ -268,7 +268,7 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
         graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
                                                self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='graph_input')
         sentence_vector = sibiling_model(sentence_input)
-        graph_vectors = keras.layers.TimeDistributed(graph_model)(graph_input)
+        graph_vectors = keras.layers.TimeDistributed(graph_model, name=self._younger_model_name)(graph_input)
 
         main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
                                          dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
