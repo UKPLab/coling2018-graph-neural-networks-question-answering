@@ -1,8 +1,11 @@
 import logging
 import re
+from collections import defaultdict
 
 import nltk
 from SPARQLWrapper import SPARQLWrapper, JSON
+
+WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 
 wdaccess_p = {
     'wikidata_url': "http://knowledgebase:8890/sparql",
@@ -56,7 +59,9 @@ sparql_entity_label = """
         """
 
 sparql_label_entity = """
-        { VALUES ?labelpredicate {rdfs:label skos:altLabel}
+        {
+        VALUES ?e2 { %entityids }
+        VALUES ?labelpredicate {rdfs:label skos:altLabel}
         GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate ?label }
         FILTER ( lang(?label) = "en" )
         }
@@ -121,7 +126,7 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
     5
     >>> g = {'edgeSet': [{'left': [0], 'right': ["Missouri"]}], 'entities': [[4]], 'tokens': ['who', 'are', 'the', 'current', 'senator', 'from', 'missouri', '?']}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = False)))
-    114
+    110
     """
     query = sparql_prefix
     variables = []
@@ -245,13 +250,38 @@ def label_query(entity, limit=10):
     variables = []
     query += sparql_select
     query += "{"
-    sparql_label_entity_inst = sparql_label_entity.replace("?e2", "e:" + entity)
+    sparql_label_entity_inst = sparql_label_entity.replace("VALUES ?e2 { %entityids }", "")
+    sparql_label_entity_inst = sparql_label_entity_inst.replace("?e2", "e:" + entity)
     sparql_label_entity_inst = sparql_label_entity_inst.replace("?label", "?label" + str(0))
     variables.append("?label" + str(0))
     query += sparql_label_entity_inst
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
     query += sparql_close.format(limit)
+    logger.debug("Querying for label with variables: {}".format(variables))
+    return query
+
+
+def multientity_label_query(entities, limit=10):
+    """
+    Construct a WikiData query to retrieve entity labels for the given list of entity ids.
+
+    :param entities: entity kbIDs
+    :param limit: limit on the result list size (multiplied with the size of the entity list)
+    :return: a WikiData query
+    """
+    query = sparql_prefix
+    variables = []
+    query += sparql_select
+    query += "{"
+    sparql_label_entity_inst = sparql_label_entity.replace("%entityids", " ".join(["e:" + entity for entity in entities]))
+    sparql_label_entity_inst = sparql_label_entity_inst.replace("?label", "?label" + str(0))
+    variables.append("?e2")
+    variables.append("?label" + str(0))
+    query += sparql_label_entity_inst
+    query += "}"
+    query = query.replace("%queryvariables%", " ".join(variables))
+    query += sparql_close.format(limit*len(entities))
     logger.debug("Querying for label with variables: {}".format(variables))
     return query
 
@@ -268,7 +298,8 @@ def main_label_query(entity):
     query = sparql_prefix
     query += sparql_select
     query += "{"
-    sparql_label_entity_inst = sparql_label_entity.replace("?e2", "e:" + entity)
+    sparql_label_entity_inst = sparql_label_entity.replace("VALUES ?e2 { %entityids }", "")
+    sparql_label_entity_inst = sparql_label_entity_inst.replace("?e2", "e:" + entity)
     sparql_label_entity_inst = sparql_label_entity_inst.replace("?label", "?label" + str(0))
     sparql_label_entity_inst = sparql_label_entity_inst.replace("skos:altLabel", "")
     query += sparql_label_entity_inst
@@ -281,7 +312,7 @@ def main_label_query(entity):
 query_cache = {}
 
 
-def query_wikidata(query, starts_with="http://www.wikidata.org/entity/", use_cache=False):
+def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False):
     """
     Execute the following query against WikiData
     :param query: SPARQL query to execute
@@ -303,7 +334,7 @@ def query_wikidata(query, starts_with="http://www.wikidata.org/entity/", use_cac
         if starts_with:
             results = [r for r in results if all(r[b]['value'].startswith(starts_with) for b in r)]
         results = [{b: (r[b]['value'].replace(starts_with, "") if starts_with else r[b]['value']) for b in r} for r in results]
-        results = [r for r in results if not any(r[b][:-1] in property_blacklist or r[b].endswith("q") for b in r)]
+        results = [r for r in results if not any(r[b][:-1] in property_blacklist or r[b][-1] in "qr" for b in r)]
         if use_cache:
             query_cache[query] = results
         return results
@@ -345,7 +376,7 @@ def load_entity_map(path_to_map):
         return nltk.Index({(t[1], t[0]) for t in return_map})
     except Exception as ex:
         logger.error("No entity map found. {}".format(ex))
-        return {}
+        return {"Q76": ["Barack Obama"]}
 
 
 def map_query_results(query_results, question_variable='e1'):
@@ -379,6 +410,26 @@ def label_entity(entity):
     return None
 
 
+def label_many_entities_with_alt_labels(entities):
+    """
+    Label the given set of variables with all labels available for them in the knowledge base.
+
+    :param entities: a list of entity ids.
+    :return: a dictionary mapping entity id to a list of labels
+    >>> dict(label_many_entities_with_alt_labels(["Q76", "Q188984"])) == \
+    {"Q188984": ["New York Rangers"], "Q76": ["Barack Obama", "Barack Hussein Obama II", "Obama", "Barack Hussein Obama", "Barack Obama II", "Barry Obama"]}
+    True
+    """
+    results = query_wikidata(multientity_label_query(entities), starts_with="", use_cache=False)
+    if len(results) > 0:
+        retrieved_labels = defaultdict(list)
+        for result in results:
+            entity_id = result.get("e2", "").replace(WIKIDATA_ENTITY_PREFIX, "")
+            retrieved_labels[entity_id].append(result.get("label0", ""))
+        return retrieved_labels
+    return {}
+
+
 def label_query_results(query_results, question_variable='e1'):
     """
     Extract the variable values from the query results and map them to canonical WebQuestions strings.
@@ -386,12 +437,13 @@ def label_query_results(query_results, question_variable='e1'):
     :param query_results: list of dictionaries returned by the sparql endpoint
     :param question_variable: the variable to extract
     :return: list of answers as entity labels or an original id if no canonical label was found.
-    >>> label_query_results([{'e1':'Q76'}, {'e1':'Q235234'}])
+    >>> label_query_results([{'e1':'Q76'}, {'e1':'Q235234'}, {'e1':'r68123123-12dd222'}])
     [['barack obama', 'barack hussein obama ii', 'obama', 'barack hussein obama', 'barack obama ii', 'barry obama'], ['james i of scotland', 'james i, king of scots']]
     """
     answers = [r[question_variable] for r in query_results]
     answers = [a for a in answers if '-' not in a and a[0] in 'pqPQ']  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
-    answers = [[l.get('label0').lower() for l in query_wikidata(label_query(a), starts_with="", use_cache=True)] for a in answers]
+    answers = [[l.lower() for l in labels] for _, labels in label_many_entities_with_alt_labels(answers).items()]
+    # answers = [[l.get('label0').lower() for l in query_wikidata(label_query(a), starts_with="", use_cache=True)] for a in answers]
     return answers
 
 RESOURCES_FOLDER = "../resources/"

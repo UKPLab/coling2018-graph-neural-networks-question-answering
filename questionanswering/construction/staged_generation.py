@@ -43,11 +43,11 @@ def generate_with_gold(ungrounded_graph, gold_answers):
                 logger.debug("Extending the pool.")
                 pool.extend(chosen_graphs)
             else:
-                g = (label_entities(g[0]), g[1], g[2])
+                g = (add_canonical_labels_to_entities(g[0]), g[1], g[2])
                 logger.debug("Extending the generated graph set: {}".format(g))
                 generated_graphs.append(g)
         else:
-            g = (label_entities(g[0]), g[1], g[2])
+            g = (add_canonical_labels_to_entities(g[0]), g[1], g[2])
             logger.debug("Extending the generated graph set: {}".format(g))
             generated_graphs.append(g)
     logger.debug("Iterations {}".format(iterations))
@@ -126,7 +126,7 @@ def generate_without_gold(ungrounded_graph,
         logger.debug("Extending the pool with {} graphs.".format(len(chosen_graphs)))
         pool.extend(chosen_graphs)
         logger.debug("Label entities")
-        chosen_graphs = [(label_entities(g[0]), g[1], g[2]) for g in chosen_graphs]
+        chosen_graphs = [(add_canonical_labels_to_entities(g[0]), g[1], g[2]) for g in chosen_graphs]
 
         logger.debug("Constructing without WikiData")
         extended_graphs = [(el, f_score, a) for s_g, f_score, a in chosen_graphs for f in non_linking_actions for el in f(s_g)]
@@ -194,7 +194,7 @@ def apply_grounding(g, grounding):
     return grounded
 
 
-def label_entities(g):
+def add_canonical_labels_to_entities(g):
     """
     Label all the entities in the given graph that participate in relations with their canonical names.
 
