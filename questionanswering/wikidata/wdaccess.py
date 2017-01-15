@@ -54,7 +54,7 @@ sparql_entity_label = """
         { VALUES ?labelpredicate {rdfs:label skos:altLabel}
         GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate "%labelright%"@en  }
         } FILTER NOT EXISTS {
-            VALUES ?topic {e:Q4167410 e:Q21286738 e:Q11266439}
+            VALUES ?topic {e:Q4167410 e:Q21286738 e:Q11266439 e:Q13406463}
             GRAPH <http://wikidata.org/instances> {?e2 rdf:type ?topic}}
         """
 
@@ -77,7 +77,7 @@ sparql_canoncial_label_entity = """
 
 sparql_relation_time_argmax = "?m ?a [base:time ?n]."
 
-sparql_close_order = " ORDER BY {} LIMIT 1"
+sparql_close_order = " ORDER BY {}"
 sparql_close = " LIMIT {}"
 
 # TODO: Additional?: given name
@@ -159,6 +159,7 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
             sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
             sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
             order_by.append("{}({})".format("DESC" if 'argmax' in edge else "ASC", "?n" + str(i)))
+            limit = 1
         else:
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", "")
 
@@ -182,13 +183,14 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
 
     if return_var_values:
         variables.append("?e1")
+        query += "BIND (xsd:integer(SUBSTR(STR(?e1), 33)) AS ?eid)"
+        order_by.append("?eid")
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
     if order_by:
         order_by_pattern = sparql_close_order.format(" ".join(order_by))
         query += order_by_pattern
-    else:
-        query += sparql_close.format(limit)
+    query += sparql_close.format(limit)
 
     logger.debug("Querying with variables: {}".format(variables))
     return query
@@ -437,7 +439,7 @@ def label_query_results(query_results, question_variable='e1'):
     :param query_results: list of dictionaries returned by the sparql endpoint
     :param question_variable: the variable to extract
     :return: list of answers as entity labels or an original id if no canonical label was found.
-    >>> label_query_results([{'e1':'Q76'}, {'e1':'Q235234'}, {'e1':'r68123123-12dd222'}])
+    >>> sorted(label_query_results([{'e1':'Q76'}, {'e1':'Q235234'}, {'e1':'r68123123-12dd222'}]))
     [['barack obama', 'barack hussein obama ii', 'obama', 'barack hussein obama', 'barack obama ii', 'barry obama'], ['james i of scotland', 'james i, king of scots']]
     """
     answers = [r[question_variable] for r in query_results]
