@@ -28,7 +28,7 @@ def generate(config_file_path):
     logger.addHandler(ch)
     # logging.basicConfig(level=logging.ERROR)
 
-    wdaccess.wdaccess_p['relation_qualifiers'] = config['wikidata'].get('qualifiers', False)
+    staged_generation.generation_p['label.query.results'] = config['generation'].get('label.query.results', False)
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
     logger.debug('Loaded WebQuestions, size: {}'.format(webquestions.get_dataset_size()))

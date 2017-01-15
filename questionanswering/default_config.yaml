@@ -15,6 +15,7 @@ generation:
   save.silver.to: "../data/generated/webquestions.examples.train.silvergraphs.200.2.json"
   take_first: 200
   include_url_entities: True
+  label.query.results: False
 
 webquestions:
   f1.samples.threshold: 0.1

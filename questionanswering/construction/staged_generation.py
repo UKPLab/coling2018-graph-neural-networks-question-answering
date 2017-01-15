@@ -4,7 +4,12 @@ from wikidata import wdaccess
 from . import stages, graph
 from datasets import evaluation
 
-logger = logging.getLogger(__name__)
+generation_p = {
+    'label.query.results': False,
+    'logger': logging.getLogger(__name__),
+}
+
+logger = generation_p['logger']
 logger.setLevel(logging.ERROR)
 
 
@@ -80,7 +85,8 @@ def ground_with_gold(input_graphs, gold_answers):
     """
     grounded_graphs = find_groundings(input_graphs)
     retrieved_answers = [wdaccess.query_graph_denotations(s_g) for s_g in grounded_graphs]
-    retrieved_answers = [wdaccess.label_query_results(answer_set) for answer_set in retrieved_answers]
+    post_process_results = wdaccess.label_query_results if generation_p['label.query.results'] else wdaccess.map_query_results
+    retrieved_answers = [post_process_results(answer_set) for answer_set in retrieved_answers]
     logger.debug(
         "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
 
