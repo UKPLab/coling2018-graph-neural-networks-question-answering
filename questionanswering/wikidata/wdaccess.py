@@ -81,7 +81,7 @@ sparql_close_order = " ORDER BY {}"
 sparql_close = " LIMIT {}"
 
 # TODO: Additional?: given name
-HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361", "P1445", "P179"]
+HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361", "P1445", "P179"] # + P674
 
 sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
 sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
@@ -96,7 +96,9 @@ def query_graph_groundings(g):
     :return: graph groundings encoded as a list of dictionaries
     """
     if get_free_variables(g):
-        return query_wikidata(graph_to_query(g))
+        groundings = query_wikidata(graph_to_query(g))
+        groundings = [r for r in groundings if not any(r[b][:-1] in property_blacklist or r[b][-1] in "qr" for b in r)]
+        return groundings
     return [{}]
 
 
@@ -336,7 +338,6 @@ def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False):
         if starts_with:
             results = [r for r in results if all(r[b]['value'].startswith(starts_with) for b in r)]
         results = [{b: (r[b]['value'].replace(starts_with, "") if starts_with else r[b]['value']) for b in r} for r in results]
-        results = [r for r in results if not any(r[b][:-1] in property_blacklist or r[b][-1] in "qr" for b in r)]
         if use_cache:
             query_cache[query] = results
         return results
@@ -418,8 +419,8 @@ def label_many_entities_with_alt_labels(entities):
 
     :param entities: a list of entity ids.
     :return: a dictionary mapping entity id to a list of labels
-    >>> dict(label_many_entities_with_alt_labels(["Q76", "Q188984"])) == \
-    {"Q188984": ["New York Rangers"], "Q76": ["Barack Obama", "Barack Hussein Obama II", "Obama", "Barack Hussein Obama", "Barack Obama II", "Barry Obama"]}
+    >>> dict(label_many_entities_with_alt_labels(["Q76", "Q188984", "Q194339"])) == \
+    {"Q188984": ["New York Rangers"], "Q76": ["Barack Obama", "Barack Hussein Obama II", "Obama", "Barack Hussein Obama", "Barack Obama II", "Barry Obama"], "Q194339": ["Bahamian dollar"]}
     True
     """
     results = query_wikidata(multientity_label_query(entities), starts_with="", use_cache=False)
