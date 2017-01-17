@@ -180,6 +180,7 @@ def ground_without_gold(input_graphs):
     chosen_graphs = [(grounded_graphs[i], (0.0, 0.0, 0.0), [])
                      for i in range(len(grounded_graphs))]
     logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
+    wdaccess.clear_cache()
     return chosen_graphs
 
 

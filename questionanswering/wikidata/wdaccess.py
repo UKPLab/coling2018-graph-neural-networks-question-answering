@@ -84,6 +84,7 @@ sparql_close = " LIMIT {}"
 HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361", "P1445", "P179"] # + P674
 
 sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
+#Can we also have something like [ [?e2 ?hopups ] ?hopupv ]
 sparql_hopup_values = ""
 # sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
 
@@ -315,6 +316,11 @@ def main_label_query(entity):
 
 
 query_cache = {}
+
+
+def clear_cache():
+    global query_cache
+    query_cache = {}
 
 
 def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False):
