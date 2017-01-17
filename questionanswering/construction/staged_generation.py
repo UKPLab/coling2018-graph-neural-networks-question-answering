@@ -73,6 +73,24 @@ def find_groundings(input_graphs):
     return grounded_graphs
 
 
+def retrieve_graph_groundings(g, honest=True):
+    if honest:
+        return wdaccess.query_graph_groundings(g)
+    else:
+        groundings = []
+        for i, edge in enumerate(g.get('edgeSet', [])):
+            if not('type' in edge and 'kbID' in edge):
+                g = {'edgeSet': edge}
+                edge_groundings = [apply_grounding(g, p) for p in wdaccess.query_graph_groundings(g)]
+                groundings.append([p['edgeSet'][0] for p in edge_groundings])
+            else:
+                groundings.append(edge)
+        # do cross-product
+    #        entity_powerset = itertools.chain.from_iterable(itertools.combinations(entities, n) for n in range(1, len(entities)+1))
+
+    return groundings
+
+
 def ground_with_gold(input_graphs, gold_answers):
     """
     For each graph among the suggested_graphs find its groundings in the WikiData, then evaluate each suggested graph

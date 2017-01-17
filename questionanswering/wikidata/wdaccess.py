@@ -205,7 +205,6 @@ def get_free_variables(g, include_relations=True, include_entities=True):
     :param g: the graph as a dictionary with an 'edgeSet'
     :param include_relations: if include variables that denote relations
     :param include_entities: if include variables that denote entities
-    :param include_question_variable: if include the question variable that is always present in the question graphs
     :return:
     """
     free_variables = []
