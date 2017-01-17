@@ -37,7 +37,11 @@ def generate(config_file_path):
 
     logger.debug('Generating choice graphs')
     choice_graphs_sets = []
-    for i in tqdm.trange(len(webquestions_tokens)):
+    len_webquestion = webquestions.get_dataset_size()
+    if 'take_first' in config['generation']:
+        print("Taking the first {} questions.".format(config['generation']['take_first']))
+        len_webquestion = config['generation']['take_first']
+    for i in tqdm.trange(len_webquestion):
         ungrounded_graph = {'tokens': webquestions_tokens[i],
                             'edgeSet': [],
                             'entities': webquestions_entities[i][:config['generation'].get("max.num.entities", 1)]}
@@ -50,7 +54,7 @@ def generate(config_file_path):
 
     logger.debug("Query cache: {}".format(len(wdaccess.query_cache)))
     logger.debug("Number of answers covered: {}".format(
-        sum(1 for graphs in choice_graphs_sets if len(graphs) > 0) / len(webquestions_tokens) ))
+        sum(1 for graphs in choice_graphs_sets if len(graphs) > 0) / len_webquestion ))
     logger.debug("Average number of choices per question: {}".format(
         np.mean([len(graphs) for graphs in choice_graphs_sets])))
 
