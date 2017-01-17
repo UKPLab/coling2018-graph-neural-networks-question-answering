@@ -84,7 +84,8 @@ sparql_close = " LIMIT {}"
 HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361", "P1445", "P179"] # + P674
 
 sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
-sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
+sparql_hopup_values = ""
+# sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
 
 
 def query_graph_groundings(g):
