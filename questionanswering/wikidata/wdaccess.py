@@ -88,16 +88,17 @@ sparql_hopup_values = ""
 # sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
 
 
-def query_graph_groundings(g):
+def query_graph_groundings(g, use_cache=False):
     """
     Convert the given graph to a WikiData query and retrieve the results. The results contain possible bindings
     for all free variables in the graph. If there are no free variables a single empty grounding is returned.
 
     :param g: graph as a dictionary
+    :param use_cache
     :return: graph groundings encoded as a list of dictionaries
     """
     if get_free_variables(g):
-        groundings = query_wikidata(graph_to_query(g))
+        groundings = query_wikidata(graph_to_query(g), use_cache=use_cache)
         groundings = [r for r in groundings if not any(r[b][:-1] in property_blacklist or r[b][-1] in "qr" for b in r)]
         return groundings
     return [{}]
@@ -129,7 +130,7 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
     5
     >>> g = {'edgeSet': [{'left': [0], 'right': ["Missouri"]}], 'entities': [[4]], 'tokens': ['who', 'are', 'the', 'current', 'senator', 'from', 'missouri', '?']}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = False)))
-    110
+    118
     """
     query = sparql_prefix
     variables = []
@@ -157,7 +158,7 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
                 sparql_relation_inst = sparql_hopup_values + sparql_relation_inst
                 variables.append("?hopup{}v".format(i))
 
-        if any(arg_type in edge for arg_type in ['argmax', 'argmin']):
+        if return_var_values and any(arg_type in edge for arg_type in ['argmax', 'argmin']):
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_relation_time_argmax)
             sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
             sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
