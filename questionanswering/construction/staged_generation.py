@@ -1,6 +1,5 @@
 import logging
 import itertools
-import tqdm
 
 from wikidata import wdaccess
 from construction import stages, graph
@@ -168,6 +167,7 @@ def generate_without_gold(ungrounded_graph,
 
 def ground_without_gold(input_graphs):
     """
+    Construct possible groundings of the given graphs subject to a white list.
 
     :param input_graphs: a list of ungrounded graphs
     :return: a list of graph groundings
