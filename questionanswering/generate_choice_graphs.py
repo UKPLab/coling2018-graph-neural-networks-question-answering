@@ -42,7 +42,7 @@ def generate(config_file_path):
         print("Taking the first {} questions.".format(config['generation']['take_first']))
         len_webquestion = config['generation']['take_first']
     for i in tqdm.trange(len_webquestion):
-        ungrounded_graph = {'tokens': webquestions_tokens[i],
+        ungrounded_graph = {#  'tokens': webquestions_tokens[i],
                             'edgeSet': [],
                             'entities': webquestions_entities[i][:config['generation'].get("max.num.entities", 1)]}
         choice_graphs = staged_generation.generate_without_gold(ungrounded_graph)

@@ -56,6 +56,11 @@ class WebQuestions(Loggable):
             self._choice_graphs = [[g for g in graph_set if graph.if_graph_adheres(g, allowed_extensions=self._p.get("extensions", set()))] for graph_set in self._choice_graphs]
             self.logger.debug("Average number of choices per question: {}".format(
                 np.mean([len(graphs) for graphs in self._choice_graphs])))
+            self.logger.debug("Adding tokens to graphs")
+            for i, graph_set in enumerate(self._choice_graphs):
+                tokens = [w for w,_,_ in self._dataset_tagged[i]]
+                for g in graph_set:
+                    g['tokens'] = tokens
 
         if len(self._silver_graphs) > 0:
             assert len(self._dataset_tagged) == len(self._silver_graphs)

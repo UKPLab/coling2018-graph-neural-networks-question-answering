@@ -163,7 +163,7 @@ def copy_graph(g):
     >>> copy_graph({}) == {'tokens':[], 'edgeSet':[], 'entities':[]}
     True
     """
-    new_g = {'tokens': g.get('tokens', []),
+    new_g = {# 'tokens': g.get('tokens', []),
              'edgeSet': copy.deepcopy(g.get('edgeSet', [])),
              'entities': copy.copy(g.get('entities', []))}
     return new_g
@@ -231,6 +231,9 @@ def extract_entities(tokens_ne_pos):
 
 
 def construct_graphs(tokens, entities):
+    """
+    Deprecated
+    """
     entity_powerset = itertools.chain.from_iterable(itertools.combinations(entities, n) for n in range(1, len(entities)+1))
     graphs = []
     for entity_set in entity_powerset:
