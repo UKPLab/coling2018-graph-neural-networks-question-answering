@@ -24,6 +24,7 @@ webquestions:
   max.negative.samples: 30
   target.dist: True
   replace.entities: False
+  normalize.tokens: False
   extensions: ['hopUp', 'temporal', 'multi_rel', 'qualifier_rel', 'v-structure']
   path.to.dataset:
     train_train: "../data/input/webquestions.examples.train.train.json"
@@ -64,5 +65,5 @@ model:
   sibling.activation: relu
 
 wikidata:
-    evaluate: True
+  evaluate: True
 
