@@ -81,12 +81,14 @@ sparql_close_order = " ORDER BY {}"
 sparql_close = " LIMIT {}"
 
 # TODO: Additional?: given name
-HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361", "P1445", "P179"] # + P674
+HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361", "P1445", "P179"] # + P674 Depricated
+TEMPORAL_RELATIONS = ["P585", "P580", "P582", "P577", "P571"]
 
 sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
 #Can we also have something like [ [?e2 ?hopups ] ?hopupv ]
 sparql_hopup_values = ""
 # sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
+sparql_temporal_values = "VALUES ?a {" + " ".join(["e:{}q".format(r) for r in TEMPORAL_RELATIONS]) + "}"
 
 
 def query_graph_groundings(g, use_cache=False):
@@ -97,6 +99,8 @@ def query_graph_groundings(g, use_cache=False):
     :param g: graph as a dictionary
     :param use_cache
     :return: graph groundings encoded as a list of dictionaries
+    >>> len(query_graph_groundings({'edgeSet': [{'right': ['book'], 'rightkbID': 'Q571',  'argmax':'time'}], 'entities': []}))
+    3
     """
     if get_free_variables(g):
         groundings = query_wikidata(graph_to_query(g), use_cache=use_cache)
@@ -160,6 +164,7 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
                 variables.append("?hopup{}v".format(i))
 
         if any(arg_type in edge for arg_type in ['argmax', 'argmin']):
+            sparql_relation_inst = sparql_temporal_values + sparql_relation_inst
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_relation_time_argmax)
             sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
             sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
