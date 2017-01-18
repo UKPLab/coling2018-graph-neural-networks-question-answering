@@ -67,7 +67,7 @@ def approximate_groundings(g):
 
     :param g: the graph to ground
     :return: a list of graph groundings.
-    >>> len(approximate_groundings({'edgeSet': [{'right': ['Percy', 'Jackson'], 'left': [0], 'kbID': 'P179v', 'type': 'direct', 'hopUp': 'P674v', 'rightkbID': 'Q3899725'}, {'rightkbID': 'Q571', 'left': [0], 'right': ['book']}], 'entities': []}))
+    >>> len(approximate_groundings({'edgeSet': [{'right': ['Percy', 'Jackson'], 'kbID': 'P179v', 'type': 'direct', 'hopUp': 'P674v', 'rightkbID': 'Q3899725'}, {'rightkbID': 'Q571', 'right': ['book']}], 'entities': []}))
     38
     """
     separate_groundings = []

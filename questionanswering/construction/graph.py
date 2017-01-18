@@ -13,11 +13,11 @@ def if_graph_adheres(g, allowed_extensions=set()):
     :param g: graphs a dictionary with an edgeSet
     :param allowed_extensions: a set of allowed extensions
     :return: True if graph uses only allowed extensions, false otherwise
-    >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}]}, allowed_extensions=set())
+    >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}]}, allowed_extensions=set())
     True
-    >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'v-structure'}]}, allowed_extensions=set())
+    >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','right': ['Iceland'],'rightkbID': 'Q189','type': 'v-structure'}]}, allowed_extensions=set())
     False
-    >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','left': [0],'right': ['Iceland']}, {'kbID':'P31v'}]}, allowed_extensions=set())
+    >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','right': ['Iceland']}, {'kbID':'P31v'}]}, allowed_extensions=set())
     False
     """
     allowed_extensions = set(allowed_extensions)
@@ -42,23 +42,23 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     :param property2label: property id to label mapping
     :param use_placeholder: if an entity should be included or just a placeholder
     :return: a string representation of an edge
-    >>> get_property_str_representation({'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}, {'P17': "country"})
+    >>> get_property_str_representation({'kbID': 'P17v','right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}, {'P17': "country"})
     'country Iceland'
-    >>> get_property_str_representation({'kbID': 'P17v','left': [0],'right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}, {'P17': "country"}, use_placeholder=True)
+    >>> get_property_str_representation({'kbID': 'P17v','right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}, {'P17': "country"}, use_placeholder=True)
     'country <e>'
-    >>> get_property_str_representation({'kbID': 'P31v', 'left': [0],  'right': ['Australia'], \
+    >>> get_property_str_representation({'kbID': 'P31v',   'right': ['Australia'], \
    'rightkbID': 'Q408', 'type': 'reverse'}, {'P31': "instance of"}, use_placeholder=True)
     '<e> instance of'
-    >>> get_property_str_representation({'argmin': 'time', 'kbID': 'P17s', 'left': [0], 'right': ['IC'], \
+    >>> get_property_str_representation({'argmin': 'time', 'kbID': 'P17s',  'right': ['IC'], \
     'rightkbID': 'Q189', 'canonical_right': 'Iceland', 'type': 'direct'}, {'P17': "country"}, use_placeholder=False)
     '<argmin> country Iceland'
-    >>> get_property_str_representation({'hopUp': 'P131v', 'kbID': 'P69s', 'left': [0], 'right': ['Missouri'], \
+    >>> get_property_str_representation({'hopUp': 'P131v', 'kbID': 'P69s',  'right': ['Missouri'], \
     'rightkbID': 'Q189', 'type': 'direct'}, {'P69': "educated at", 'P131': 'located in'}, use_placeholder=True)
     'educated at <x> located in <e>'
-    >>> get_property_str_representation({'hopUp': 'P17v', 'kbID': 'P140v', 'left': [0], 'right': ['Russia'], \
+    >>> get_property_str_representation({'hopUp': 'P17v', 'kbID': 'P140v',  'right': ['Russia'], \
     'rightkbID': 'Q159', 'type': 'reverse'}, {'P17': "country", 'P140': 'religion'}, use_placeholder=True)
     '<x> country <e> religion'
-    >>> get_property_str_representation({'hopUp': None, 'kbID': 'P140v', 'left': [0], 'right': ['Russia'], \
+    >>> get_property_str_representation({'hopUp': None, 'kbID': 'P140v',  'right': ['Russia'], \
     'rightkbID': 'Q159', 'type': 'reverse'}, {'P17': "country", 'P140': 'religion'}, use_placeholder=True)
     '<e> religion'
     """
@@ -140,13 +140,13 @@ def get_graph_first_edge(g):
 
     :param g: a graph as a dictionary
     :return: an edge as a dictionary
-    >>> get_graph_first_edge({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': []}) == {'left':[0], 'right':[4,5,6]}
+    >>> get_graph_first_edge({'edgeSet': [{'right':[4,5,6]}], 'entities': []}) == {'right':[4,5,6]}
     True
     >>> get_graph_first_edge({})
     {}
     >>> get_graph_first_edge({'edgeSet':[]})
     {}
-    >>> get_graph_first_edge({'edgeSet': [{'left':[0], 'right':[4,5,6]}, {'left':[0], 'right':[8]}], 'entities': []}) == {'left':[0], 'right':[4,5,6]}
+    >>> get_graph_first_edge({'edgeSet': [{'right':[4,5,6]}, {'right':[8]}], 'entities': []}) == {'right':[4,5,6]}
     True
     """
     return g["edgeSet"][0] if 'edgeSet' in g and g["edgeSet"] else {}
@@ -158,7 +158,7 @@ def copy_graph(g):
 
     :param g: input graph as dictionary
     :return: a copy of the graph
-    >>> copy_graph({'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': []}) == {'edgeSet': [{'left':[0], 'right':[4,5,6]}], 'entities': [], 'tokens':[]}
+    >>> copy_graph({'edgeSet': [{'right':[4,5,6]}], 'entities': []}) == {'edgeSet': [{'right':[4,5,6]}], 'entities': [], 'tokens':[]}
     True
     >>> copy_graph({}) == {'tokens':[], 'edgeSet':[], 'entities':[]}
     True
@@ -204,9 +204,9 @@ def extract_entities(tokens_ne_pos):
     :param tokens_ne_pos: list of POS and NE tags.
     :return: list of entities in the order: NE>NNP>NN
     >>> extract_entities([('who', 'O', 'WP'), ('are', 'O', 'VBP'), ('the', 'O', 'DT'), ('current', 'O', 'JJ'), ('senators', 'O', 'NNS'), ('from', 'O', 'IN'), ('missouri', 'LOCATION', 'NNP'), ('?', 'O', '.')])
-    [(['Missouri'], 'LOCATION'), (['senator'], 'NN')]
+    [(['Missouri'], 'LOCATION'), (['senators'], 'NN')]
     >>> extract_entities([('what', 'O', 'WDT'), ('awards', 'O', 'NNS'), ('has', 'O', 'VBZ'), ('louis', 'PERSON', 'NNP'), ('sachar', 'PERSON', 'NNP'), ('won', 'O', 'NNP'), ('?', 'O', '.')])
-    [(['Louis', 'Sachar'], 'PERSON'), (['award'], 'NN')]
+    [(['Louis', 'Sachar'], 'PERSON'), (['awards'], 'NN')]
     >>> extract_entities([('who', 'O', 'WP'), ('was', 'O', 'VBD'), ('the', 'O', 'DT'), ('president', 'O', 'NN'), ('after', 'O', 'IN'), ('jfk', 'O', 'NNP'), ('died', 'O', 'VBD'), ('?', 'O', '.')])
     [(['Jfk'], 'NNP'), (['president'], 'NN')]
     >>> extract_entities([('who', 'O', 'WP'), ('natalie', 'PERSON', 'NN'), ('likes', 'O', 'VBP')])
@@ -236,7 +236,7 @@ def construct_graphs(tokens, entities):
     for entity_set in entity_powerset:
         g = {'edgeSet': [], 'tokens': tokens}
         for entity in entity_set:
-            g['edgeSet'].append({'left':[0], 'right':entity})
+            g['edgeSet'].append({'right':entity})
         graphs.append(g)
     return graphs
 

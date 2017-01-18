@@ -123,13 +123,13 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
     :param return_var_values: if True the denotations for free variables will be returned
     :param limit: limit on the result list size
     :return: a sparql query
-    >>> g = {'edgeSet': [{'left': [0], 'kbID': 'P35v', 'type': 'reverse', 'rightkbID': 'Q155', 'right': [5], 'argmax':'time'}], 'entities': []}
+    >>> g = {'edgeSet': [{'kbID': 'P35v', 'type': 'reverse', 'rightkbID': 'Q155', 'right': [5], 'argmax':'time'}], 'entities': []}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = True)))
     1
-    >>> g = {'edgeSet': [{'left': [0], 'kbID': 'P35v', 'type': 'reverse', 'rightkbID': 'Q155', 'right': [5]}], 'entities': []}
+    >>> g = {'edgeSet': [{'kbID': 'P35v', 'type': 'reverse', 'rightkbID': 'Q155', 'right': [5]}], 'entities': []}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = True)))
     5
-    >>> g = {'edgeSet': [{'left': [0], 'right': ["Missouri"]}], 'entities': [[4]], 'tokens': ['who', 'are', 'the', 'current', 'senator', 'from', 'missouri', '?']}
+    >>> g = {'edgeSet': [{'right': ["Missouri"]}], 'entities': [[4]], 'tokens': ['who', 'are', 'the', 'current', 'senator', 'from', 'missouri', '?']}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = False)))
     118
     """
