@@ -72,7 +72,10 @@ class WebQuestions(Loggable):
                                for graph_set in self._choice_graphs]
         self._silver_graphs = [[(graph.add_string_representations_to_edges(g[0], wdaccess.property2label, self._p.get("replace.entities", False)), g[1],) for g in graph_set]
                                for graph_set in self._silver_graphs]
-        assert len(self._dataset_tagged) == len(self._choice_graphs) == len(self._silver_graphs)
+        if len(self._choice_graphs) > 0:
+            assert len(self._dataset_tagged) == len(self._choice_graphs)
+        if len(self._silver_graphs) > 0:
+            assert len(self._dataset_tagged) == len(self._silver_graphs)
 
     def _get_samples(self, questions):
         indices = self._get_sample_indices(questions)
