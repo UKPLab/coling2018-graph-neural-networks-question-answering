@@ -90,7 +90,7 @@ sparql_hopup_values = ""
 # sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
 sparql_temporal_values = "VALUES ?a {" + " ".join(["e:{}".format(r) for r in TEMPORAL_RELATIONS]) + "}"
 
-FILTER_ENDINGS = "qr"
+FILTER_ENDINGS = "r"
 
 
 def query_graph_groundings(g, use_cache=False):
