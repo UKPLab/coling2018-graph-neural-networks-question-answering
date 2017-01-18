@@ -10,8 +10,8 @@ from keras import backend as K
 
 import utils
 from construction import graph
-from . import keras_extensions
-from .qamodel import TwinsModel, BrothersModel
+from models import keras_extensions
+from models.qamodel import TwinsModel, BrothersModel
 
 
 class CharCNNModel(TwinsModel):
@@ -341,7 +341,13 @@ def string_to_trigrams(t):
 
     :param t: a single token as a string
     :return: list of triples of characters
-    >>> string_to_trigrams('who')
+    >>> list(string_to_trigrams('who'))
     [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#')]
     """
     return nltk.ngrams("#{}#".format(t), 3)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    print(doctest.testmod())

@@ -158,14 +158,15 @@ def copy_graph(g):
 
     :param g: input graph as dictionary
     :return: a copy of the graph
-    >>> copy_graph({'edgeSet': [{'right':[4,5,6]}], 'entities': []}) == {'edgeSet': [{'right':[4,5,6]}], 'entities': [], 'tokens':[]}
+    >>> copy_graph({'edgeSet': [{'right':[4,5,6]}], 'entities': [], 'tokens':[]}) == {'edgeSet': [{'right':[4,5,6]}], 'entities': [], 'tokens':[]}
     True
-    >>> copy_graph({}) == {'tokens':[], 'edgeSet':[], 'entities':[]}
+    >>> copy_graph({}) == {'edgeSet':[], 'entities':[]}
     True
     """
-    new_g = {# 'tokens': g.get('tokens', []),
-             'edgeSet': copy.deepcopy(g.get('edgeSet', [])),
+    new_g = {'edgeSet': copy.deepcopy(g.get('edgeSet', [])),
              'entities': copy.copy(g.get('entities', []))}
+    if 'tokens' in g:
+        new_g['tokens'] = g.get('tokens', [])
     return new_g
 
 
