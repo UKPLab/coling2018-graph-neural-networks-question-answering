@@ -177,7 +177,7 @@ def ground_without_gold(input_graphs):
     logger.debug("First one: {}".format(grounded_graphs[:1]))
 
     grounded_graphs = [g for g in grounded_graphs if all(e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g.get('edgeSet', []))]
-    chosen_graphs = [(grounded_graphs[i], (0.0, 0.0, 0.0), [])
+    chosen_graphs = [(grounded_graphs[i],)
                      for i in range(len(grounded_graphs))]
     logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
     wdaccess.clear_cache()
