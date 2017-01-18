@@ -27,6 +27,8 @@ def possible_subentities(entity_tokens, entity_type):
     [('Mendeleev',), ('Dmitri',)]
     >>> possible_subentities(["Dmitrii", "Ivanovich",  "Mendeleev"], "PERSON")
     [('Dmitrii', 'Mendeleev'), ('Mendeleev',), ('Dmitrii',)]
+    >>> possible_subentities(["Victoria"], "PERSON")
+    []
     >>> possible_subentities(["Jfk"], "NNP")
     [('JFK',)]
     >>> possible_subentities(["Us"], "LOCATION")
@@ -72,7 +74,7 @@ def link_entity(entity, try_subentities=True, max_options=3):
     entity_tokens, entity_type = entity
     linkings = wdaccess.query_wikidata(wdaccess.entity_query(" ".join(entity_tokens)))
     if entity_type is not 'URL':
-        if (try_subentities and not linkings) or len(entity_tokens) == 1:
+        if (try_subentities and not linkings) or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
             subentities = possible_subentities(entity_tokens, entity_type)
             while subentities:
                 linkings += wdaccess.query_wikidata(wdaccess.entity_query(" ".join(subentities.pop(0))))
