@@ -159,6 +159,10 @@ def generate_without_gold(ungrounded_graph,
         generated_graphs.extend(chosen_graphs)
         iterations += 1
     logger.debug("Iterations {}".format(iterations))
+    logger.debug("Clean up graphs.")
+    for g in generated_graphs:
+        if 'entities' in g:
+            del g['entities']
     logger.debug("Grounding the resulting graphs.")
     generated_graphs = ground_without_gold(generated_graphs)
     logger.debug("Grounded graphs: {}".format(len(generated_graphs)))
@@ -177,8 +181,7 @@ def ground_without_gold(input_graphs):
     logger.debug("First one: {}".format(grounded_graphs[:1]))
 
     grounded_graphs = [g for g in grounded_graphs if all(e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g.get('edgeSet', []))]
-    chosen_graphs = [(grounded_graphs[i],)
-                     for i in range(len(grounded_graphs))]
+    chosen_graphs = [(grounded_graphs[i],) for i in range(len(grounded_graphs))]
     logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
     wdaccess.clear_cache()
     return chosen_graphs
