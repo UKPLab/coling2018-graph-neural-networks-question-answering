@@ -82,13 +82,15 @@ sparql_close = " LIMIT {}"
 
 # TODO: Additional?: given name
 HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361", "P1445", "P179"] # + P674 Depricated
-TEMPORAL_RELATIONS = ["P585", "P580", "P582", "P577", "P571"]
+TEMPORAL_RELATIONS = {"P585q", "P580q", "P582q", "P577q", "P571q"}
 
 sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
 #Can we also have something like [ [?e2 ?hopups ] ?hopupv ]
 sparql_hopup_values = ""
 # sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
-sparql_temporal_values = "VALUES ?a {" + " ".join(["e:{}q".format(r) for r in TEMPORAL_RELATIONS]) + "}"
+sparql_temporal_values = "VALUES ?a {" + " ".join(["e:{}".format(r) for r in TEMPORAL_RELATIONS]) + "}"
+
+FILTER_ENDINGS = "qr"
 
 
 def query_graph_groundings(g, use_cache=False):
@@ -104,7 +106,7 @@ def query_graph_groundings(g, use_cache=False):
     """
     if get_free_variables(g):
         groundings = query_wikidata(graph_to_query(g), use_cache=use_cache)
-        groundings = [r for r in groundings if not any(r[b][:-1] in property_blacklist or r[b][-1] in "qr" for b in r)]
+        groundings = [r for r in groundings if not any(r[b][:-1] in property_blacklist or r[b] in TEMPORAL_RELATIONS or r[b][-1] in FILTER_ENDINGS for b in r)]
         return groundings
     return [{}]
 
