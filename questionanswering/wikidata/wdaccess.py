@@ -44,9 +44,9 @@ sparql_relation = {
 
 sparql_relation_complex = """
         {
-        {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . }}
+        {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . %restriction% }}
         UNION
-        {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . }}
+        {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . %restriction% }}
         }
         """
 
@@ -159,12 +159,13 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
                 sparql_relation_inst = sparql_hopup_values + sparql_relation_inst
                 variables.append("?hopup{}v".format(i))
 
-        if return_var_values and any(arg_type in edge for arg_type in ['argmax', 'argmin']):
+        if any(arg_type in edge for arg_type in ['argmax', 'argmin']):
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_relation_time_argmax)
             sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
             sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
-            order_by.append("{}({})".format("DESC" if 'argmax' in edge else "ASC", "?n" + str(i)))
-            limit = 1
+            if return_var_values:
+                order_by.append("{}({})".format("DESC" if 'argmax' in edge else "ASC", "?n" + str(i)))
+                limit = 1
         else:
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", "")
 
