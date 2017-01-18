@@ -21,21 +21,31 @@ class WebQuestions(Loggable):
         self._p = parameters
         path_to_dataset = self._p["path.to.dataset"]
         self.logger.debug("Loading data")
-        # Load the train questions
-        with open(path_to_dataset["train_train"]) as f:
-            self._questions_train = json.load(f)
-        # Load the validation questions
-        with open(path_to_dataset["train_validation"]) as f:
-            self._questions_val = json.load(f)
-        # Load the tagged version
+        # Load the tagged version. This part should be lways present.
         with open(path_to_dataset["train_tagged"]) as f:
             self._dataset_tagged = json.load(f)
+
+        self._questions_train = []
+        self._questions_val = []
+        self._silver_graphs = []
+        self._choice_graphs = []
+
+        # Load the train questions
+        if "train_train" in path_to_dataset:
+            with open(path_to_dataset["train_train"]) as f:
+                self._questions_train = json.load(f)
+        # Load the validation questions
+        if "train_validation" in path_to_dataset:
+            with open(path_to_dataset["train_validation"]) as f:
+                self._questions_val = json.load(f)
         # Load the generated graphs
-        with open(path_to_dataset["train_silvergraphs"]) as f:
-            self._silver_graphs = json.load(f)
+        if "train_silvergraphs" in path_to_dataset:
+            with open(path_to_dataset["train_silvergraphs"]) as f:
+                self._silver_graphs = json.load(f)
         # Load the choice graphs. Choice graphs are all graph derivable from each sentence.
-        with open(path_to_dataset["train_choicegraphs"]) as f:
-            self._choice_graphs = json.load(f)
+        if "train_choicegraphs" in path_to_dataset:
+            with open(path_to_dataset["train_choicegraphs"]) as f:
+                self._choice_graphs = json.load(f)
         self._choice_graphs = [[g[0] for g in graph_set] for graph_set in self._choice_graphs]
 
         self.logger.debug("Average number of choices per question: {}".format(
