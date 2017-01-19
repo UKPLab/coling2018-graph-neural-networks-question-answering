@@ -16,7 +16,6 @@ class WebQuestions(Loggable):
 
         :param path_to_dataset: path to the data set location
         """
-        # TODO: Tests needed!
         super(WebQuestions, self).__init__(**kwargs)
         self._p = parameters
         path_to_dataset = self._p["path.to.dataset"]
@@ -24,6 +23,7 @@ class WebQuestions(Loggable):
         # Load the tagged version. This part should be lways present.
         with open(path_to_dataset["train_tagged"]) as f:
             self._dataset_tagged = json.load(f)
+        self.logger.debug("Tagged: {}".format(len(self._dataset_tagged)))
 
         self._questions_train = []
         self._questions_val = []
@@ -34,18 +34,22 @@ class WebQuestions(Loggable):
         if "train_train" in path_to_dataset:
             with open(path_to_dataset["train_train"]) as f:
                 self._questions_train = json.load(f)
+            self.logger.debug("Train: {}".format(len(self._questions_train)))
         # Load the validation questions
         if "train_validation" in path_to_dataset:
             with open(path_to_dataset["train_validation"]) as f:
                 self._questions_val = json.load(f)
+            self.logger.debug("Val: {}".format(len(self._questions_val)))
         # Load the generated graphs
         if "train_silvergraphs" in path_to_dataset:
             with open(path_to_dataset["train_silvergraphs"]) as f:
                 self._silver_graphs = json.load(f)
+            self.logger.debug("Silver: {}".format(len(self._silver_graphs)))
         # Load the choice graphs. Choice graphs are all graph derivable from each sentence.
         if "train_choicegraphs" in path_to_dataset:
             with open(path_to_dataset["train_choicegraphs"]) as f:
                 self._choice_graphs = json.load(f)
+            self.logger.debug("Choice: {}".format(len(self._choice_graphs)))
 
         if len(self._choice_graphs) > 0:
             assert len(self._dataset_tagged) == len(self._choice_graphs)
