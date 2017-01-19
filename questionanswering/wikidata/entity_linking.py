@@ -25,7 +25,7 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(["star", "wars"], "NN")
     [('Star', 'Wars'), ('star', 'war'), ('star',), ('wars',), ('war',)]
     >>> possible_subentities(["Grand", "Bahama", "Island"], "LOCATION")
-    [('Grand', 'Bahama'), ('Bahama', 'Island'), ('Grand',), ('Bahama',), ('Island',)]
+    [('Grand', 'Bahama'), ('Bahama', 'Island'), ('Grand,', 'Bahama', 'Island'), ('Grand', 'Bahama,', 'Island'), ('Grand',), ('Bahama',), ('Island',)]
     >>> possible_subentities(["Dmitri", "Mendeleev"], "PERSON")
     [('Mendeleev',), ('Dmitri',)]
     >>> possible_subentities(["Dmitrii", "Ivanovich",  "Mendeleev"], "PERSON")
@@ -34,8 +34,16 @@ def possible_subentities(entity_tokens, entity_type):
     []
     >>> possible_subentities(["Jfk"], "NNP")
     [('JFK',)]
+    >>> possible_subentities(['Jj', 'Thomson'], 'PERSON')
+    [('J. J.', 'Thomson'), ('Thomson',), ('Jj',)]
+    >>> possible_subentities(['W', 'Bush'], 'PERSON')
+    [('W.', 'Bush'), ('Bush',), ('W',)]
     >>> possible_subentities(["Us"], "LOCATION")
     [('US',)]
+    >>> possible_subentities(['Atlanta', 'Texas'], "LOCATION")
+    [('Atlanta,', 'Texas'), ('Atlanta',), ('Texas',)]
+    >>> possible_subentities(['Atlanta', 'United', 'States'], "LOCATION")
+    [('Atlanta', 'United'), ('United', 'States'), ('Atlanta,', 'United', 'States'), ('Atlanta', 'United,', 'States'), ('Atlanta',), ('United',), ('States',)]
     >>> possible_subentities(['Names', 'Of', 'Walt', 'Disney'], 'ORGANIZATION')
     [('Names', 'Of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('OF',), ('WALT',), ('Names',), ('Of',), ('Walt',), ('Disney',)]
     """
@@ -47,6 +55,8 @@ def possible_subentities(entity_tokens, entity_type):
         if len(entity_tokens) > 2:
             new_entities.append((entity_tokens[0], entity_tokens[-1]))
         if len(entity_tokens) > 1:
+            if len(entity_tokens[0]) < 3:
+                new_entities.append((" ".join([c.upper() + "." for c in entity_tokens[0]]),) + tuple(entity_tokens[1:]))
             new_entities.extend([(entity_tokens[-1],), (entity_tokens[0],)])
     else:
         for i in range(len(entity_tokens) - 1, 1, -1):
@@ -55,6 +65,8 @@ def possible_subentities(entity_tokens, entity_type):
                 new_entities.append(new_entity)
         if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP']:
             new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 5])
+        if entity_type in ['LOCATION'] and len(entity_tokens) > 1:
+            new_entities.extend([tuple(entity_tokens[:i]) + (entity_tokens[i] + ",", ) + tuple(entity_tokens[i+1:]) for i in range(len(entity_tokens)-1)])
         if entity_type in ['NN']:
             new_entities.append(tuple([ne.title() for ne in entity_tokens]))
             if entity_lemmas != entity_tokens:
