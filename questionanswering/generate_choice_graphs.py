@@ -31,6 +31,8 @@ def generate(config_file_path):
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
     entity_linking.entity_linking_p["max.entity.options"] = config['generation']["max.entity.options"]
+    wdaccess.wdaccess_p["restrict.hopup"] = config['wikidata'].get("restrict.hopup", False)
+    wdaccess.update_sparql_clauses()
 
     logger.debug('Extracting entities.')
     webquestions_entities = webquestions.extract_question_entities()

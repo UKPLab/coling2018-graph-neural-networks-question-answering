@@ -12,6 +12,7 @@ wdaccess_p = {
     'timeout': 40,
     'global_result_limit': 500,
     'logger': logging.getLogger(__name__),
+    'restrict.hopup': False
 }
 
 logger = wdaccess_p['logger']
@@ -81,16 +82,21 @@ sparql_close_order = " ORDER BY {}"
 sparql_close = " LIMIT {}"
 
 # TODO: Additional?: given name
-HOP_UP_RELATIONS = ["P131", "P31", "P279", "P17", "P361", "P1445", "P179"] # + P674 Depricated
+HOP_UP_RELATIONS = {"P131", "P31", "P279", "P17", "P361", "P1445", "P179"} # + P674 Depricated
 TEMPORAL_RELATIONS = {"P585q", "P580q", "P582q", "P577q", "P571q"}
 
 sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
 #Can we also have something like [ [?e2 ?hopups ] ?hopupv ]
 sparql_hopup_values = ""
-# sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
 sparql_temporal_values = "VALUES ?a {" + " ".join(["e:{}".format(r) for r in TEMPORAL_RELATIONS]) + "}"
 
 FILTER_ENDINGS = "r"
+
+
+def update_sparql_clauses():
+    global sparql_hopup_values
+    if wdaccess_p.get('restrict.hopup'):
+        sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
 
 
 def query_graph_groundings(g, use_cache=False):
