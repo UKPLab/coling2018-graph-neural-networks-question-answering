@@ -8,7 +8,7 @@ import tqdm
 from construction import staged_generation
 from datasets import webquestions_io
 import utils
-from wikidata import wdaccess
+from wikidata import wdaccess, entity_linking
 
 
 @click.command()
@@ -30,10 +30,10 @@ def generate(config_file_path):
     # logging.basicConfig(level=config['logger']['level'])
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
+    entity_linking.entity_linking_p["max.entity.options"] = config['generation']["max.entity.options"]
 
     logger.debug('Extracting entities.')
     webquestions_entities = webquestions.extract_question_entities()
-    webquestions_tokens = webquestions.get_question_tokens()
 
     logger.debug('Generating choice graphs')
     choice_graphs_sets = []
@@ -42,8 +42,7 @@ def generate(config_file_path):
         print("Taking the first {} questions.".format(config['generation']['take_first']))
         len_webquestion = config['generation']['take_first']
     for i in tqdm.trange(len_webquestion):
-        ungrounded_graph = {#  'tokens': webquestions_tokens[i],
-                            'edgeSet': [],
+        ungrounded_graph = {'edgeSet': [],
                             'entities': webquestions_entities[i][:config['generation'].get("max.num.entities", 1)]}
         choice_graphs = staged_generation.generate_without_gold(ungrounded_graph)
         choice_graphs_sets.append(choice_graphs)

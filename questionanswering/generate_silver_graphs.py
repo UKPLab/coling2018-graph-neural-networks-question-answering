@@ -7,6 +7,7 @@ import tqdm
 import sys
 
 import utils
+from wikidata import entity_linking
 from wikidata import wdaccess
 from datasets import webquestions_io
 
@@ -29,6 +30,7 @@ def generate(config_file_path):
     # logging.basicConfig(level=logging.ERROR)
 
     staged_generation.generation_p['label.query.results'] = config['generation'].get('label.query.results', False)
+    entity_linking.entity_linking_p["max.entity.options"] = config['generation']["max.entity.options"]
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
     logger.debug('Loaded WebQuestions, size: {}'.format(webquestions.get_dataset_size()))

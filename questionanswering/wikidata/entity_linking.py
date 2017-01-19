@@ -2,6 +2,9 @@ import nltk
 
 from wikidata import wdaccess
 
+entity_linking_p = {
+    "max.entity.options": 3
+}
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
 
@@ -62,7 +65,7 @@ def possible_subentities(entity_tokens, entity_type):
     return new_entities
 
 
-def link_entity(entity, try_subentities=True, max_options=3):
+def link_entity(entity, try_subentities=True):
     """
     Link the given list of tokens to an entity in a knowledge base. If none linkings is found try all combinations of
     subtokens of the given entity.
@@ -80,5 +83,5 @@ def link_entity(entity, try_subentities=True, max_options=3):
                 linkings += wdaccess.query_wikidata(wdaccess.entity_query(" ".join(subentities.pop(0))))
     linkings = [l.get("e20", "") for l in linkings if l]
     linkings = sorted(linkings, key=lambda k: int(k[1:]))
-    linkings = linkings[:max_options]
+    linkings = linkings[:entity_linking_p.get("max.entity.options", 3)]
     return linkings
