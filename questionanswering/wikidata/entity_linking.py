@@ -25,7 +25,7 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(["star", "wars"], "NN")
     [('Star', 'Wars'), ('star', 'war'), ('star',), ('wars',), ('war',)]
     >>> possible_subentities(["Grand", "Bahama", "Island"], "LOCATION")
-    [('Grand', 'Bahama'), ('Bahama', 'Island'), ('Grand,', 'Bahama', 'Island'), ('Grand', 'Bahama,', 'Island'), ('Grand',), ('Bahama',), ('Island',)]
+    [('Grand', 'Bahama'), ('Bahama', 'Island'), ('Grand',), ('Bahama',), ('Island',)]
     >>> possible_subentities(["Dmitri", "Mendeleev"], "PERSON")
     [('Mendeleev',), ('Dmitri',)]
     >>> possible_subentities(["Dmitrii", "Ivanovich",  "Mendeleev"], "PERSON")
@@ -36,14 +36,18 @@ def possible_subentities(entity_tokens, entity_type):
     [('JFK',)]
     >>> possible_subentities(['Jj', 'Thomson'], 'PERSON')
     [('J. J.', 'Thomson'), ('Thomson',), ('Jj',)]
+    >>> possible_subentities(['J', 'J', 'Thomson'], 'URL')
+    [['J.', 'J.', 'Thomson']]
+    >>> possible_subentities(['Natalie', 'Portman'], 'URL')
+    []
     >>> possible_subentities(['W', 'Bush'], 'PERSON')
     [('W.', 'Bush'), ('Bush',), ('W',)]
     >>> possible_subentities(["Us"], "LOCATION")
     [('US',)]
     >>> possible_subentities(['Atlanta', 'Texas'], "LOCATION")
-    [('Atlanta,', 'Texas'), ('Atlanta',), ('Texas',)]
+    [('Atlanta',), ('Texas',)]
     >>> possible_subentities(['Atlanta', 'United', 'States'], "LOCATION")
-    [('Atlanta', 'United'), ('United', 'States'), ('Atlanta,', 'United', 'States'), ('Atlanta', 'United,', 'States'), ('Atlanta',), ('United',), ('States',)]
+    [('Atlanta', 'United'), ('United', 'States'), ('Atlanta',), ('United',), ('States',)]
     >>> possible_subentities(['Names', 'Of', 'Walt', 'Disney'], 'ORGANIZATION')
     [('Names', 'Of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('OF',), ('WALT',), ('Names',), ('Of',), ('Walt',), ('Disney',)]
     """
@@ -51,6 +55,7 @@ def possible_subentities(entity_tokens, entity_type):
     entity_lemmas = []
     if entity_type is "NN":
         entity_lemmas = [lemmatizer.lemmatize(n) for n in entity_tokens]
+
     if entity_type is "PERSON":
         if len(entity_tokens) > 2:
             new_entities.append((entity_tokens[0], entity_tokens[-1]))
@@ -58,15 +63,20 @@ def possible_subentities(entity_tokens, entity_type):
             if len(entity_tokens[0]) < 3:
                 new_entities.append((" ".join([c.upper() + "." for c in entity_tokens[0]]),) + tuple(entity_tokens[1:]))
             new_entities.extend([(entity_tokens[-1],), (entity_tokens[0],)])
+    elif entity_type == "URL":
+        new_entity = [t + "." if len(t) == 1 else t for t in entity_tokens]
+        if new_entity != entity_tokens:
+            new_entities.append(new_entity)
     else:
-        for i in range(len(entity_tokens) - 1, 1, -1):
-            ngrams = nltk.ngrams(entity_tokens, i)
-            for new_entity in ngrams:
-                new_entities.append(new_entity)
+        if entity_type != "URL":
+            for i in range(len(entity_tokens) - 1, 1, -1):
+                ngrams = nltk.ngrams(entity_tokens, i)
+                for new_entity in ngrams:
+                    new_entities.append(new_entity)
         if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP']:
             new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 5])
-        if entity_type in ['LOCATION'] and len(entity_tokens) > 1:
-            new_entities.extend([tuple(entity_tokens[:i]) + (entity_tokens[i] + ",", ) + tuple(entity_tokens[i+1:]) for i in range(len(entity_tokens)-1)])
+        # if entity_type in ['LOCATION', 'URL'] and len(entity_tokens) > 1:
+        #     new_entities.extend([tuple(entity_tokens[:i]) + (entity_tokens[i] + ",", ) + tuple(entity_tokens[i+1:]) for i in range(len(entity_tokens)-1)])
         if entity_type in ['NN']:
             new_entities.append(tuple([ne.title() for ne in entity_tokens]))
             if entity_lemmas != entity_tokens:
@@ -88,12 +98,17 @@ def link_entity(entity, try_subentities=True):
     """
     entity_tokens, entity_type = entity
     linkings = wdaccess.query_wikidata(wdaccess.entity_query(" ".join(entity_tokens)))
-    if entity_type is not 'URL':
-        if (try_subentities and not linkings) or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
-            subentities = possible_subentities(entity_tokens, entity_type)
-            while subentities:
-                linkings += wdaccess.query_wikidata(wdaccess.entity_query(" ".join(subentities.pop(0))))
+    if (try_subentities and not linkings) or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
+        subentities = possible_subentities(entity_tokens, entity_type)
+        while subentities:
+            linkings += wdaccess.query_wikidata(wdaccess.entity_query(" ".join(subentities.pop(0))))
     linkings = [l.get("e20", "") for l in linkings if l]
     linkings = sorted(linkings, key=lambda k: int(k[1:]))
     linkings = linkings[:entity_linking_p.get("max.entity.options", 3)]
     return linkings
+
+
+if __name__ == "__main__":
+    import doctest
+
+    print(doctest.testmod())

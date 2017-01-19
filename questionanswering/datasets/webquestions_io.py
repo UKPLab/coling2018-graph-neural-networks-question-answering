@@ -267,6 +267,8 @@ def get_main_entity_from_question(question_object):
     :return: A list of answers as strings
     >>> get_main_entity_from_question({"url": "http://www.freebase.com/view/en/natalie_portman", "targetValue": "(list (description \\"Padm\u00e9 Amidala\\"))", "utterance": "what character did natalie portman play in star wars?"})
     (['Natalie', 'Portman'], 'URL')
+    >>> get_main_entity_from_question({"url": "http://www.freebase.com/view/en/j_j_thomson"})
+    (['J', 'J', 'Thomson'], 'URL')
     >>> get_main_entity_from_question({"targetValue": "(list (description Abduction) (description Eclipse) (description \\"Valentine's Day\\") (description \\"New Moon\\"))"})
     ()
     """
