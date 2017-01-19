@@ -15,7 +15,7 @@ def last_relation_subentities(g):
     []
     >>> len(last_relation_subentities({'edgeSet': [{'right': (['grand', 'bahama', 'island'], 'LOCATION')}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
     5
-    >>> last_relation_subentities({'edgeSet': [{'right':(['Jfk'], 'NNP')}], 'entities': []}) == [{'tokens': [], 'edgeSet': [{'right': ['JFK']}], 'entities': []}]
+    >>> last_relation_subentities({'edgeSet': [{'right':(['Jfk'], 'NNP')}], 'entities': []}) == [{'edgeSet': [{'right': ['JFK']}], 'entities': []}]
     True
     """
     if len(g.get('edgeSet', [])) == 0 or len(g['edgeSet'][-1]['right']) < 1:
@@ -37,14 +37,14 @@ def last_relation_hop_up(g):
     :return: a list of suggested graphs
     >>> last_relation_hop_up({'edgeSet': [], 'entities': [[4, 5, 6]]})
     []
-    >>> last_relation_hop_up({'edgeSet': [{'right':[4,5,6]}], 'entities': []}) == [{'edgeSet': [{'right':[4,5,6], 'hopUp': None}], 'entities': [], 'tokens':[]}]
+    >>> last_relation_hop_up({'edgeSet': [{'right':[4,5,6]}], 'entities': []}) == [{'edgeSet': [{'right':[4,5,6], 'hopUp': None}], 'entities': []}]
     True
     >>> last_relation_hop_up({'edgeSet': [{'right':[4,5,6], 'hopUp': None}], 'entities': []})
     []
-    >>> last_relation_hop_up({'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754"}], 'entities': []}) == [{'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754", 'hopUp': None}], 'entities': [], 'tokens':[]}]
+    >>> last_relation_hop_up({'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754"}], 'entities': []}) == [{'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754", 'hopUp': None}], 'entities': []}]
     True
     """
-    if len(g.get('edgeSet', [])) == 0 or any('hopUp' in edge for edge in g['edgeSet']):
+    if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1]:
         return []
     new_g = graph.copy_graph(g)
     new_g['edgeSet'][-1]['hopUp'] = None
@@ -60,7 +60,7 @@ def add_entity_and_relation(g):
     :return: a list of suggested graphs
     >>> add_entity_and_relation({'edgeSet': [], 'entities': []})
     []
-    >>> add_entity_and_relation({'edgeSet': [], 'entities': [(["Natalie", "Portman"], 'PERSON')]}) == [{'tokens': [], 'edgeSet': [{'right': ['Natalie', 'Portman'], 'rightkbID': 'Q37876'}], 'entities': []}]
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [(["Natalie", "Portman"], 'PERSON')]}) == [{'edgeSet': [{'right': ['Natalie', 'Portman'], 'rightkbID': 'Q37876'}], 'entities': []}]
     True
     """
     if len(g.get('entities', [])) == 0:
@@ -86,7 +86,7 @@ def last_relation_temporal(g):
 
     :param g: a graph with a non-empty edgeSet
     :return: a list of suggested graphs
-    >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': []}) == [{'edgeSet': [{'right':[2]}, {'right':[8], 'argmax': 'time'}], 'entities': [], 'tokens':[]}, {'edgeSet': [{'right':[2]}, {'right':[8], 'argmin': 'time'}], 'entities': [], 'tokens':[]}]
+    >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': []}) == [{'edgeSet': [{'right':[2]}, {'right':[8], 'argmax': 'time'}], 'entities': []}, {'edgeSet': [{'right':[2]}, {'right':[8], 'argmin': 'time'}], 'entities': []}]
     True
     >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8], 'argmin':'time'}], 'entities': []})
     []
@@ -126,7 +126,7 @@ def expand(g):
     :return: a list of new graphs that are modified copies
     >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[["Barack", "Obama"]]})
     []
-    >>> expand({"edgeSet":[{"right":["Barack", "Obama"]}]}) == [{'edgeSet': [{'hopUp': None, 'right': ['Barack', 'Obama']}], 'tokens': [], 'entities': []}]
+    >>> expand({"edgeSet":[{"right":["Barack", "Obama"]}]}) == [{'edgeSet': [{'hopUp': None, 'right': ['Barack', 'Obama']}], 'entities': []}]
     True
     """
     if "edgeSet" not in g:
@@ -152,3 +152,9 @@ def restrict(g):
     available_restrictions = RESTRICT_ACTIONS
     return_graphs = [el for f in available_restrictions for el in f(g)]
     return return_graphs
+
+
+if __name__ == "__main__":
+    import doctest
+
+    print(doctest.testmod())
