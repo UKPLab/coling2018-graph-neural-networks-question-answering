@@ -33,6 +33,7 @@ def generate(config_file_path):
     entity_linking.entity_linking_p["max.entity.options"] = config['generation']["max.entity.options"]
     wdaccess.wdaccess_p["restrict.hopup"] = config['wikidata'].get("restrict.hopup", False)
     wdaccess.update_sparql_clauses()
+    logger.debug("max.entity.options: {}".format(entity_linking.entity_linking_p["max.entity.options"]))
 
     logger.debug('Extracting entities.')
     webquestions_entities = webquestions.extract_question_entities()
