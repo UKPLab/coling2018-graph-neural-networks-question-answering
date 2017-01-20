@@ -87,6 +87,53 @@ def approximate_groundings(g):
     return graph_groundings
 
 
+def find_groundings(g):
+    """
+    Retrieve possible groundings for a given graph.
+
+    :param g: the graph to ground
+    :return: a list of graph groundings.
+    >>> len(find_groundings({'edgeSet': [{'right': ['Percy', 'Jackson'], 'rightkbID': 'Q3899725'}, {'rightkbID': 'Q571', 'right': ['book']}]}))
+    1
+    """
+    graph_groundings = []
+    num_edges_to_ground = sum(1 for e in g.get('edgeSet', []) if not('type' in e and 'kbID' in e))
+    edge_type_combinations = list(itertools.product(*[['direct', 'reverse']]*num_edges_to_ground))
+    for type_combindation in edge_type_combinations:
+        t = graph.copy_graph(g)
+        print(type_combindation)
+        for i, edge in enumerate([e for e in t.get('edgeSet', []) if not('type' in e and 'kbID' in e)]):
+            edge['type'] = type_combindation[i]
+        print(t)
+        graph_groundings.extend([apply_grounding(t, p) for p in wdaccess.query_graph_groundings(t, use_cache=False)])
+    return graph_groundings
+
+
+def find_groundings_by_overlap(g):
+    """
+    Retrieve possible groundings for a given graph.
+
+    :param g: the graph to ground
+    :return: a list of graph groundings.
+    >>> len(find_groundings({'edgeSet': [{'right': ['Percy', 'Jackson'], 'rightkbID': 'Q3899725'}, {'rightkbID': 'Q571', 'right': ['book']}]}))
+    1
+    """
+    separate_groundings = []
+    graph_groundings = []
+    for i, edge in enumerate(g.get('edgeSet', [])):
+        t = {'edgeSet': [edge]}
+        edge_groundings = wdaccess.query_graph_groundings(t, use_cache=True, with_denotations=True)
+
+        edge_groundings = [apply_grounding(t, p) for p in wdaccess.query_graph_groundings(t, use_cache=True, with_denotations=True)]
+        separate_groundings.append([p['edgeSet'][0] for p in edge_groundings])
+    graph_groundings = []
+    for edge_set in list(itertools.product(*separate_groundings)):
+        new_g = graph.copy_graph(g)
+        new_g['edgeSet'] = list(edge_set)
+        graph_groundings.append(new_g)
+    return graph_groundings
+
+
 def ground_with_gold(input_graphs, gold_answers):
     """
     For each graph among the suggested_graphs find its groundings in the WikiData, then evaluate each suggested graph
@@ -141,20 +188,20 @@ def generate_without_gold(ungrounded_graph,
         # logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
 
         # logger.debug("Constructing with WikiData")
-        suggested_graphs = [el for f in wikidata_actions_restrict for el in f(g)]
-        suggested_graphs += [el for s_g in suggested_graphs for f in wikidata_actions_expand for el in f(s_g)]
+        suggested_graphs = stages.restrict(g)  # [el for f in wikidata_actions_restrict for el in f(g)]
+        suggested_graphs += [el for s_g in suggested_graphs for el in stages.expand(s_g)]
 
         # logger.debug("Suggested graphs: {}".format(suggested_graphs))
-        # chosen_graphs = ground_without_gold(suggested_graphs)
-        chosen_graphs = suggested_graphs
+        chosen_graphs = ground_without_gold(suggested_graphs)
+        # chosen_graphs = suggested_graphs
         # logger.debug("Extending the pool with {} graphs.".format(len(chosen_graphs)))
         pool.extend(chosen_graphs)
         # logger.debug("Label entities")
         chosen_graphs = [add_canonical_labels_to_entities(g) for g in chosen_graphs]
 
         # logger.debug("Constructing without WikiData")
-        extended_graphs = [el for s_g in chosen_graphs for f in non_linking_actions for el in f(s_g)]
-        chosen_graphs.extend(extended_graphs)
+        # extended_graphs = [el for s_g in chosen_graphs for f in non_linking_actions for el in f(s_g)]
+        # chosen_graphs.extend(extended_graphs)
 
         # logger.debug("Extending the generated with {} graphs.".format(len(chosen_graphs)))
         generated_graphs.extend(chosen_graphs)
@@ -165,8 +212,8 @@ def generate_without_gold(ungrounded_graph,
     for g in generated_graphs:
         if 'entities' in g:
             del g['entities']
-    logger.debug("Grounding the resulting graphs.")
-    generated_graphs = ground_without_gold(generated_graphs)
+    # logger.debug("Grounding the resulting graphs.")
+    # generated_graphs = ground_without_gold(generated_graphs)
     logger.debug("Grounded graphs: {}".format(len(generated_graphs)))
     return generated_graphs
 
