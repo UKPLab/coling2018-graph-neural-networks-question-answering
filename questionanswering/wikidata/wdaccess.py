@@ -76,7 +76,7 @@ sparql_canoncial_label_entity = """
         """
 
 
-sparql_relation_time_argmax = "?m ?a [base:time ?n]."
+sparql_relation_time_argmax = "?e1 ?o0 [ ?a [base:time ?n]]."
 
 sparql_close_order = " ORDER BY {}"
 sparql_close = " LIMIT {}"
