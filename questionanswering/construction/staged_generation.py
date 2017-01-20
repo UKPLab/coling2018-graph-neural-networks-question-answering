@@ -225,13 +225,13 @@ def ground_without_gold(input_graphs):
     :param input_graphs: a list of ungrounded graphs
     :return: a list of graph groundings
     """
-    grounded_graphs = [p for s_g in tqdm.tqdm(input_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) for p in approximate_groundings(s_g)]
-    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
-    logger.debug("First one: {}".format(grounded_graphs[:1]))
-
-    # grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in wdaccess.query_graph_groundings(s_g)]
+    # grounded_graphs = [p for s_g in tqdm.tqdm(input_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) for p in approximate_groundings(s_g)]
     # logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     # logger.debug("First one: {}".format(grounded_graphs[:1]))
+    #
+    grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in wdaccess.query_graph_groundings(s_g)]
+    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
+    logger.debug("First one: {}".format(grounded_graphs[:1]))
 
 
     grounded_graphs = [g for g in grounded_graphs if all(e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g.get('edgeSet', []))]
