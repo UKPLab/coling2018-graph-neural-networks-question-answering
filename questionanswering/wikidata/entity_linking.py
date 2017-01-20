@@ -51,7 +51,7 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(['Names', 'Of', 'Walt', 'Disney'], 'ORGANIZATION')
     [('Names', 'Of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('OF',), ('WALT',), ('Names',), ('Of',), ('Walt',), ('Disney',)]
     >>> possible_subentities(['Timothy', 'Mcveigh'], 'PERSON')
-    [('Timothy', 'McVeigh')]
+    [('Timothy', 'McVeigh'), ('Mcveigh',), ('Timothy',)]
     >>> possible_subentities(['Mcdonalds'], 'URL')
     [('McDonalds',)]
     """
@@ -66,11 +66,15 @@ def possible_subentities(entity_tokens, entity_type):
         if len(entity_tokens) > 1:
             if len(entity_tokens[0]) < 3:
                 new_entities.append((" ".join([c.upper() + "." for c in entity_tokens[0]]),) + tuple(entity_tokens[1:]))
+            if any(t.startswith("Mc") for t in entity_tokens):
+                new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
             new_entities.extend([(entity_tokens[-1],), (entity_tokens[0],)])
     elif entity_type == "URL":
         new_entity = [t + "." if len(t) == 1 else t for t in entity_tokens]
         if new_entity != entity_tokens:
             new_entities.append(new_entity)
+        if any(t.startswith("Mc") for t in entity_tokens):
+            new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
     else:
         if entity_type != "URL":
             for i in range(len(entity_tokens) - 1, 1, -1):
