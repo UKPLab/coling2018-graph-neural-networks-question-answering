@@ -65,7 +65,7 @@ def generate(config_file_path):
         gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
         generated_graphs = staged_generation.generate_with_gold(ungrounded_graph, gold_answers)
         silver_dataset.append(generated_graphs)
-        if i % 100 == 0:
+        if i % 200 == 0:
             logger.debug("Average f1 so far: {}".format(
                 np.average([np.max([g[1][2] for g in graphs]) if len(graphs) > 0 else 0.0 for graphs in silver_dataset])))
 

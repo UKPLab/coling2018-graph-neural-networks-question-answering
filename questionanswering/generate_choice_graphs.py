@@ -49,6 +49,9 @@ def generate(config_file_path):
                             'entities': webquestions_entities[i][:config['generation'].get("max.num.entities", 1)]}
         choice_graphs = staged_generation.generate_without_gold(ungrounded_graph)
         choice_graphs_sets.append(choice_graphs)
+        if i % 200 == 0:
+            logger.debug("Average number of choices per question so far: {}".format(
+                np.mean([len(graphs) for graphs in choice_graphs_sets])))
 
     logger.debug('Generation is finished')
     with open(config['generation']["save.choice.to"], 'w') as out:
