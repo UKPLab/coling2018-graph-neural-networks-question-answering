@@ -50,6 +50,10 @@ def possible_subentities(entity_tokens, entity_type):
     [('Atlanta', 'United'), ('United', 'States'), ('Atlanta',), ('United',), ('States',)]
     >>> possible_subentities(['Names', 'Of', 'Walt', 'Disney'], 'ORGANIZATION')
     [('Names', 'Of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('OF',), ('WALT',), ('Names',), ('Of',), ('Walt',), ('Disney',)]
+    >>> possible_subentities(['Timothy', 'Mcveigh'], 'PERSON')
+    [('Timothy', 'McVeigh')]
+    >>> possible_subentities(['Mcdonalds'], 'URL')
+    [('McDonalds',)]
     """
     new_entities = []
     entity_lemmas = []
