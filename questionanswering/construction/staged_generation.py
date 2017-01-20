@@ -189,7 +189,7 @@ def generate_without_gold(ungrounded_graph,
 
         # logger.debug("Constructing with WikiData")
         suggested_graphs = stages.restrict(g)  # [el for f in wikidata_actions_restrict for el in f(g)]
-        suggested_graphs += [el for s_g in suggested_graphs for el in stages.expand(s_g)]
+        suggested_graphs.extend([el for s_g in suggested_graphs for el in stages.expand(s_g)])
 
         # logger.debug("Suggested graphs: {}".format(suggested_graphs))
         chosen_graphs = ground_without_gold(suggested_graphs)
@@ -230,7 +230,7 @@ def ground_without_gold(input_graphs):
     logger.debug("First one: {}".format(grounded_graphs[:1]))
 
     grounded_graphs = [g for g in grounded_graphs if all(e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g.get('edgeSet', []))]
-    chosen_graphs = [(grounded_graphs[i],) for i in range(len(grounded_graphs))]
+    chosen_graphs = [grounded_graphs[i] for i in range(len(grounded_graphs))]
     logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
     wdaccess.clear_cache()
     return chosen_graphs
