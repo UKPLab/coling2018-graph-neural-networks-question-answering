@@ -232,9 +232,10 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
         sparql_relation_inst = sparql_relation_inst.replace("_:s", "_:s" + str(i))
 
         query += sparql_relation_inst
-        query = query.replace("%queryvariables%", " ".join(local_variables))
         variables.extend(local_variables)
-
+        if not local_variables or return_var_values:
+            local_variables.append('?e1')
+        query = query.replace("%queryvariables%", " ".join(local_variables))
 
     query = sparql_prefix + (sparql_select if not ask else sparql_ask) + query
 
