@@ -136,6 +136,16 @@ def find_groundings_by_overlap(g):
     return graph_groundings
 
 
+def verify_grounding(g):
+    """
+    Verify the given graph with (partial) grounding exists in wikidata.
+
+    :param g: graph as a dictionary
+    :return: true if the graph exists, false otherwise
+    """
+    return wdaccess.query_wikidata(wdaccess.graph_to_ask(g))
+
+
 def ground_with_gold(input_graphs, gold_answers):
     """
     For each graph among the suggested_graphs find its groundings in the WikiData, then evaluate each suggested graph
@@ -216,7 +226,9 @@ def generate_without_gold(ungrounded_graph,
             del g['entities']
     logger.debug("Grounding the resulting graphs.")
     generated_graphs = ground_without_gold(generated_graphs)
-    logger.debug("Grounded graphs: {}".format(len(generated_graphs)))
+    logger.debug("Approximated grounded graphs: {}".format(len(generated_graphs)))
+    generated_graphs = [g for g in tqdm.tqdm(generated_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) if verify_grounding(g)]
+    logger.debug("Saved grounded graphs: {}".format(len(generated_graphs)))
     return generated_graphs
 
 
@@ -232,10 +244,10 @@ def ground_without_gold(input_graphs):
     logger.debug("First one: {}".format(grounded_graphs[:1]))
 
     grounded_graphs = [g for g in grounded_graphs if all(e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g.get('edgeSet', []))]
-    chosen_graphs = [grounded_graphs[i] for i in range(len(grounded_graphs))]
-    logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
+    # chosen_graphs = [grounded_graphs[i] for i in range(len(grounded_graphs))]
+    logger.debug("Number of chosen groundings: {}".format(len(grounded_graphs)))
     wdaccess.clear_cache()
-    return chosen_graphs
+    return grounded_graphs
 
 
 def apply_grounding(g, grounding):
