@@ -35,12 +35,21 @@ sparql_select = """
         SELECT DISTINCT %queryvariables% WHERE
         """
 
+sparql_ask= """
+        ASK WHERE
+        """
+
+
 sparql_relation = {
-    "direct": "{GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . %restriction% }}",
-
-    "reverse": "{GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . %restriction% }}",
-
-    "v-structure": "{GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}",
+    "direct": """
+        {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . %restriction% }}
+    """,
+    "reverse": """
+        {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . %restriction% }}
+    """,
+    "v-structure": """
+        {GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}
+    """,
 }
 
 sparql_relation_complex = """
@@ -132,9 +141,19 @@ def query_graph_denotations(g):
     return denotations
 
 
-def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
+def graph_to_select(g, **kwargs):
+    return graph_to_query(g, ask=False, **kwargs)
+
+
+def graph_to_ask(g, **kwargs):
+    return graph_to_query(g, ask=True,  **kwargs)
+
+
+def graph_to_query(g, ask=False ,return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
     """
     Convert graph to a sparql query.
+
+    :param ask: if the a simple existence of the graph should be checked instead of returning variable values.
     :param g: a graph as a dictionary with non-empty edgeSet
     :param return_var_values: if True the denotations for free variables will be returned
     :param limit: limit on the result list size
@@ -152,7 +171,7 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
     query = sparql_prefix
     variables = []
     order_by = []
-    query += sparql_select
+    query += sparql_select if not ask else sparql_ask
     query += "{"
     for i, edge in enumerate(g.get('edgeSet', [])):
         if 'type' in edge:
@@ -204,16 +223,17 @@ def graph_to_query(g, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
 
         query += sparql_relation_inst
 
-    if return_var_values:
+    if return_var_values and not ask:
         variables.append("?e1")
         query += "BIND (xsd:integer(SUBSTR(STR(?e1), 33)) AS ?eid)"
         order_by.append("?eid")
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
-    if order_by:
+    if order_by and not ask:
         order_by_pattern = sparql_close_order.format(" ".join(order_by))
         query += order_by_pattern
-    query += sparql_close.format(limit)
+    if not ask:
+        query += sparql_close.format(limit)
 
     logger.debug("Querying with variables: {}".format(variables))
     return query
@@ -357,7 +377,7 @@ def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False):
     except Exception as inst:
         logger.debug(inst)
         return []
-    if len(results["results"]["bindings"]) > 0:
+    if "results" in results and len(results["results"]["bindings"]) > 0:
         results = results["results"]["bindings"]
         logger.debug("Results bindings: {}".format(results[0].keys()))
         if starts_with:
@@ -366,6 +386,8 @@ def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False):
         if use_cache:
             query_cache[query] = results
         return results
+    elif "boolean" in results:
+        return results['boolean']
     else:
         logger.debug(results)
         return []
