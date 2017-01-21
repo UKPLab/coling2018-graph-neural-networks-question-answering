@@ -10,7 +10,7 @@ WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 wdaccess_p = {
     'wikidata_url': "http://knowledgebase:8890/sparql",
     'timeout': 40,
-    'global_result_limit': 5000,
+    'global_result_limit': 2500,
     'logger': logging.getLogger(__name__),
     'restrict.hopup': False
 }
