@@ -76,6 +76,7 @@ def approximate_groundings(g):
         if not('type' in edge and 'kbID' in edge):
             t = {'edgeSet': [edge]}
             edge_groundings = [apply_grounding(t, p) for p in wdaccess.query_graph_groundings(t, use_cache=True)]
+            edge_groundings = [e for e in edge_groundings if "kbID" in e['edgeSet'][0] and e['edgeSet'][0]["kbID"][:-1] in wdaccess.property_whitelist]
             separate_groundings.append([p['edgeSet'][0] for p in edge_groundings])
         else:
             separate_groundings.append([edge])
@@ -102,10 +103,8 @@ def find_groundings(g):
     edge_type_combinations = list(itertools.product(*[['direct', 'reverse']]*num_edges_to_ground))
     for type_combindation in edge_type_combinations:
         t = graph.copy_graph(g)
-        print(type_combindation)
         for i, edge in enumerate([e for e in t.get('edgeSet', []) if not('type' in e and 'kbID' in e)]):
             edge['type'] = type_combindation[i]
-        print(t)
         graph_groundings.extend([apply_grounding(t, p) for p in wdaccess.query_graph_groundings(t, use_cache=False)])
     return graph_groundings
 
@@ -193,7 +192,7 @@ def generate_without_gold(ungrounded_graph,
     generated_graphs = []
     iterations = 0
     while pool:
-        if iterations % 50 == 0:
+        if iterations % 10 == 0:
             logger.debug("Generated: {}".format(len(generated_graphs)))
             logger.debug("Pool: {}".format(len(pool)))
         g = pool.pop(0)
@@ -202,7 +201,7 @@ def generate_without_gold(ungrounded_graph,
         # logger.debug("Constructing with WikiData")
         suggested_graphs = [el for f in wikidata_actions_restrict for el in f(g)]
         suggested_graphs += [el for s_g in suggested_graphs for f in wikidata_actions_expand for el in f(s_g)]
-
+        # pool.extend(suggested_graphs)
         # logger.debug("Suggested graphs: {}".format(suggested_graphs))
         # chosen_graphs = ground_without_gold(suggested_graphs)
         chosen_graphs = suggested_graphs
@@ -220,14 +219,16 @@ def generate_without_gold(ungrounded_graph,
         iterations += 1
     logger.debug("Iterations {}".format(iterations))
     logger.debug("Generated: {}".format(len(generated_graphs)))
+    # generated_graphs = [g for g in tqdm.tqdm(generated_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) if verify_grounding(g)]
+    # logger.debug("Generated checked: {}".format(len(generated_graphs)))
     logger.debug("Clean up graphs.")
     for g in generated_graphs:
         if 'entities' in g:
             del g['entities']
     logger.debug("Grounding the resulting graphs.")
     generated_graphs = ground_without_gold(generated_graphs)
-    logger.debug("Approximated grounded graphs: {}".format(len(generated_graphs)))
-    generated_graphs = [g for g in tqdm.tqdm(generated_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) if verify_grounding(g)]
+    # logger.debug("Approximated grounded graphs: {}".format(len(generated_graphs)))
+    # generated_graphs = [g for g in tqdm.tqdm(generated_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) if verify_grounding(g)]
     logger.debug("Saved grounded graphs: {}".format(len(generated_graphs)))
     return generated_graphs
 
@@ -239,7 +240,7 @@ def ground_without_gold(input_graphs):
     :param input_graphs: a list of ungrounded graphs
     :return: a list of graph groundings
     """
-    grounded_graphs = [p for s_g in tqdm.tqdm(input_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) for p in approximate_groundings(s_g)]
+    grounded_graphs = [p for s_g in tqdm.tqdm(input_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) for p in find_groundings(s_g)]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     logger.debug("First one: {}".format(grounded_graphs[:1]))
 

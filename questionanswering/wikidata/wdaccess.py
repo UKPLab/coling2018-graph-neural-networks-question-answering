@@ -10,7 +10,7 @@ WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 wdaccess_p = {
     'wikidata_url': "http://knowledgebase:8890/sparql",
     'timeout': 40,
-    'global_result_limit': 500,
+    'global_result_limit': 5000,
     'logger': logging.getLogger(__name__),
     'restrict.hopup': False
 }
@@ -22,7 +22,7 @@ sparql = SPARQLWrapper(wdaccess_p.get('wikidata_url', "http://knowledgebase:8890
 sparql.setReturnFormat(JSON)
 sparql.setMethod("GET")
 sparql.setTimeout(wdaccess_p.get('timeout', 40))
-GLOBAL_RESULT_LIMIT = 500
+GLOBAL_RESULT_LIMIT = wdaccess_p['global_result_limit']
 
 
 sparql_prefix = """
@@ -42,13 +42,22 @@ sparql_ask= """
 
 sparql_relation = {
     "direct": """
+    { SELECT DISTINCT %queryvariables% WHERE{
         {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . %restriction% }}
+        FILTER STRSTARTS(STR(?rd), "http://www.wikidata.org/entity/")
+    } LIMIT """ + str(wdaccess_p['global_result_limit']) + """}
     """,
     "reverse": """
+    { SELECT DISTINCT %queryvariables% WHERE{
         {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . %restriction% }}
+        FILTER STRSTARTS(STR(?rr), "http://www.wikidata.org/entity/")
+    } LIMIT """ + str(wdaccess_p['global_result_limit']) + """}
     """,
     "v-structure": """
+    { SELECT DISTINCT %queryvariables% WHERE{
         {GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}
+        FILTER STRSTARTS(STR(?rv), "http://www.wikidata.org/entity/")
+    } LIMIT """ + str(wdaccess_p['global_result_limit']) + """}
     """,
 }
 
@@ -86,6 +95,8 @@ sparql_canoncial_label_entity = """
 
 
 sparql_relation_time_argmax = "?e1 ?o0 [ ?a [base:time ?n]]."
+
+sparql_relation_filter = 'FILTER STRSTARTS(STR({}), "http://www.wikidata.org/entity/")'
 
 sparql_close_order = " ORDER BY {}"
 sparql_close = " LIMIT {}"
@@ -149,7 +160,7 @@ def graph_to_ask(g, **kwargs):
     return graph_to_query(g, ask=True,  **kwargs)
 
 
-def graph_to_query(g, ask=False ,return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
+def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LIMIT):
     """
     Convert graph to a sparql query.
 
@@ -168,12 +179,11 @@ def graph_to_query(g, ask=False ,return_var_values=False, limit=GLOBAL_RESULT_LI
     >>> len(query_wikidata(graph_to_query(g, return_var_values = False)))
     118
     """
-    query = sparql_prefix
     variables = []
     order_by = []
-    query += sparql_select if not ask else sparql_ask
-    query += "{"
+    query = "{"
     for i, edge in enumerate(g.get('edgeSet', [])):
+        local_variables = []
         if 'type' in edge:
             sparql_relation_inst = sparql_relation[edge['type']]
         else:
@@ -183,7 +193,7 @@ def graph_to_query(g, ask=False ,return_var_values=False, limit=GLOBAL_RESULT_LI
             sparql_relation_inst = re.sub(r"\?r[drv]", "e:" + edge['kbID'], sparql_relation_inst)
         else:
             sparql_relation_inst = sparql_relation_inst.replace("?r", "?r" + str(i))
-            variables.extend(["?r{}{}".format(i, t[0]) for t in ['direct', 'reverse']] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
+            local_variables.extend(["?r{}{}".format(i, t[0]) for t in ['direct', 'reverse']] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
 
         if 'hopUp' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", sparql_entity_abstract)
@@ -192,7 +202,7 @@ def graph_to_query(g, ask=False ,return_var_values=False, limit=GLOBAL_RESULT_LI
                 sparql_relation_inst = sparql_relation_inst.replace("?hopups",  "e:" + edge['hopUp'][:-1] + "s")
             else:
                 sparql_relation_inst = sparql_hopup_values + sparql_relation_inst
-                variables.append("?hopup{}v".format(i))
+                local_variables.append("?hopup{}v".format(i))
 
         if any(arg_type in edge for arg_type in ['argmax', 'argmin']):
             sparql_relation_inst = sparql_temporal_values + sparql_relation_inst
@@ -216,12 +226,17 @@ def graph_to_query(g, ask=False ,return_var_values=False, limit=GLOBAL_RESULT_LI
             right_label = " ".join(edge['right'])
             sparql_entity_label_inst = sparql_entity_label.replace("?e2", "?e2" + str(i))
             sparql_entity_label_inst = sparql_entity_label_inst.replace("%labelright%", right_label)
-            variables.append("?e2" + str(i))
+            local_variables.append("?e2" + str(i))
             query += sparql_entity_label_inst
         sparql_relation_inst = sparql_relation_inst.replace("_:m", "_:m" + str(i))
         sparql_relation_inst = sparql_relation_inst.replace("_:s", "_:s" + str(i))
 
         query += sparql_relation_inst
+        query = query.replace("%queryvariables%", " ".join(local_variables))
+        variables.extend(local_variables)
+
+
+    query = sparql_prefix + (sparql_select if not ask else sparql_ask) + query
 
     if return_var_values and not ask:
         variables.append("?e1")
