@@ -10,7 +10,7 @@ WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 wdaccess_p = {
     'wikidata_url': "http://knowledgebase:8890/sparql",
     'timeout': 40,
-    'global_result_limit': 2500,
+    'global_result_limit': 5000,
     'logger': logging.getLogger(__name__),
     'restrict.hopup': False
 }
@@ -42,32 +42,23 @@ sparql_ask= """
 
 sparql_relation = {
     "direct": """
-    { SELECT DISTINCT %queryvariables% WHERE{
         {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . %restriction% }}
-        FILTER STRSTARTS(STR(?rd), "http://www.wikidata.org/entity/")
-    } LIMIT """ + str(wdaccess_p['global_result_limit']) + """}
     """,
     "reverse": """
-    { SELECT DISTINCT %queryvariables% WHERE{
         {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . %restriction% }}
-        FILTER STRSTARTS(STR(?rr), "http://www.wikidata.org/entity/")
-    } LIMIT """ + str(wdaccess_p['global_result_limit']) + """}
     """,
     "v-structure": """
-    { SELECT DISTINCT %queryvariables% WHERE{
         {GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}
-        FILTER STRSTARTS(STR(?rv), "http://www.wikidata.org/entity/")
-    } LIMIT """ + str(wdaccess_p['global_result_limit']) + """}
     """,
 }
 
 sparql_relation_complex = """
-        {
-        {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . %restriction% }}
-        UNION
-        {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . %restriction% }}
-        }
-        """
+    {
+    """ + sparql_relation['direct'] + """
+    UNION
+    """ + sparql_relation['reverse'] + """
+    }
+    """
 
 sparql_entity_label = """
         { VALUES ?labelpredicate {rdfs:label skos:altLabel}
@@ -96,7 +87,7 @@ sparql_canoncial_label_entity = """
 
 sparql_relation_time_argmax = "?e1 ?o0 [ ?a [base:time ?n]]."
 
-sparql_relation_filter = 'FILTER STRSTARTS(STR({}), "http://www.wikidata.org/entity/")'
+sparql_relation_filter = 'FILTER NOT EXISTS { GRAPH <http://wikidata.org/properties> {%relationvar% rdf:type base:Property}}'
 
 sparql_close_order = " ORDER BY {}"
 sparql_close = " LIMIT {}"
@@ -128,7 +119,7 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False):
     :param use_cache
     :return: graph groundings encoded as a list of dictionaries
     >>> len(query_graph_groundings({'edgeSet': [{'right': ['book'], 'rightkbID': 'Q571',  'argmax':'time'}], 'entities': []}))
-    3
+    8
     """
     if get_free_variables(g):
         groundings = query_wikidata(graph_to_query(g, limit=GLOBAL_RESULT_LIMIT*(10 if with_denotations else 1), return_var_values=with_denotations), use_cache=use_cache)
@@ -174,10 +165,10 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
     1
     >>> g = {'edgeSet': [{'kbID': 'P35v', 'type': 'reverse', 'rightkbID': 'Q155', 'right': [5]}], 'entities': []}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = True)))
-    5
+    6
     >>> g = {'edgeSet': [{'right': ["Missouri"]}], 'entities': [[4]], 'tokens': ['who', 'are', 'the', 'current', 'senator', 'from', 'missouri', '?']}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = False)))
-    118
+    152
     """
     variables = []
     order_by = []
@@ -233,9 +224,9 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
 
         query += sparql_relation_inst
         variables.extend(local_variables)
-        if not local_variables or return_var_values:
-            local_variables.append('?e1')
-        query = query.replace("%queryvariables%", " ".join(local_variables))
+        # if not local_variables or return_var_values:
+        #     local_variables.append('?e1')
+        # query = query.replace("%queryvariables%", " ".join(local_variables))
 
     query = sparql_prefix + (sparql_select if not ask else sparql_ask) + query
 
@@ -304,7 +295,7 @@ def label_query(entity, limit=10):
     :param limit: limit on the result list size
     :return: a WikiData query
     >>> query_wikidata(label_query("Q36"), starts_with=None)
-    [{'label0': 'Poland'}, {'label0': 'Republic of Poland'}, {'label0': 'POL'}]
+    [{'label0': 'Poland'}, {'label0': 'Republic of Poland'}, {'label0': 'Polska'}, {'label0': 'PL'}, {'label0': 'pl'}, {'label0': 'POL'}]
     """
     query = sparql_prefix
     variables = []
@@ -392,7 +383,7 @@ def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False):
         results = sparql.query().convert()
     except Exception as inst:
         logger.debug(inst)
-        return []
+        return None
     if "results" in results and len(results["results"]["bindings"]) > 0:
         results = results["results"]["bindings"]
         logger.debug("Results bindings: {}".format(results[0].keys()))
@@ -483,7 +474,7 @@ def label_many_entities_with_alt_labels(entities):
     :param entities: a list of entity ids.
     :return: a dictionary mapping entity id to a list of labels
     >>> dict(label_many_entities_with_alt_labels(["Q76", "Q188984", "Q194339"])) == \
-    {"Q188984": ["New York Rangers"], "Q76": ["Barack Obama", "Barack Hussein Obama II", "Obama", "Barack Hussein Obama", "Barack Obama II", "Barry Obama"], "Q194339": ["Bahamian dollar"]}
+    {"Q188984": ["New York Rangers"], "Q76": ["Barack Obama", "Barack Hussein Obama II", "Obama", "Barack Hussein Obama", "Barack Obama II"], "Q194339": ["Bahamian dollar"]}
     True
     """
     results = query_wikidata(multientity_label_query(entities), starts_with="", use_cache=False)
@@ -504,7 +495,7 @@ def label_query_results(query_results, question_variable='e1'):
     :param question_variable: the variable to extract
     :return: list of answers as entity labels or an original id if no canonical label was found.
     >>> sorted(label_query_results([{'e1':'Q76'}, {'e1':'Q235234'}, {'e1':'r68123123-12dd222'}]))
-    [['barack obama', 'barack hussein obama ii', 'obama', 'barack hussein obama', 'barack obama ii', 'barry obama'], ['james i of scotland', 'james i, king of scots']]
+    [['barack obama', 'barack hussein obama ii', 'obama', 'barack hussein obama', 'barack obama ii'], ['james i of scotland', 'james i, king of scots']]
     """
     answers = [r[question_variable] for r in query_results]
     answers = [a for a in answers if '-' not in a and a[0] in 'pqPQ']  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
