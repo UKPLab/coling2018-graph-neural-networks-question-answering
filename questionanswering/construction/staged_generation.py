@@ -72,11 +72,13 @@ def approximate_groundings(g):
     38
     """
     separate_groundings = []
+    logger.debug("Approximating graph groundings: {}".format(g))
     for i, edge in enumerate(g.get('edgeSet', [])):
         if not('type' in edge and 'kbID' in edge):
             t = {'edgeSet': [edge]}
             edge_groundings = [apply_grounding(t, p) for p in wdaccess.query_graph_groundings(t, use_cache=True)]
             edge_groundings = [e for e in edge_groundings if "kbID" in e['edgeSet'][0] and e['edgeSet'][0]["kbID"][:-1] in wdaccess.property_whitelist]
+            logger.debug("Edge groundings: {}".format(len(edge_groundings)))
             separate_groundings.append([p['edgeSet'][0] for p in edge_groundings])
         else:
             separate_groundings.append([edge])
@@ -85,6 +87,7 @@ def approximate_groundings(g):
         new_g = graph.copy_graph(g)
         new_g['edgeSet'] = list(edge_set)
         graph_groundings.append(new_g)
+    logger.debug("Graph groundings: {}".format(len(graph_groundings)))
     return graph_groundings
 
 
@@ -105,7 +108,13 @@ def find_groundings(g):
         t = graph.copy_graph(g)
         for i, edge in enumerate([e for e in t.get('edgeSet', []) if not('type' in e and 'kbID' in e)]):
             edge['type'] = type_combindation[i]
-        graph_groundings.extend([apply_grounding(t, p) for p in wdaccess.query_graph_groundings(t, use_cache=False)])
+        query_results = wdaccess.query_graph_groundings(t, use_cache=False, pass_exception=True)
+        if query_results is None:
+            appoximated_groundings = approximate_groundings(t)
+            appoximated_groundings = [a for a in tqdm.tqdm(appoximated_groundings, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) if verify_grounding(a)]
+            graph_groundings.extend(appoximated_groundings)
+        else:
+            graph_groundings.extend([apply_grounding(t, p) for p in query_results])
     return graph_groundings
 
 
@@ -219,8 +228,8 @@ def generate_without_gold(ungrounded_graph,
         iterations += 1
     logger.debug("Iterations {}".format(iterations))
     logger.debug("Generated: {}".format(len(generated_graphs)))
-    # generated_graphs = [g for g in tqdm.tqdm(generated_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) if verify_grounding(g)]
-    # logger.debug("Generated checked: {}".format(len(generated_graphs)))
+    generated_graphs = [g for g in tqdm.tqdm(generated_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) if verify_grounding(g)]
+    logger.debug("Generated checked: {}".format(len(generated_graphs)))
     logger.debug("Clean up graphs.")
     for g in generated_graphs:
         if 'entities' in g:

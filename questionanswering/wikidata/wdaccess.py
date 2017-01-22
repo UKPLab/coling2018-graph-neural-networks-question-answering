@@ -9,8 +9,8 @@ WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 
 wdaccess_p = {
     'wikidata_url': "http://knowledgebase:8890/sparql",
-    'timeout': 40,
-    'global_result_limit': 5000,
+    'timeout': 60,
+    'global_result_limit': 1000,
     'logger': logging.getLogger(__name__),
     'restrict.hopup': False
 }
@@ -35,7 +35,7 @@ sparql_select = """
         SELECT DISTINCT %queryvariables% WHERE
         """
 
-sparql_ask= """
+sparql_ask = """
         ASK WHERE
         """
 
@@ -110,7 +110,7 @@ def update_sparql_clauses():
         sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
 
 
-def query_graph_groundings(g, use_cache=False, with_denotations=False):
+def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exception=False):
     """
     Convert the given graph to a WikiData query and retrieve the results. The results contain possible bindings
     for all free variables in the graph. If there are no free variables a single empty grounding is returned.
@@ -123,6 +123,8 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False):
     """
     if get_free_variables(g):
         groundings = query_wikidata(graph_to_query(g, limit=GLOBAL_RESULT_LIMIT*(10 if with_denotations else 1), return_var_values=with_denotations), use_cache=use_cache)
+        if groundings is None:  # If there was an exception
+            return None if pass_exception else []
         groundings = [r for r in groundings if not any(r[b][:-1] in property_blacklist or r[b] in TEMPORAL_RELATIONS or r[b][-1] in FILTER_ENDINGS for b in r)]
         return groundings
     return [{}]
