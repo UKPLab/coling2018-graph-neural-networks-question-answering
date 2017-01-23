@@ -119,7 +119,7 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exce
     :param use_cache
     :return: graph groundings encoded as a list of dictionaries
     >>> len(query_graph_groundings({'edgeSet': [{'right': ['book'], 'rightkbID': 'Q571',  'argmax':'time'}], 'entities': []}))
-    8
+    7
     """
     if get_free_variables(g):
         groundings = query_wikidata(graph_to_query(g, limit=GLOBAL_RESULT_LIMIT*(10 if with_denotations else 1), return_var_values=with_denotations), use_cache=use_cache)
@@ -187,6 +187,8 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
         else:
             sparql_relation_inst = sparql_relation_inst.replace("?r", "?r" + str(i))
             local_variables.extend(["?r{}{}".format(i, t[0]) for t in ['direct', 'reverse']] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
+            # for v in local_variables:
+            #     sparql_relation_inst += sparql_relation_filter.replace("%relationvar%", v)
 
         if 'hopUp' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", sparql_entity_abstract)
@@ -385,7 +387,7 @@ def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False):
         results = sparql.query().convert()
     except Exception as inst:
         logger.debug(inst)
-        return None
+        return []
     if "results" in results and len(results["results"]["bindings"]) > 0:
         results = results["results"]["bindings"]
         logger.debug("Results bindings: {}".format(results[0].keys()))
