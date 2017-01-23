@@ -8,7 +8,7 @@ import utils
 
 def if_graph_adheres(g, allowed_extensions=set()):
     """
-    Test if teh given graphs only uses the allowed extensions.
+    Test if the given graphs only uses the allowed extensions.
 
     :param g: graphs a dictionary with an edgeSet
     :param allowed_extensions: a set of allowed extensions
@@ -169,6 +169,16 @@ def copy_graph(g):
         new_g['tokens'] = g.get('tokens', [])
     return new_g
 
+np_grammar = r"""
+    NP:
+    {(<PRP\$|POS|DT><NN|NNS>|<NNP|NNPS>)+<IN>(<PRP\$|POS|DT><NN|NNS>|<NNP|NNPS>)+}
+    {(<PRP\$|POS|DT><NN|NNS>|<NNP|NNPS>)<NNP|NN|NNS|NNPS>+}
+    {<PRP\$|POS|DT><JJ>*<NN|NNS><VB.>?<RB>?}
+    {<JJ>*<NNP|NNPS><VB.>?<RB>?}
+    {<NNP|NN|NNS|NNPS>+}
+    """
+np_parser = nltk.RegexpParser(np_grammar)
+
 
 def extract_entities_from_tagged(annotated_tokens, tags):
     """
@@ -183,6 +193,9 @@ def extract_entities_from_tagged(annotated_tokens, tags):
     >>> extract_entities_from_tagged([('Who', 'O'), ('was', 'O'), ('john', 'PERSON'), ('noble', 'PERSON')], tags={'PERSON'})
     [['john', 'noble']]
     >>> extract_entities_from_tagged([(w, 'NE' if t != 'O' else 'O') for w, t in [('Who', 'O'), ('played', 'O'), ('Aragorn', 'PERSON'), ('in', 'O'), ('the', 'ORG'), ('Hobbit', 'ORG'), ('?', 'O')]], tags={'NE'})
+    [['Aragorn'], ['the', 'Hobbit']]
+    >>> extract_entities_from_tagged([('what', 'WDT'), ('character', 'NN'), ('did', 'VBD'), ('john', 'NNP'), \
+    ('noble', 'NNP'), ('play', 'VB'), ('in', 'IN'), ('lord', 'NNP'), ('of', 'IN'), ('the', 'DT'), ('rings', 'NNS'), ('?', '.')], tags={'NN', 'NNS'})
     [['Aragorn'], ['the', 'Hobbit']]
     """
     vertices = []
@@ -217,8 +230,12 @@ def extract_entities(tokens_ne_pos):
     locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])
     orgs = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['ORGANIZATION'])
 
-    nns = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NN', 'NNS'])
-    nnps = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NNP', 'NNPS'])
+    nps = [el for el in np_parser.parse([(w, t) for w, _, t in tokens_ne_pos]) if type(el) == nltk.tree.Tree and el.label() == "NP"]
+    # nns = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NN', 'NNS'])
+    # nnps = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NNP', 'NNPS'])
+    nnps = [[w for w, _ in el.leaves()] for el in nps if all(t in {'NNP', 'NNPS'} for _, t in el.leaves())]
+    nns = [[w for w, _ in el.leaves()] for el in nps if not all(t in {'NNP', 'NNPS'} for _, t in el.leaves())]
+
     ne_vertices = [(ne, 'PERSON') for ne in persons] + [(ne, 'LOCATION') for ne in locations] + [(ne, 'ORGANIZATION') for ne in orgs]
     vertices = []
     for nn in nnps:

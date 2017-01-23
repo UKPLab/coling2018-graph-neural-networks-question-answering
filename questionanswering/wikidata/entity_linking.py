@@ -18,8 +18,10 @@ def possible_subentities(entity_tokens, entity_type):
     :return: a list of sub-entities.
     >>> possible_subentities(["Nfl", "Redskins"], "ORGANIZATION")
     [('NFL',), ('Nfl',), ('Redskins',)]
-    >>> possible_subentities(["senator"], "NN")
-    [('Senator',)]
+    >>> possible_subentities(["senators"], "NN")
+    [('Senators',), ('senator',)]
+    >>> possible_subentities(['the', 'current', 'senators'], 'NN')
+    [('the', 'current'), ('current', 'senators'), ('The', 'Current', 'Senators'), ('the', 'current', 'senator'), ('the',), ('current',), ('senators',), ('senator',)]
     >>> possible_subentities(["awards"], "NN")
     [('Awards',), ('award',)]
     >>> possible_subentities(["star", "wars"], "NN")
