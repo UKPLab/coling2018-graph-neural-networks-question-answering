@@ -119,7 +119,7 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exce
     :param use_cache
     :return: graph groundings encoded as a list of dictionaries
     >>> len(query_graph_groundings({'edgeSet': [{'right': ['book'], 'rightkbID': 'Q571',  'argmax':'time'}], 'entities': []}))
-    7
+    8
     """
     if get_free_variables(g):
         groundings = query_wikidata(graph_to_query(g, limit=GLOBAL_RESULT_LIMIT*(10 if with_denotations else 1), return_var_values=with_denotations), use_cache=use_cache)

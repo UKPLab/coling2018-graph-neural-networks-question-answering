@@ -171,10 +171,11 @@ def copy_graph(g):
 
 np_grammar = r"""
     NP:
-    {(<PRP\$|POS|DT><NN|NNS>|<NNP|NNPS>)+<IN>(<PRP\$|POS|DT><NN|NNS>|<NNP|NNPS>)+}
-    {(<PRP\$|POS|DT><NN|NNS>|<NNP|NNPS>)<NNP|NN|NNS|NNPS>+}
-    {<PRP\$|POS|DT><JJ>*<NN|NNS><VB.>?<RB>?}
-    {<JJ>*<NNP|NNPS><VB.>?<RB>?}
+    {(<PRP\$|DT><NN|NNS>|<NNP|NNPS>)<NNP|NN|NNS|NNPS>+}
+    {(<PRP\$|DT><NN|NNS>+|<NNP|NNPS>+)<IN|CC>(<PRP\$|DT><NN|NNS>+|<NNP|NNPS>+)}
+    {<PRP\$|DT><JJ|RB>*<NN|NNS>+<VB.*>?<RB>?}
+    {<JJ|RB>*<NNP|NN|NNS|NNPS>+}
+    {<JJ|RB>*<NNP|NN|NNS|NNPS>+<VB.>?<RB>?}
     {<NNP|NN|NNS|NNPS>+}
     """
 np_parser = nltk.RegexpParser(np_grammar)
@@ -193,9 +194,6 @@ def extract_entities_from_tagged(annotated_tokens, tags):
     >>> extract_entities_from_tagged([('Who', 'O'), ('was', 'O'), ('john', 'PERSON'), ('noble', 'PERSON')], tags={'PERSON'})
     [['john', 'noble']]
     >>> extract_entities_from_tagged([(w, 'NE' if t != 'O' else 'O') for w, t in [('Who', 'O'), ('played', 'O'), ('Aragorn', 'PERSON'), ('in', 'O'), ('the', 'ORG'), ('Hobbit', 'ORG'), ('?', 'O')]], tags={'NE'})
-    [['Aragorn'], ['the', 'Hobbit']]
-    >>> extract_entities_from_tagged([('what', 'WDT'), ('character', 'NN'), ('did', 'VBD'), ('john', 'NNP'), \
-    ('noble', 'NNP'), ('play', 'VB'), ('in', 'IN'), ('lord', 'NNP'), ('of', 'IN'), ('the', 'DT'), ('rings', 'NNS'), ('?', '.')], tags={'NN', 'NNS'})
     [['Aragorn'], ['the', 'Hobbit']]
     """
     vertices = []
@@ -218,13 +216,16 @@ def extract_entities(tokens_ne_pos):
     :param tokens_ne_pos: list of POS and NE tags.
     :return: list of entities in the order: NE>NNP>NN
     >>> extract_entities([('who', 'O', 'WP'), ('are', 'O', 'VBP'), ('the', 'O', 'DT'), ('current', 'O', 'JJ'), ('senators', 'O', 'NNS'), ('from', 'O', 'IN'), ('missouri', 'LOCATION', 'NNP'), ('?', 'O', '.')])
-    [(['Missouri'], 'LOCATION'), (['senators'], 'NN')]
+    [(['Missouri'], 'LOCATION'), (['the', 'current', 'senators'], 'NN')]
     >>> extract_entities([('what', 'O', 'WDT'), ('awards', 'O', 'NNS'), ('has', 'O', 'VBZ'), ('louis', 'PERSON', 'NNP'), ('sachar', 'PERSON', 'NNP'), ('won', 'O', 'NNP'), ('?', 'O', '.')])
     [(['Louis', 'Sachar'], 'PERSON'), (['awards'], 'NN')]
     >>> extract_entities([('who', 'O', 'WP'), ('was', 'O', 'VBD'), ('the', 'O', 'DT'), ('president', 'O', 'NN'), ('after', 'O', 'IN'), ('jfk', 'O', 'NNP'), ('died', 'O', 'VBD'), ('?', 'O', '.')])
-    [(['Jfk'], 'NNP'), (['president'], 'NN')]
+    [(['the', 'president', 'after', 'jfk'], 'NN')]
     >>> extract_entities([('who', 'O', 'WP'), ('natalie', 'PERSON', 'NN'), ('likes', 'O', 'VBP')])
     [(['Natalie'], 'PERSON')]
+    >>> extract_entities([('what', 'O', 'WDT'), ('character', 'O', 'NN'), ('did', 'O', 'VBD'), ('john', 'O', 'NNP'), \
+    ('noble', 'O', 'NNP'), ('play', 'O', 'VB'), ('in', 'O', 'IN'), ('lord', 'O', 'NNP'), ('of', 'O', 'IN'), ('the', 'O', 'DT'), ('rings', 'O', 'NNS'), ('?', 'O', '.')])
+    [(['John', 'Noble'], 'NNP'), (['character'], 'NN'), (['lord', 'of', 'the', 'rings'], 'NN')]
     """
     persons = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['PERSON'])
     locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])

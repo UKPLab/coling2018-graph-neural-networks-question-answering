@@ -21,7 +21,7 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(["senators"], "NN")
     [('Senators',), ('senator',)]
     >>> possible_subentities(['the', 'current', 'senators'], 'NN')
-    [('the', 'current'), ('current', 'senators'), ('The', 'Current', 'Senators'), ('the', 'current', 'senator'), ('the',), ('current',), ('senators',), ('senator',)]
+    [('the', 'current'), ('current', 'senators'), ('THE',), ('The', 'Current', 'Senators'), ('the', 'current', 'senator'), ('the',), ('current',), ('senators',), ('senator',)]
     >>> possible_subentities(["awards"], "NN")
     [('Awards',), ('award',)]
     >>> possible_subentities(["star", "wars"], "NN")
@@ -36,6 +36,8 @@ def possible_subentities(entity_tokens, entity_type):
     []
     >>> possible_subentities(["Jfk"], "NNP")
     [('JFK',)]
+    >>> possible_subentities(['the', 'president', 'after', 'jfk'], 'NN')
+    [('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('THE',), ('JFK',), ('The', 'President', 'After', 'Jfk'), ('the',), ('president',), ('after',), ('jfk',)]
     >>> possible_subentities(['Jj', 'Thomson'], 'PERSON')
     [('J. J.', 'Thomson'), ('Thomson',), ('Jj',)]
     >>> possible_subentities(['J', 'J', 'Thomson'], 'URL')
@@ -51,7 +53,7 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(['Atlanta', 'United', 'States'], "LOCATION")
     [('Atlanta', 'United'), ('United', 'States'), ('Atlanta',), ('United',), ('States',)]
     >>> possible_subentities(['Names', 'Of', 'Walt', 'Disney'], 'ORGANIZATION')
-    [('Names', 'Of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('OF',), ('WALT',), ('Names',), ('Of',), ('Walt',), ('Disney',)]
+    [('Names', 'Of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('OF',), ('Names',), ('Of',), ('Walt',), ('Disney',)]
     >>> possible_subentities(['Timothy', 'Mcveigh'], 'PERSON')
     [('Timothy', 'McVeigh'), ('Mcveigh',), ('Timothy',)]
     >>> possible_subentities(['Mcdonalds'], 'URL')
@@ -83,8 +85,8 @@ def possible_subentities(entity_tokens, entity_type):
                 ngrams = nltk.ngrams(entity_tokens, i)
                 for new_entity in ngrams:
                     new_entities.append(new_entity)
-        if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP']:
-            new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 5])
+        if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP', 'NN']:
+            new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 4])
         # if entity_type in ['LOCATION', 'URL'] and len(entity_tokens) > 1:
         #     new_entities.extend([tuple(entity_tokens[:i]) + (entity_tokens[i] + ",", ) + tuple(entity_tokens[i+1:]) for i in range(len(entity_tokens)-1)])
         if entity_type in ['NN']:
