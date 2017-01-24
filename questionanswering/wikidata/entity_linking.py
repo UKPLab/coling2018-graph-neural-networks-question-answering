@@ -1,4 +1,5 @@
 import nltk
+import re
 
 from wikidata import wdaccess
 
@@ -7,6 +8,7 @@ entity_linking_p = {
 }
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
+roman_nums_pattern = re.compile("^(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$")
 
 
 def possible_subentities(entity_tokens, entity_type):
@@ -58,6 +60,8 @@ def possible_subentities(entity_tokens, entity_type):
     [('Timothy', 'McVeigh'), ('Mcveigh',), ('Timothy',)]
     >>> possible_subentities(['Mcdonalds'], 'URL')
     [('McDonalds',)]
+    >>> possible_subentities(['Super', 'Bowl', 'Xliv'], 'NNP')
+    [('Super', 'Bowl'), ('Bowl', 'Xliv'), ('Super',), ('Bowl',), ('Xliv',), ('Super', 'Bowl', 'XLIV')]
     """
     new_entities = []
     entity_lemmas = []
@@ -96,6 +100,8 @@ def possible_subentities(entity_tokens, entity_type):
         if len(entity_tokens) > 1:
             new_entities.extend([(ne,) for ne in entity_tokens])
             new_entities.extend([(ne,) for ne in entity_lemmas if ne not in entity_tokens])
+    if any(roman_nums_pattern.match(ne.upper()) for ne in entity_tokens):
+        new_entities.append(tuple([ne.upper() if roman_nums_pattern.match(ne.upper()) else ne for ne in entity_tokens]))
     return new_entities
 
 

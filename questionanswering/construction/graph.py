@@ -188,7 +188,7 @@ np_grammar = r"""
     {(<PRP\$|DT><NN|NNS>|<NNP|NNPS>)<NNP|NN|NNS|NNPS>+}
     {(<PRP\$|DT><NN|NNS>+|<NNP|NNPS>+)<IN|CC>(<PRP\$|DT><NN|NNS>+|<NNP|NNPS>+)}
     {<PRP\$|DT><JJ|RB>*<NN|NNS>+<VB.*>?<RB>?}
-    {<JJ|RB>*<NNP|NN|NNS|NNPS>+}
+    {<JJ|RB|CD>*<NNP|NN|NNS|NNPS>+}
     {<JJ|RB>*<NNP|NN|NNS|NNPS>+<VB.>?<RB>?}
     {<NNP|NN|NNS|NNPS>+}
     """
@@ -244,6 +244,8 @@ def extract_entities(tokens_ne_pos):
     [(['Lois', 'Lane'], 'PERSON'), (['superman', 'returns'], 'NN')]
     >>> extract_entities([('the', 'O', 'DT'), ('empire', 'O', 'NN'), ('strikes', 'O', 'VBZ'), ('back', 'O', 'RB'), ('is', 'O', 'VBZ'), ('the', 'O', 'DT'), ('second', 'O', 'JJ'), ('movie', 'O', 'NN'), ('in', 'O', 'IN'), ('the', 'O', 'DT'), ('star', 'O', 'NN'), ('wars', 'O', 'NNS'), ('franchise', 'O', 'VBP')])
     [(['the', 'empire', 'strikes', 'back'], 'NN'), (['the', 'second', 'movie'], 'NN'), (['the', 'star', 'wars'], 'NN')]
+    >>> extract_entities([['who', 'O', 'WP'], ['played', 'O', 'VBD'], ['cruella', 'LOCATION', 'NNP'], ['deville', 'LOCATION', 'NNP'], ['in', 'O', 'IN'], ['102', 'O', 'CD'], ['dalmatians', 'O', 'NNS'], ['?', 'O', '.']])
+    [(['Cruella', 'Deville'], 'LOCATION'), (['102', 'dalmatians'], 'NN')]
     """
     # >>> extract_entities([['who', 'O', 'WP'], ['played', 'O', 'VBD'], ['eowyn', 'PERSON', 'NNP'], ['in', 'O', 'IN'], ['the', 'O', 'DT'], ['lord', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'], ['rings', 'O', 'NNS'], ['movies', 'O', 'NNS'], ['?', 'O', '.']])
     # [(['Eowyn'], 'PERSON'), (['the', 'lord', 'of', 'the', 'rings', 'movies'], 'NN')]
