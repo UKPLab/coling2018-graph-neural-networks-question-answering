@@ -68,6 +68,9 @@ def generate(config_file_path):
         if i % 200 == 0:
             logger.debug("Average f1 so far: {}".format(
                 np.average([np.max([g[1][2] for g in graphs]) if len(graphs) > 0 else 0.0 for graphs in silver_dataset])))
+            # Dump the data set once in while
+            with open(config['generation']["save.silver.to"], 'w') as out:
+                json.dump(silver_dataset, out, sort_keys=True, indent=4)
 
     logger.debug("Generation finished. Silver dataset size: {}".format(len(silver_dataset)))
     with open(config['generation']["save.silver.to"], 'w') as out:
