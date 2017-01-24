@@ -9,7 +9,7 @@ WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 
 wdaccess_p = {
     'wikidata_url': "http://knowledgebase:8890/sparql",
-    'timeout': 60,
+    'timeout': 40,
     'global_result_limit': 1000,
     'logger': logging.getLogger(__name__),
     'restrict.hopup': False
@@ -94,7 +94,7 @@ sparql_close = " LIMIT {}"
 
 # TODO: Additional?: given name
 HOP_UP_RELATIONS = {"P131", "P31", "P279", "P17", "P361", "P1445", "P179"} # + P674 Depricated
-TEMPORAL_RELATIONS = {"P585q", "P580q", "P582q", "P577q", "P571q"}
+TEMPORAL_RELATIONS = {"P585q", "P580q", "P582q", "P577q", "P571q", "P580v", "P582v", "P577v", "P571v", "P569v", "P570v"}
 
 sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
 #Can we also have something like [ [?e2 ?hopups ] ?hopupv ]
