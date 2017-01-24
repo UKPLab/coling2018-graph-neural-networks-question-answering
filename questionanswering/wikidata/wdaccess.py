@@ -65,8 +65,9 @@ sparql_relation_complex = """
     """
 
 sparql_entity_label = """
-        { VALUES ?labelpredicate {rdfs:label skos:altLabel}
-        GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate "%labelright%"@en  }
+        { VALUES ?labelright { %entitylabels }
+        VALUES ?labelpredicate {rdfs:label skos:altLabel}
+        GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate ?labelright  }
         } FILTER NOT EXISTS {
             VALUES ?topic {e:Q4167410 e:Q21286738 e:Q11266439 e:Q13406463}
             GRAPH <http://wikidata.org/instances> {?e2 rdf:type ?topic}}
@@ -301,9 +302,35 @@ def entity_query(label, limit=100):
     variables = []
     query += sparql_select
     query += "{"
-    sparql_entity_label_inst = sparql_entity_label.replace("?e2", "?e2" + str(0))
-    sparql_entity_label_inst = sparql_entity_label_inst.replace("%labelright%", label)
+    sparql_entity_label_inst = sparql_entity_label.replace("VALUES ?labelright { %entitylabels }", "")
+    sparql_entity_label_inst = sparql_entity_label_inst.replace("?e2", "?e2" + str(0))
+    sparql_entity_label_inst = sparql_entity_label_inst.replace("?labelright", "\"{}\"@en".format(label))
     variables.append("?e2" + str(0))
+    query += sparql_entity_label_inst
+    query += "}"
+    query = query.replace("%queryvariables%", " ".join(variables))
+    query += sparql_close.format(limit)
+    logger.debug("Querying for entity with variables: {}".format(variables))
+    return query
+
+
+def multi_entity_query(labels, limit=100):
+    """
+    A method to look up a WikiData entities given a set of labels
+
+    :param labels: entity labels as a list of str
+    :param limit: limit on the result list size
+    :return: a query that can be executed against WikiData
+    """
+    query = sparql_prefix
+    variables = []
+    query += sparql_select
+    query += "{"
+    sparql_entity_label_inst = sparql_entity_label.replace("?e2", "?e2" + str(0))
+    labels = ["\"{}\"@en".format(l) for l in labels]
+    sparql_entity_label_inst = sparql_entity_label_inst.replace("%entitylabels", " ".join(labels))
+    variables.append("?e2" + str(0))
+    variables.append("?labelright")
     query += sparql_entity_label_inst
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))

@@ -120,9 +120,9 @@ def link_entity(entity, try_subentities=True):
     linkings = wdaccess.query_wikidata(wdaccess.entity_query(" ".join(entity_tokens)))
     if (try_subentities and not linkings) or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
         subentities = possible_subentities(entity_tokens, entity_type)
-        while subentities:
-            linkings += wdaccess.query_wikidata(wdaccess.entity_query(" ".join(subentities.pop(0))))
-    linkings = [l.get("e20", "") for l in linkings if l]
+        subentities = [" ".join(s) for s in subentities]
+        linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(subentities), starts_with=None)
+    linkings = [l.get("e20", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, "") for l in linkings if l]
     linkings = sorted(linkings, key=lambda k: int(k[1:]))
     linkings = linkings[:entity_linking_p.get("max.entity.options", 3)]
     return linkings
