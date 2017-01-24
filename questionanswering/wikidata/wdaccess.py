@@ -128,9 +128,9 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exce
     >>> len(query_graph_groundings({'edgeSet': [{'right': ['book'], 'rightkbID': 'Q571', 'type':'direct', 'argmax':'time'}], 'entities': []}))
     4
     >>> len(query_graph_groundings({'edgeSet': [{'rightkbID': 'Q127367', 'type':'reverse'}, {'type':'time'}], 'entities': []}))
-    27
+    23
     >>> len(query_graph_groundings({'edgeSet': [{'rightkbID': 'Q127367', 'type':'reverse'}, {'type':'time', 'argmax':'time'}], 'entities': []}))
-    27
+    23
     """
     if get_free_variables(g):
         groundings = query_wikidata(graph_to_query(g, limit=GLOBAL_RESULT_LIMIT*(10 if with_denotations else 1), return_var_values=with_denotations), use_cache=use_cache)
@@ -150,6 +150,8 @@ def query_graph_denotations(g):
     :return: graph denotations as a list of dictionaries
     >>> query_graph_denotations({'edgeSet': [{'right': ['Percy', 'Jackson'], 'type': 'reverse', 'rightkbID': 'Q6256', 'kbID':"P813q"}]})
     []
+    >>> query_graph_denotations({'edgeSet': [{'type': 'reverse', 'rightkbID': 'Q35637', 'kbID':"P1346v", 'num':['2009']}]})
+    [{'e1': 'Q76'}]
     """
     denotations = query_wikidata(graph_to_query(g, return_var_values=True))
     denotations = [r for r in denotations if any('-' not in r[b] and r[b][0] in 'pqPQ' for b in r)]  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
@@ -216,13 +218,15 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
                 local_variables.append("?hopup{}v".format(i))
 
         if any(arg_type in edge for arg_type in ['argmax', 'argmin']):
-            sparql_relation_inst = sparql_relation_inst
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_restriction_time_argmax)
             # sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
             # sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
             if return_var_values:
                 order_by.append("{}({})".format("DESC" if 'argmax' in edge else "ASC", "?n"))
                 limit = 1
+        elif 'num' in edge:
+            sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_restriction_time_argmax)
+            sparql_relation_inst = sparql_relation_inst.replace("?n",  "\"{}\"^^xsd:dateTime".format(" ".join(edge['num'])))
         else:
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", "")
 

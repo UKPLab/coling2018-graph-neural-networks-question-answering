@@ -191,6 +191,8 @@ np_grammar = r"""
     {<JJ|RB|CD>*<NNP|NN|NNS|NNPS>+}
     {<JJ|RB>*<NNP|NN|NNS|NNPS>+<VB.>?<RB>?}
     {<NNP|NN|NNS|NNPS>+}
+    CD:
+    {<CD>+}
     """
 np_parser = nltk.RegexpParser(np_grammar)
 
@@ -246,6 +248,8 @@ def extract_entities(tokens_ne_pos):
     [(['the', 'empire', 'strikes', 'back'], 'NN'), (['the', 'second', 'movie'], 'NN'), (['the', 'star', 'wars'], 'NN')]
     >>> extract_entities([['who', 'O', 'WP'], ['played', 'O', 'VBD'], ['cruella', 'LOCATION', 'NNP'], ['deville', 'LOCATION', 'NNP'], ['in', 'O', 'IN'], ['102', 'O', 'CD'], ['dalmatians', 'O', 'NNS'], ['?', 'O', '.']])
     [(['Cruella', 'Deville'], 'LOCATION'), (['102', 'dalmatians'], 'NN')]
+    >>> extract_entities([['who', 'O', 'WP'], ['was', 'O', 'VBD'], ['the', 'O', 'DT'], ['winner', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'], ['2009', 'O', 'CD'], ['nobel', 'O', 'NNP'], ['peace', 'O', 'NNP'], ['prize', 'O', 'NNP'], ['?', 'O', '.']])
+    [(['Nobel', 'Peace', 'Prize'], 'NNP'), (['the', 'winner'], 'NN'), (['2009'], 'CD')]
     """
     # >>> extract_entities([['who', 'O', 'WP'], ['played', 'O', 'VBD'], ['eowyn', 'PERSON', 'NNP'], ['in', 'O', 'IN'], ['the', 'O', 'DT'], ['lord', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'], ['rings', 'O', 'NNS'], ['movies', 'O', 'NNS'], ['?', 'O', '.']])
     # [(['Eowyn'], 'PERSON'), (['the', 'lord', 'of', 'the', 'rings', 'movies'], 'NN')]
@@ -253,11 +257,13 @@ def extract_entities(tokens_ne_pos):
     locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])
     orgs = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['ORGANIZATION'])
 
-    nps = [el for el in np_parser.parse([(w, t if p == "O" else "O") for w, p, t in tokens_ne_pos]) if type(el) == nltk.tree.Tree and el.label() == "NP"]
+    chunks = np_parser.parse([(w, t if p == "O" else "O") for w, p, t in tokens_ne_pos])
+    nps = [el for el in chunks if type(el) == nltk.tree.Tree and el.label() == "NP"]
     # nns = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NN', 'NNS'])
     # nnps = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NNP', 'NNPS'])
     nnps = [[w for w, _ in el.leaves()] for el in nps if all(t in {'NNP', 'NNPS'} for _, t in el.leaves())]
     nns = [[w for w, _ in el.leaves()] for el in nps if not all(t in {'NNP', 'NNPS'} for _, t in el.leaves())]
+    cds = [[w for w, _ in el.leaves()] for el in chunks if type(el) == nltk.tree.Tree and el.label() == "CD"]
 
     ne_vertices = [(ne, 'PERSON') for ne in persons] + [(ne, 'LOCATION') for ne in locations] + [(ne, 'ORGANIZATION') for ne in orgs]
     vertices = []
@@ -267,6 +273,7 @@ def extract_entities(tokens_ne_pos):
     for nn in nns:
         if not ne_vertices or not all(n in v for n in nn for v, _ in ne_vertices):
             vertices.append((nn, 'NN'))
+    vertices.extend([(cd, 'CD') for cd in cds])
     ne_vertices = [([w.title() for w in ne], pos) for ne, pos in ne_vertices]
     return ne_vertices + vertices
 

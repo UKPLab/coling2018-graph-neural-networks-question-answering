@@ -62,6 +62,8 @@ def possible_subentities(entity_tokens, entity_type):
     [('McDonalds',)]
     >>> possible_subentities(['Super', 'Bowl', 'Xliv'], 'NNP')
     [('Super', 'Bowl'), ('Bowl', 'Xliv'), ('Super',), ('Bowl',), ('Xliv',), ('Super', 'Bowl', 'XLIV')]
+    >>> possible_subentities(['2009'], 'CD')
+    []
     """
     new_entities = []
     entity_lemmas = []

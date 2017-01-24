@@ -69,15 +69,53 @@ def add_entity_and_relation(g):
     new_graphs = []
     while entities:
         entity = entities.pop(0)
+        # if entity[1] == 'CD':
+        #     new_g = graph.copy_graph(g)
+        #     new_g['entities'] = entities[:]
+        #     new_g['edgeSet'].append({'right': entity[0], 'rightkbID': "CD"})
+        #     new_graphs.append(new_g)
+        # else:
         linkings = entity_linking.link_entity(entity)
         for linking in linkings:
             new_g = graph.copy_graph(g)
             new_g['entities'] = entities[:]
-            new_edge = {'right': entity[0], 'rightkbID': linking}
-            new_g['edgeSet'].append(new_edge)
+            new_g['edgeSet'].append({'right': entity[0], 'rightkbID': linking})
             new_graphs.append(new_g)
-
     return new_graphs
+
+
+def last_relation_numeric(g):
+    """
+    Adds a numeric restriction to the last relation in the graph.
+
+    :param g: a graph with a non-empty edgeSet
+    :return: a list of suggested graphs
+    >>> last_relation_numeric({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': [(["Natalie", "Portman"], 'PERSON'), (['2012'], 'CD')]}) == \
+    [{'edgeSet': [{'right':[2]}, {'right':[8], 'num': ['2012']}], 'entities': [(["Natalie", "Portman"], 'PERSON')]}]
+    True
+    >>> last_relation_numeric({'edgeSet': [{'right':[2]}, {'right':[8], 'argmin':'time'}], 'entities': [(['2012'], 'CD')]})
+    []
+    >>> last_relation_numeric({'edgeSet': [{'right':[2]}, {'right':[8], 'num':'2009'}], 'entities': [(['2012'], 'CD')]})
+    []
+    >>> last_relation_numeric({'edgeSet': [{'right':[2]}], 'entities': []})
+    []
+    >>> last_relation_numeric({'edgeSet': [{'right':[2]}], 'entities': [(["Natalie", "Portman"], 'PERSON')]})
+    []
+    """
+    if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g) or any('num' in e for e in g['edgeSet']):
+        return []
+    if len(g.get('entities', [])) == 0 or not any(t == 'CD' for e, t in g['entities']):
+        return []
+    entities = copy.copy(g.get('entities', []))
+    cd_entities = [e for e,t in entities if t == 'CD']
+    if len(cd_entities) == 0:
+        return []
+    cd_entity = cd_entities[0]
+    entities = [(e, t) for e,t in entities if e != cd_entity]
+    new_g = graph.copy_graph(g)
+    new_g['entities'] = entities
+    new_g['edgeSet'][-1]['num'] = cd_entity
+    return [new_g]
 
 
 def last_relation_temporal(g):
@@ -130,7 +168,7 @@ def add_temporal_relation(g):
 # This division of actions is relevant for grounding with gold answers:
 # - Restrict action limit the set of answers and should be applied
 #   to a graph that has groundings
-RESTRICT_ACTIONS = {add_entity_and_relation, last_relation_temporal, add_temporal_relation}
+RESTRICT_ACTIONS = {add_entity_and_relation, last_relation_temporal, add_temporal_relation, last_relation_numeric}
 # - Expand actions change graph to extract another set of answers and should be
 #   applied to a graph that has empty denotation
 EXPAND_ACTIONS = {last_relation_hop_up}  # Expand actions
@@ -140,7 +178,7 @@ EXPAND_ACTIONS = {last_relation_hop_up}  # Expand actions
 WIKIDATA_ACTIONS = {add_entity_and_relation, last_relation_hop_up}
 # - Non linking options just add options to the graph structure without checking if it is possible in WikiData.
 #   Hop-up is always possible anyway, temporal is possible most of the time.
-NON_LINKING_ACTIONS = {last_relation_temporal, add_temporal_relation}
+NON_LINKING_ACTIONS = {last_relation_temporal, add_temporal_relation, last_relation_numeric}
 
 ARG_TYPES = ['argmax', 'argmin']
 
