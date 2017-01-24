@@ -82,7 +82,7 @@ def add_entity_and_relation(g):
 
 def last_relation_temporal(g):
     """
-    Adds a temporal argmax to the last relation in the graph, that is only the latest entity is returned as the answer.
+    Adds a temporal argmax to the last relation in the graph, that is only the latest/earliest entity is returned as the answer.
 
     :param g: a graph with a non-empty edgeSet
     :return: a list of suggested graphs
@@ -90,8 +90,10 @@ def last_relation_temporal(g):
     True
     >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8], 'argmin':'time'}], 'entities': []})
     []
+    >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'type':'time'}], 'entities': []})
+    []
     """
-    if len(g.get('edgeSet', [])) == 0 or any(t in edge for t in ARG_TYPES for edge in g['edgeSet']):
+    if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g):
         return []
     new_graphs = []
     for t in ARG_TYPES:
@@ -100,10 +102,35 @@ def last_relation_temporal(g):
         new_graphs.append(new_g)
     return new_graphs
 
+
+def add_temporal_relation(g):
+    """
+    Adds a temporal argmax relation in the graph, that is only the latest/earliest entity is returned as the answer.
+
+    :param g: a graph with a non-empty edgeSet
+    :return: a list of suggested graphs
+    >>> add_temporal_relation({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': []}) == \
+     [{'edgeSet': [{'right':[2]}, {'right':[8]}, {'type':'time', 'argmax':'time'}], 'entities': []}, {'edgeSet': [{'right':[2]}, {'right':[8]}, {'type':'time', 'argmin':'time'}], 'entities': []}]
+    True
+    >>> add_temporal_relation({'edgeSet': [{'right':[2]}, {'right':[8], 'argmin':'time'}], 'entities': []})
+    []
+    >>> add_temporal_relation({'edgeSet': [{'right':[2]}, {'type':'time'}], 'entities': []})
+    []
+    """
+    if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g):
+        return []
+    new_graphs = []
+    for t in ARG_TYPES:
+        new_g = graph.copy_graph(g)
+        new_edge = {'type': 'time', t: 'time'}
+        new_g['edgeSet'].append(new_edge)
+        new_graphs.append(new_g)
+    return new_graphs
+
 # This division of actions is relevant for grounding with gold answers:
 # - Restrict action limit the set of answers and should be applied
 #   to a graph that has groundings
-RESTRICT_ACTIONS = {add_entity_and_relation, last_relation_temporal}
+RESTRICT_ACTIONS = {add_entity_and_relation, last_relation_temporal, add_temporal_relation}
 # - Expand actions change graph to extract another set of answers and should be
 #   applied to a graph that has empty denotation
 EXPAND_ACTIONS = {last_relation_hop_up}  # Expand actions
@@ -113,7 +140,7 @@ EXPAND_ACTIONS = {last_relation_hop_up}  # Expand actions
 WIKIDATA_ACTIONS = {add_entity_and_relation, last_relation_hop_up}
 # - Non linking options just add options to the graph structure without checking if it is possible in WikiData.
 #   Hop-up is always possible anyway, temporal is possible most of the time.
-NON_LINKING_ACTIONS = {last_relation_temporal}
+NON_LINKING_ACTIONS = {last_relation_temporal, add_temporal_relation}
 
 ARG_TYPES = ['argmax', 'argmin']
 

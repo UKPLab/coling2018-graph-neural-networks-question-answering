@@ -6,6 +6,16 @@ import re
 import utils
 
 
+def graph_has_temporal(g):
+    """
+    Test if there are temporal relation in the graph.
+
+    :param g: graph as a dictionary
+    :return: True if graph has temporal relations, False otherwise
+    """
+    return any(any(edge.get(p) == 'time' for p in {'argmax', 'argmin', 'type'}) for edge in g.get('edgeSet', []))
+
+
 def if_graph_adheres(g, allowed_extensions=set()):
     """
     Test if the given graphs only uses the allowed extensions.
@@ -17,13 +27,17 @@ def if_graph_adheres(g, allowed_extensions=set()):
     True
     >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','right': ['Iceland'],'rightkbID': 'Q189','type': 'v-structure'}]}, allowed_extensions=set())
     False
+    >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','right': ['Iceland'],'rightkbID': 'Q189','argmin': 'time'}]}, allowed_extensions=set())
+    False
+    >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','right': ['Iceland'],'rightkbID': 'Q189','type': 'time'}]}, allowed_extensions={'temporal'})
+    True
     >>> if_graph_adheres({'edgeSet': [{'kbID': 'P17v','right': ['Iceland']}, {'kbID':'P31v'}]}, allowed_extensions=set())
     False
     """
     allowed_extensions = set(allowed_extensions)
     if 'v-structure' not in allowed_extensions and 'v-structure' in {e.get('type', "direct") for e in g.get('edgeSet', [])}:
         return False
-    if 'temporal' not in allowed_extensions and any('argmax' in e or 'argmin' in e for e in g.get('edgeSet', [])):
+    if 'temporal' not in allowed_extensions and graph_has_temporal(g):
         return False
     if 'hopUp' not in allowed_extensions and any('hopUp' in e for e in g.get('edgeSet', [])):
         return False

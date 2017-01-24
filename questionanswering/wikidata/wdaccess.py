@@ -4,6 +4,7 @@ from collections import defaultdict
 
 import nltk
 from SPARQLWrapper import SPARQLWrapper, JSON
+from construction import graph
 
 WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 
@@ -50,6 +51,9 @@ sparql_relation = {
     "v-structure": """
         {GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}
     """,
+    "time": """
+        {GRAPH <http://wikidata.org/statements> { ?e1 ?o0 [ ?a [base:time ?n]]. }}
+    """
 }
 
 sparql_relation_complex = """
@@ -85,7 +89,7 @@ sparql_canoncial_label_entity = """
         """
 
 
-sparql_relation_time_argmax = "?e1 ?o0 [ ?a [base:time ?n]]."
+sparql_restriction_time_argmax = "?m ?a [base:time ?n]."
 
 sparql_relation_filter = 'FILTER NOT EXISTS { GRAPH <http://wikidata.org/properties> {%relationvar% rdf:type base:Property}}'
 
@@ -118,8 +122,12 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exce
     :param g: graph as a dictionary
     :param use_cache
     :return: graph groundings encoded as a list of dictionaries
-    >>> len(query_graph_groundings({'edgeSet': [{'right': ['book'], 'rightkbID': 'Q571',  'argmax':'time'}], 'entities': []}))
-    8
+    >>> len(query_graph_groundings({'edgeSet': [{'right': ['book'], 'rightkbID': 'Q571', 'type':'direct', 'argmax':'time'}], 'entities': []}))
+    4
+    >>> len(query_graph_groundings({'edgeSet': [{'rightkbID': 'Q127367', 'type':'reverse'}, {'type':'time'}], 'entities': []}))
+    27
+    >>> len(query_graph_groundings({'edgeSet': [{'rightkbID': 'Q127367', 'type':'reverse'}, {'type':'time', 'argmax':'time'}], 'entities': []}))
+    27
     """
     if get_free_variables(g):
         groundings = query_wikidata(graph_to_query(g, limit=GLOBAL_RESULT_LIMIT*(10 if with_denotations else 1), return_var_values=with_denotations), use_cache=use_cache)
@@ -175,6 +183,8 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
     variables = []
     order_by = []
     query = "{"
+    if graph.graph_has_temporal(g):
+        query += sparql_temporal_values
     for i, edge in enumerate(g.get('edgeSet', [])):
         local_variables = []
         if 'type' in edge:
@@ -184,7 +194,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
 
         if 'kbID' in edge:
             sparql_relation_inst = re.sub(r"\?r[drv]", "e:" + edge['kbID'], sparql_relation_inst)
-        else:
+        elif edge.get('type') not in {'time'}:
             sparql_relation_inst = sparql_relation_inst.replace("?r", "?r" + str(i))
             local_variables.extend(["?r{}{}".format(i, t[0]) for t in ['direct', 'reverse']] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
             # for v in local_variables:
@@ -200,10 +210,10 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
                 local_variables.append("?hopup{}v".format(i))
 
         if any(arg_type in edge for arg_type in ['argmax', 'argmin']):
-            sparql_relation_inst = sparql_temporal_values + sparql_relation_inst
-            sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_relation_time_argmax)
-            sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
-            sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
+            sparql_relation_inst = sparql_relation_inst
+            sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_restriction_time_argmax)
+            # sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
+            # sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
             if return_var_values:
                 order_by.append("{}({})".format("DESC" if 'argmax' in edge else "ASC", "?n" + str(i)))
                 limit = 1
@@ -216,7 +226,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
 
         if 'rightkbID' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", "e:" + edge['rightkbID'])
-        else:
+        elif 'right' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", "?e2" + str(i))
             right_label = " ".join(edge['right'])
             sparql_entity_label_inst = sparql_entity_label.replace("?e2", "?e2" + str(i))
