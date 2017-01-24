@@ -218,7 +218,7 @@ def extract_entities(tokens_ne_pos):
     >>> extract_entities([('who', 'O', 'WP'), ('are', 'O', 'VBP'), ('the', 'O', 'DT'), ('current', 'O', 'JJ'), ('senators', 'O', 'NNS'), ('from', 'O', 'IN'), ('missouri', 'LOCATION', 'NNP'), ('?', 'O', '.')])
     [(['Missouri'], 'LOCATION'), (['the', 'current', 'senators'], 'NN')]
     >>> extract_entities([('what', 'O', 'WDT'), ('awards', 'O', 'NNS'), ('has', 'O', 'VBZ'), ('louis', 'PERSON', 'NNP'), ('sachar', 'PERSON', 'NNP'), ('won', 'O', 'NNP'), ('?', 'O', '.')])
-    [(['Louis', 'Sachar'], 'PERSON'), (['awards'], 'NN')]
+    [(['Louis', 'Sachar'], 'PERSON'), (['Won'], 'NNP'), (['awards'], 'NN')]
     >>> extract_entities([('who', 'O', 'WP'), ('was', 'O', 'VBD'), ('the', 'O', 'DT'), ('president', 'O', 'NN'), ('after', 'O', 'IN'), ('jfk', 'O', 'NNP'), ('died', 'O', 'VBD'), ('?', 'O', '.')])
     [(['the', 'president', 'after', 'jfk'], 'NN')]
     >>> extract_entities([('who', 'O', 'WP'), ('natalie', 'PERSON', 'NN'), ('likes', 'O', 'VBP')])
@@ -228,14 +228,16 @@ def extract_entities(tokens_ne_pos):
     [(['John', 'Noble'], 'NNP'), (['character'], 'NN'), (['lord', 'of', 'the', 'rings'], 'NN')]
     >>> extract_entities([['who', 'O', 'WP'], ['plays', 'O', 'VBZ'], ['lois', 'PERSON', 'NNP'], ['lane', 'PERSON', 'NNP'], ['in', 'O', 'IN'], ['superman', 'O', 'NNP'], ['returns', 'O', 'NNS'], ['?', 'O', '.']])
     [(['Lois', 'Lane'], 'PERSON'), (['superman', 'returns'], 'NN')]
-    >>> extract_entities([['who', 'O', 'WP'], ['played', 'O', 'VBD'], ['eowyn', 'PERSON', 'NNP'], ['in', 'O', 'IN'], ['the', 'O', 'DT'], ['lord', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'], ['rings', 'O', 'NNS'], ['movies', 'O', 'NNS'], ['?', 'O', '.']])
-    [(['Eowyn'], 'PERSON'), (['the', 'lord', 'of', 'the', 'rings', 'movies'], 'NN')]
+    >>> extract_entities([('the', 'O', 'DT'), ('empire', 'O', 'NN'), ('strikes', 'O', 'VBZ'), ('back', 'O', 'RB'), ('is', 'O', 'VBZ'), ('the', 'O', 'DT'), ('second', 'O', 'JJ'), ('movie', 'O', 'NN'), ('in', 'O', 'IN'), ('the', 'O', 'DT'), ('star', 'O', 'NN'), ('wars', 'O', 'NNS'), ('franchise', 'O', 'VBP')])
+    [(['the', 'empire', 'strikes', 'back'], 'NN'), (['the', 'second', 'movie'], 'NN'), (['the', 'star', 'wars'], 'NN')]
     """
+    # >>> extract_entities([['who', 'O', 'WP'], ['played', 'O', 'VBD'], ['eowyn', 'PERSON', 'NNP'], ['in', 'O', 'IN'], ['the', 'O', 'DT'], ['lord', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'], ['rings', 'O', 'NNS'], ['movies', 'O', 'NNS'], ['?', 'O', '.']])
+    # [(['Eowyn'], 'PERSON'), (['the', 'lord', 'of', 'the', 'rings', 'movies'], 'NN')]
     persons = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['PERSON'])
     locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])
     orgs = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['ORGANIZATION'])
 
-    nps = [el for el in np_parser.parse([(w, t) for w, _, t in tokens_ne_pos]) if type(el) == nltk.tree.Tree and el.label() == "NP"]
+    nps = [el for el in np_parser.parse([(w, t if p == "O" else "O") for w, p, t in tokens_ne_pos]) if type(el) == nltk.tree.Tree and el.label() == "NP"]
     # nns = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NN', 'NNS'])
     # nnps = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NNP', 'NNPS'])
     nnps = [[w for w, _ in el.leaves()] for el in nps if all(t in {'NNP', 'NNPS'} for _, t in el.leaves())]
@@ -244,10 +246,10 @@ def extract_entities(tokens_ne_pos):
     ne_vertices = [(ne, 'PERSON') for ne in persons] + [(ne, 'LOCATION') for ne in locations] + [(ne, 'ORGANIZATION') for ne in orgs]
     vertices = []
     for nn in nnps:
-        if not any(n in v for n in nn for v, _ in vertices + ne_vertices):
+        if not ne_vertices or not all(n in v for n in nn for v, _ in ne_vertices):
             ne_vertices.append((nn, 'NNP'))
     for nn in nns:
-        if not any(n in v for n in nn for v, _ in vertices + ne_vertices):
+        if not ne_vertices or not all(n in v for n in nn for v, _ in ne_vertices):
             vertices.append((nn, 'NN'))
     ne_vertices = [([w.title() for w in ne], pos) for ne, pos in ne_vertices]
     return ne_vertices + vertices
