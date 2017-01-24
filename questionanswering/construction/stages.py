@@ -44,7 +44,7 @@ def last_relation_hop_up(g):
     >>> last_relation_hop_up({'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754"}], 'entities': []}) == [{'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754", 'hopUp': None}], 'entities': []}]
     True
     """
-    if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1]:
+    if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1] or g['edgeSet'][-1].get('type') in {'time'}:
         return []
     new_g = graph.copy_graph(g)
     new_g['edgeSet'][-1]['hopUp'] = None

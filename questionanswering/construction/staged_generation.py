@@ -164,6 +164,7 @@ def ground_with_gold(input_graphs, gold_answers):
     :param gold_answers: a set of gold answers
     :return: a list of graph groundings
     """
+    logger.debug("Input graphs: {}".format(input_graphs))
     grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in wdaccess.query_graph_groundings(s_g)]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     logger.debug("First one: {}".format(grounded_graphs[:1]))

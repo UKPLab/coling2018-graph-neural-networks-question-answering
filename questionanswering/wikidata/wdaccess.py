@@ -98,12 +98,15 @@ sparql_close = " LIMIT {}"
 
 # TODO: Additional?: given name
 HOP_UP_RELATIONS = {"P131", "P31", "P279", "P17", "P361", "P1445", "P179"} # + P674 Depricated
-TEMPORAL_RELATIONS = {"P585q", "P580q", "P582q", "P577q", "P571q", "P580v", "P582v", "P577v", "P571v", "P569v", "P570v"}
+TEMPORAL_RELATIONS_Q = {"P585q", "P580q", "P582q", "P577q", "P571q"}
+TEMPORAL_RELATIONS_V = {"P580v", "P582v", "P577v", "P571v", "P569v", "P570v"}
+TEMPORAL_RELATIONS = TEMPORAL_RELATIONS_Q | TEMPORAL_RELATIONS_V
 
 sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
 #Can we also have something like [ [?e2 ?hopups ] ?hopupv ]
 sparql_hopup_values = ""
-sparql_temporal_values = "VALUES ?a {" + " ".join(["e:{}".format(r) for r in TEMPORAL_RELATIONS]) + "}"
+sparql_temporal_values_q = "VALUES ?a {" + " ".join(["e:{}".format(r) for r in TEMPORAL_RELATIONS_Q]) + "}"
+sparql_temporal_values_v = "VALUES ?a {" + " ".join(["e:{}".format(r) for r in TEMPORAL_RELATIONS_V]) + "}"
 
 FILTER_ENDINGS = "r"
 
@@ -184,7 +187,10 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
     order_by = []
     query = "{"
     if graph.graph_has_temporal(g):
-        query += sparql_temporal_values
+        if any(edge.get('type') == 'time' for edge in g.get('edgeSet', [])):
+            query += sparql_temporal_values_v
+        else:
+            query += sparql_temporal_values_q
     for i, edge in enumerate(g.get('edgeSet', [])):
         local_variables = []
         if 'type' in edge:
@@ -215,7 +221,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
             # sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
             # sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
             if return_var_values:
-                order_by.append("{}({})".format("DESC" if 'argmax' in edge else "ASC", "?n" + str(i)))
+                order_by.append("{}({})".format("DESC" if 'argmax' in edge else "ASC", "?n"))
                 limit = 1
         else:
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", "")
@@ -271,10 +277,11 @@ def get_free_variables(g, include_relations=True, include_entities=True):
     """
     free_variables = []
     for i, edge in enumerate(g.get('edgeSet', [])):
-        if include_relations and 'kbID' not in edge:
-            free_variables.extend(["?r{}{}".format(i, t[0]) for t in ['direct', 'reverse']] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
-        if include_entities and 'rightkbID' not in edge:
-            free_variables.append("?e2" + str(i))
+        if edge.get('type') not in {'time'}:
+            if include_relations and 'kbID' not in edge:
+                free_variables.extend(["?r{}{}".format(i, t[0]) for t in ['direct', 'reverse']] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
+            if include_entities and 'rightkbID' not in edge:
+                free_variables.append("?e2" + str(i))
     return free_variables
 
 
