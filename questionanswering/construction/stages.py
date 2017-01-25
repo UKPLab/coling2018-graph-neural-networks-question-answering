@@ -102,7 +102,7 @@ def last_relation_numeric(g):
     >>> last_relation_numeric({'edgeSet': [{'right':[2]}], 'entities': [(["Natalie", "Portman"], 'PERSON')]})
     []
     """
-    if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g) or any('num' in e for e in g['edgeSet']):
+    if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g):
         return []
     if len(g.get('entities', [])) == 0 or not any(t == 'CD' for e, t in g['entities']):
         return []
@@ -127,6 +127,8 @@ def last_relation_temporal(g):
     >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': []}) == [{'edgeSet': [{'right':[2]}, {'right':[8], 'argmax': 'time'}], 'entities': []}, {'edgeSet': [{'right':[2]}, {'right':[8], 'argmin': 'time'}], 'entities': []}]
     True
     >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8], 'argmin':'time'}], 'entities': []})
+    []
+    >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8], 'num':['2009']}], 'entities': []})
     []
     >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'type':'time'}], 'entities': []})
     []

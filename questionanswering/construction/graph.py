@@ -13,7 +13,7 @@ def graph_has_temporal(g):
     :param g: graph as a dictionary
     :return: True if graph has temporal relations, False otherwise
     """
-    return any(any(edge.get(p) == 'time' for p in {'argmax', 'argmin', 'type'}) for edge in g.get('edgeSet', []))
+    return any(any(edge.get(p) == 'time' for p in {'argmax', 'argmin', 'type'}) or 'num' in edge for edge in g.get('edgeSet', []))
 
 
 def if_graph_adheres(g, allowed_extensions=set()):
