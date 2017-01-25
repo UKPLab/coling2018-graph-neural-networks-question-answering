@@ -62,25 +62,27 @@ def add_entity_and_relation(g):
     []
     >>> add_entity_and_relation({'edgeSet': [], 'entities': [(["Natalie", "Portman"], 'PERSON')]}) == [{'edgeSet': [{'right': ['Natalie', 'Portman'], 'rightkbID': 'Q37876'}], 'entities': []}]
     True
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [(['2012'], 'CD'), (["Natalie", "Portman"], 'PERSON')]}) == [{'edgeSet': [{'right': ['Natalie', 'Portman'], 'rightkbID': 'Q37876'}], 'entities': [(['2012'], 'CD')]}]
+    True
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [(['2012'], 'CD')]})
+    []
     """
     if len(g.get('entities', [])) == 0:
         return []
     entities = copy.copy(g.get('entities', []))
+    skipped = []
     new_graphs = []
     while entities:
         entity = entities.pop(0)
-        # if entity[1] == 'CD':
-        #     new_g = graph.copy_graph(g)
-        #     new_g['entities'] = entities[:]
-        #     new_g['edgeSet'].append({'right': entity[0], 'rightkbID': "CD"})
-        #     new_graphs.append(new_g)
-        # else:
-        linkings = entity_linking.link_entity(entity)
-        for linking in linkings:
-            new_g = graph.copy_graph(g)
-            new_g['entities'] = entities[:]
-            new_g['edgeSet'].append({'right': entity[0], 'rightkbID': linking})
-            new_graphs.append(new_g)
+        if entity[1] == 'CD':
+            skipped.append(entity)
+        else:
+            linkings = entity_linking.link_entity(entity)
+            for linking in linkings:
+                new_g = graph.copy_graph(g)
+                new_g['entities'] = entities[:] + skipped
+                new_g['edgeSet'].append({'right': entity[0], 'rightkbID': linking})
+                new_graphs.append(new_g)
     return new_graphs
 
 
