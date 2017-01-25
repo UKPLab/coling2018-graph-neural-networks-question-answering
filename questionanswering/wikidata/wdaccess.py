@@ -224,7 +224,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
             #     sparql_relation_inst += sparql_relation_filter.replace("%relationvar%", v)
 
         if 'hopUp' in edge or 'hopDown' in edge:
-            hop = 'hopUp' if 'hopDown' in edge  else 'hopUp'
+            hop = 'hopDown' if 'hopDown' in edge else 'hopUp'
             sparql_hop = sparql_entity_specify if 'hopDown' in edge else sparql_entity_abstract
             sparql_relation_inst = sparql_relation_inst.replace("?e2", "?e3")
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_hop + " %restriction%")
