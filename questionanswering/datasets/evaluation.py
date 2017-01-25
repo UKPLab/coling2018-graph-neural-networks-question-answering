@@ -44,6 +44,10 @@ def retrieval_prec_rec_f1(gold, predicted):
     (0.3333333333333333, 0.25, 0.28571428571428575)
     >>> retrieval_prec_rec_f1(['Star Wars', 'Black Swan', 'Thor', 'Leon'], [])
     (0.0, 0.0, 0.0)
+    >>> retrieval_prec_rec_f1([1,2], [1,2,3])
+    (0.6666666666666666, 1.0, 0.8)
+    >>> retrieval_prec_rec_f1([1,2], [1])
+    (1.0, 0.5, 0.6666666666666666)
     """
     prec = retrieval_precision(gold, predicted) if len(predicted) > 0 else 0.0
     rec = retrieval_precision(predicted, gold) if len(gold) > 0 else 0.0

@@ -31,8 +31,8 @@ def generate_with_gold(ungrounded_graph, gold_answers):
         iterations += 1
         g = pool.pop(0)
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
-
-        if g[1][2] < 0.7:
+        master_g_fscore = g[1][2]
+        if master_g_fscore < 0.7:
             logger.debug("Restricting")
             restricted_graphs = stages.restrict(g[0])
             logger.debug("Suggested graphs: {}".format(restricted_graphs))
@@ -40,12 +40,12 @@ def generate_with_gold(ungrounded_graph, gold_answers):
             suggested_graphs = restricted_graphs[:]
             while not chosen_graphs and suggested_graphs:
                 s_g = suggested_graphs.pop(0)
-                chosen_graphs = ground_with_gold([s_g], gold_answers)
+                chosen_graphs = ground_with_gold([s_g], gold_answers, min_fscore=master_g_fscore)
                 if not chosen_graphs:
                     logger.debug("Expanding")
                     expanded_graphs = stages.expand(s_g)
                     logger.debug("Expanded graphs: {}".format(expanded_graphs))
-                    chosen_graphs = ground_with_gold(expanded_graphs, gold_answers)
+                    chosen_graphs = ground_with_gold(expanded_graphs, gold_answers, min_fscore=master_g_fscore)
             if len(chosen_graphs) > 0:
                 logger.debug("Extending the pool.")
                 pool.extend(chosen_graphs)
@@ -61,7 +61,7 @@ def generate_with_gold(ungrounded_graph, gold_answers):
     return generated_graphs
 
 
-def ground_with_gold(input_graphs, gold_answers):
+def ground_with_gold(input_graphs, gold_answers, min_fscore=0.0):
     """
     For each graph among the suggested_graphs find its groundings in the WikiData, then evaluate each suggested graph
     with each of its possible groundings and compare the denotations with the answers embedded in the question_obj.
@@ -85,7 +85,7 @@ def ground_with_gold(input_graphs, gold_answers):
     evaluation_results = [evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers[i]) for i in
                           range(len(grounded_graphs))]
     chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
-                     for i in range(len(grounded_graphs)) if evaluation_results[i][2] > 0.0]
+                     for i in range(len(grounded_graphs)) if evaluation_results[i][2] > min_fscore]
     if len(chosen_graphs) > 3:
         chosen_graphs = sorted(chosen_graphs, key=lambda x: x[1][2], reverse=True)[:3]
     logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
