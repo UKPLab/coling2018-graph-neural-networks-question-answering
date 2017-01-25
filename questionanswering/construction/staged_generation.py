@@ -151,6 +151,8 @@ def find_groundings(g):
     :param g: the graph to ground
     :return: a list of graph groundings.
     """
+    if not any('hopUp' in e or 'hopDown' in e for e in g.get('edgeSet', []) if not('type' in e and 'kbID' in e)):
+        return wdaccess.query_graph_groundings(g)
     query_results = []
     num_edges_to_ground = sum(1 for e in g.get('edgeSet', []) if not('type' in e and 'kbID' in e))
     edge_type_combinations = list(itertools.product(*[['direct', 'reverse']]*num_edges_to_ground))
