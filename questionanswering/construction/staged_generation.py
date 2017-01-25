@@ -61,6 +61,37 @@ def generate_with_gold(ungrounded_graph, gold_answers):
     return generated_graphs
 
 
+def ground_with_gold(input_graphs, gold_answers):
+    """
+    For each graph among the suggested_graphs find its groundings in the WikiData, then evaluate each suggested graph
+    with each of its possible groundings and compare the denotations with the answers embedded in the question_obj.
+    Return all groundings that produce an f-score > 0.0
+
+    :param input_graphs: a list of ungrounded graphs
+    :param gold_answers: a set of gold answers
+    :return: a list of graph groundings
+    """
+    logger.debug("Input graphs: {}".format(input_graphs))
+    grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in wdaccess.query_graph_groundings(s_g)]
+    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
+    logger.debug("First one: {}".format(grounded_graphs[:1]))
+
+    retrieved_answers = [wdaccess.query_graph_denotations(s_g) for s_g in grounded_graphs]
+    post_process_results = wdaccess.label_query_results if generation_p['label.query.results'] else wdaccess.map_query_results
+    retrieved_answers = [post_process_results(answer_set) for answer_set in retrieved_answers]
+    logger.debug(
+        "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
+
+    evaluation_results = [evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers[i]) for i in
+                          range(len(grounded_graphs))]
+    chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
+                     for i in range(len(grounded_graphs)) if evaluation_results[i][2] > 0.0]
+    if len(chosen_graphs) > 3:
+        chosen_graphs = sorted(chosen_graphs, key=lambda x: x[1][2], reverse=True)[:3]
+    logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
+    return chosen_graphs
+
+
 def approximate_groundings(g):
     """
     Retrieve possible groundings for a given graph.
@@ -118,32 +149,6 @@ def find_groundings(g):
     return graph_groundings
 
 
-def find_groundings_by_overlap(g):
-    """
-    Retrieve possible groundings for a given graph.
-    Not implemented yet.
-
-    :param g: the graph to ground
-    :return: a list of graph groundings.
-    >>> len(find_groundings({'edgeSet': [{'right': ['Percy', 'Jackson'], 'rightkbID': 'Q3899725'}, {'rightkbID': 'Q571', 'right': ['book']}]}))
-    1
-    """
-    separate_groundings = []
-    graph_groundings = []
-    for i, edge in enumerate(g.get('edgeSet', [])):
-        t = {'edgeSet': [edge]}
-        edge_groundings = wdaccess.query_graph_groundings(t, use_cache=True, with_denotations=True)
-
-        edge_groundings = [apply_grounding(t, p) for p in wdaccess.query_graph_groundings(t, use_cache=True, with_denotations=True)]
-        separate_groundings.append([p['edgeSet'][0] for p in edge_groundings])
-    graph_groundings = []
-    for edge_set in list(itertools.product(*separate_groundings)):
-        new_g = graph.copy_graph(g)
-        new_g['edgeSet'] = list(edge_set)
-        graph_groundings.append(new_g)
-    return graph_groundings
-
-
 def verify_grounding(g):
     """
     Verify the given graph with (partial) grounding exists in wikidata.
@@ -152,37 +157,6 @@ def verify_grounding(g):
     :return: true if the graph exists, false otherwise
     """
     return wdaccess.query_wikidata(wdaccess.graph_to_ask(g))
-
-
-def ground_with_gold(input_graphs, gold_answers):
-    """
-    For each graph among the suggested_graphs find its groundings in the WikiData, then evaluate each suggested graph
-    with each of its possible groundings and compare the denotations with the answers embedded in the question_obj.
-    Return all groundings that produce an f-score > 0.0
-
-    :param input_graphs: a list of ungrounded graphs
-    :param gold_answers: a set of gold answers
-    :return: a list of graph groundings
-    """
-    logger.debug("Input graphs: {}".format(input_graphs))
-    grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in wdaccess.query_graph_groundings(s_g)]
-    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
-    logger.debug("First one: {}".format(grounded_graphs[:1]))
-
-    retrieved_answers = [wdaccess.query_graph_denotations(s_g) for s_g in grounded_graphs]
-    post_process_results = wdaccess.label_query_results if generation_p['label.query.results'] else wdaccess.map_query_results
-    retrieved_answers = [post_process_results(answer_set) for answer_set in retrieved_answers]
-    logger.debug(
-        "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
-
-    evaluation_results = [evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers[i]) for i in
-                          range(len(grounded_graphs))]
-    chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
-                     for i in range(len(grounded_graphs)) if evaluation_results[i][2] > 0.0]
-    if len(chosen_graphs) > 3:
-        chosen_graphs = sorted(chosen_graphs, key=lambda x: x[1][2], reverse=True)[:3]
-    logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
-    return chosen_graphs
 
 
 def generate_without_gold(ungrounded_graph,
