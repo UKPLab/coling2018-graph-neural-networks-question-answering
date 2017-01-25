@@ -40,7 +40,7 @@ def generate_with_gold(ungrounded_graph, gold_answers):
             logger.debug("Chosen graphs length: {}".format(len(chosen_graphs)))
             if not chosen_graphs:
                 logger.debug("Expanding")
-                expanded_graphs = [e_g for c_g in chosen_graphs for e_g in stages.expand(c_g)]
+                expanded_graphs = [e_g for c_g in restricted_graphs for e_g in stages.expand(c_g)]
                 logger.debug("Expanded graphs (10): {}".format(expanded_graphs[:10]))
                 chosen_graphs = ground_with_gold(expanded_graphs, gold_answers, min_fscore=master_g_fscore)
             if len(chosen_graphs) > 0:
