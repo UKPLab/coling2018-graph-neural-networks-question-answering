@@ -26,7 +26,7 @@ webquestions:
   target.dist: True
   replace.entities: False
   normalize.tokens: False
-  extensions: ['hopUp', 'temporal', 'multi_rel', 'qualifier_rel', 'v-structure']
+  extensions: ['hopUp', 'hopDown', 'temporal', 'multi_rel', 'qualifier_rel', 'v-structure']
   path.to.dataset:
     train_train: "../data/input/webquestions.examples.train.train.json"
     train_validation: "../data/input/webquestions.examples.train.validation.json"

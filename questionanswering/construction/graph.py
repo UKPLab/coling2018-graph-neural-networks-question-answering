@@ -41,6 +41,8 @@ def if_graph_adheres(g, allowed_extensions=set()):
         return False
     if 'hopUp' not in allowed_extensions and any('hopUp' in e for e in g.get('edgeSet', [])):
         return False
+    if 'hopDown' not in allowed_extensions and any('hopDown' in e for e in g.get('edgeSet', [])):
+        return False
     if 'qualifier_rel' not in allowed_extensions and any(e.get('kbID', "").endswith('q') for e in g.get('edgeSet', [])):
         return False
     if 'multi_rel' not in allowed_extensions and len(g.get('edgeSet', [])) > 1:

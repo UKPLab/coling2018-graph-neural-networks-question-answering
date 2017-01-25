@@ -233,7 +233,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
                 sparql_relation_inst = sparql_relation_inst.replace("?hops",  "e:" + edge[hop][:-1] + "s")
             else:
                 sparql_relation_inst = sparql_hopup_values + sparql_relation_inst
-                local_variables.append("?hopup{}v".format(i))
+                local_variables.append("?hop{}v".format(i))
 
         if any(arg_type in edge for arg_type in ['argmax', 'argmin']):
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_restriction_time_argmax)
@@ -251,7 +251,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
 
         sparql_relation_inst = sparql_relation_inst.replace("?p", "?p" + str(i))
         sparql_relation_inst = sparql_relation_inst.replace("?m", "?m" + str(i))
-        sparql_relation_inst = sparql_relation_inst.replace("?hopup", "?hopup" + str(i))
+        sparql_relation_inst = sparql_relation_inst.replace("?hop", "?hop" + str(i))
 
         if 'rightkbID' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", "e:" + edge['rightkbID'])

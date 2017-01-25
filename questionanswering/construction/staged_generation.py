@@ -281,8 +281,11 @@ def apply_grounding(g, grounding):
     for i, edge in enumerate(grounded.get('edgeSet', [])):
         if "e2" + str(i) in grounding:
             edge['rightkbID'] = grounding["e2" + str(i)]
-        if "hopup{}v".format(i) in grounding:
-            edge['hopUp'] = grounding["hopup{}v".format(i)]
+        if "hop{}v".format(i) in grounding:
+            if 'hopUp' in edge:
+                edge['hopUp'] = grounding["hop{}v".format(i)]
+            else:
+                edge['hopDown'] = grounding["hop{}v".format(i)]
         if "r{}d".format(i) in grounding:
             edge['kbID'] = grounding["r{}d".format(i)]
             edge['type'] = 'direct'
