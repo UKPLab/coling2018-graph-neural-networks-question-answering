@@ -31,7 +31,7 @@ def generate(config_file_path):
 
     staged_generation.generation_p['label.query.results'] = config['generation'].get('label.query.results', False)
     entity_linking.entity_linking_p["max.entity.options"] = config['generation']["max.entity.options"]
-    wdaccess.wdaccess_p["restrict.hopup"] = config['wikidata'].get("restrict.hopup", False)
+    wdaccess.wdaccess_p["restrict.hop"] = config['wikidata'].get("restrict.hop", False)
     wdaccess.update_sparql_clauses()
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)

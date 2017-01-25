@@ -13,7 +13,7 @@ wdaccess_p = {
     'timeout': 40,
     'global_result_limit': 1000,
     'logger': logging.getLogger(__name__),
-    'restrict.hopup': False
+    'restrict.hop': False
 }
 
 logger = wdaccess_p['logger']
@@ -110,9 +110,8 @@ TEMPORAL_RELATIONS_Q = {"P585q", "P580q", "P582q", "P577q", "P571q"}
 TEMPORAL_RELATIONS_V = {"P580v", "P582v", "P577v", "P571v", "P569v", "P570v"}
 TEMPORAL_RELATIONS = TEMPORAL_RELATIONS_Q | TEMPORAL_RELATIONS_V
 
-sparql_entity_abstract = "?e3 ?hopups [ ?hopupv ?e2]."
-sparql_entity_specify = " ?e2 ?hopups [ ?hopupv ?e3]. "
-#Can we also have something like [ [?e2 ?hopups ] ?hopupv ]
+sparql_entity_abstract = "?e3 ?hops [ ?hopv ?e2]."
+sparql_entity_specify = " ?e2 ?hops [ ?hopv ?e3]. "
 sparql_hopup_values = ""
 sparql_temporal_values_q = "VALUES ?a {" + " ".join(["e:{}".format(r) for r in TEMPORAL_RELATIONS_Q]) + "}"
 sparql_temporal_values_v = "VALUES ?a {" + " ".join(["e:{}".format(r) for r in TEMPORAL_RELATIONS_V]) + "}"
@@ -122,8 +121,8 @@ FILTER_ENDINGS = "r"
 
 def update_sparql_clauses():
     global sparql_hopup_values
-    if wdaccess_p.get('restrict.hopup'):
-        sparql_hopup_values = "VALUES (?hopups ?hopupv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
+    if wdaccess_p.get('restrict.hop'):
+        sparql_hopup_values = "VALUES (?hops ?hopv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
 
 
 def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exception=False):
@@ -224,11 +223,14 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
             # for v in local_variables:
             #     sparql_relation_inst += sparql_relation_filter.replace("%relationvar%", v)
 
-        if 'hopUp' in edge:
-            sparql_relation_inst = sparql_relation_inst.replace("?e2", sparql_entity_abstract)
-            if edge['hopUp']:
-                sparql_relation_inst = sparql_relation_inst.replace("?hopupv",  "e:" + edge['hopUp'])
-                sparql_relation_inst = sparql_relation_inst.replace("?hopups",  "e:" + edge['hopUp'][:-1] + "s")
+        if 'hopUp' in edge or 'hopDown' in edge:
+            hop = 'hopUp' if 'hopDown' in edge  else 'hopUp'
+            sparql_hop = sparql_entity_specify if 'hopDown' in edge else sparql_entity_abstract
+            sparql_relation_inst = sparql_relation_inst.replace("?e2", "?e3")
+            sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_hop + " %restriction%")
+            if edge[hop]:
+                sparql_relation_inst = sparql_relation_inst.replace("?hopv",  "e:" + edge[hop])
+                sparql_relation_inst = sparql_relation_inst.replace("?hops",  "e:" + edge[hop][:-1] + "s")
             else:
                 sparql_relation_inst = sparql_hopup_values + sparql_relation_inst
                 local_variables.append("?hopup{}v".format(i))

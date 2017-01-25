@@ -67,5 +67,5 @@ model:
 
 wikidata:
   evaluate: True
-  restrict.hopup: True
+  restrict.hop: True
 
