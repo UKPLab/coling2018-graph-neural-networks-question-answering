@@ -36,16 +36,13 @@ def generate_with_gold(ungrounded_graph, gold_answers):
             logger.debug("Restricting")
             restricted_graphs = stages.restrict(g[0])
             logger.debug("Suggested graphs: {}".format(restricted_graphs))
-            chosen_graphs = []
-            suggested_graphs = restricted_graphs[:]
-            while not chosen_graphs and suggested_graphs:
-                s_g = suggested_graphs.pop(0)
-                chosen_graphs = ground_with_gold([s_g], gold_answers, min_fscore=master_g_fscore)
-                if not chosen_graphs:
-                    logger.debug("Expanding")
-                    expanded_graphs = stages.expand(s_g)
-                    logger.debug("Expanded graphs: {}".format(expanded_graphs))
-                    chosen_graphs = ground_with_gold(expanded_graphs, gold_answers, min_fscore=master_g_fscore)
+            chosen_graphs = ground_with_gold(restricted_graphs, gold_answers, min_fscore=master_g_fscore)
+            logger.debug("Chosen graphs length: {}".format(len(chosen_graphs)))
+            if not chosen_graphs:
+                logger.debug("Expanding")
+                expanded_graphs = [e_g for c_g in chosen_graphs for e_g in stages.expand(c_g)]
+                logger.debug("Expanded graphs (10): {}".format(expanded_graphs[:10]))
+                chosen_graphs = ground_with_gold(expanded_graphs, gold_answers, min_fscore=master_g_fscore)
             if len(chosen_graphs) > 0:
                 logger.debug("Extending the pool.")
                 pool.extend(chosen_graphs)
