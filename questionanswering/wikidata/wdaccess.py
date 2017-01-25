@@ -90,7 +90,7 @@ sparql_canoncial_label_entity = """
         """
 
 
-sparql_restriction_time_argmax = "?m ?a [base:time ?n]."
+sparql_restriction_time_argmax = "?m ?a [base:time ?n]. FILTER (YEAR(?n) = ?yearvalue)"
 
 sparql_relation_filter = 'FILTER NOT EXISTS { GRAPH <http://wikidata.org/properties> {%relationvar% rdf:type base:Property}}'
 
@@ -220,6 +220,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
 
         if any(arg_type in edge for arg_type in ['argmax', 'argmin']):
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_restriction_time_argmax)
+            sparql_relation_inst = sparql_relation_inst.replace("FILTER (YEAR(?n) = ?yearvalue)", "")
             # sparql_relation_inst = sparql_relation_inst.replace("?n", "?n" + str(i))
             # sparql_relation_inst = sparql_relation_inst.replace("?a", "?a" + str(i))
             if return_var_values:
@@ -227,7 +228,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
                 limit = 1
         elif 'num' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_restriction_time_argmax)
-            sparql_relation_inst = sparql_relation_inst.replace("?n",  "\"{}\"^^xsd:dateTime".format(" ".join(edge['num'])))
+            sparql_relation_inst = sparql_relation_inst.replace("?yearvalue",  " ".join(edge['num']))
         else:
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", "")
 
@@ -240,8 +241,9 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
         elif 'right' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", "?e2" + str(i))
             right_label = " ".join(edge['right'])
-            sparql_entity_label_inst = sparql_entity_label.replace("?e2", "?e2" + str(i))
-            sparql_entity_label_inst = sparql_entity_label_inst.replace("%labelright%", right_label)
+            sparql_entity_label_inst = sparql_entity_label.replace("VALUES ?labelright { %entitylabels }", "")
+            sparql_entity_label_inst = sparql_entity_label_inst.replace("?e2", "?e2" + str(i))
+            sparql_entity_label_inst = sparql_entity_label_inst.replace("?labelright", "\"{}\"@en".format(right_label))
             local_variables.append("?e2" + str(i))
             query += sparql_entity_label_inst
         sparql_relation_inst = sparql_relation_inst.replace("_:m", "_:m" + str(i))
