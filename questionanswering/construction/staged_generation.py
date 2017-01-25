@@ -80,7 +80,7 @@ def ground_with_gold(input_graphs, gold_answers, min_fscore=0.0):
     all_chosen_graphs, all_not_chosen_graphs = [], []
     input_graphs = input_graphs[:]
     current_f_score = min_fscore
-    while input_graphs and current_f_score < 0.9:
+    while input_graphs and current_f_score < 0.9 and len(all_chosen_graphs) < 3:
         s_g = input_graphs.pop(0)
         chosen_graphs, not_chosen_graphs = ground_one_with_gold(s_g, gold_answers, min_fscore)
         all_chosen_graphs += chosen_graphs
