@@ -79,14 +79,11 @@ def ground_with_gold(input_graphs, gold_answers, min_fscore=0.0):
     logger.debug("Input graphs: {}".format(input_graphs))
     all_chosen_graphs, all_not_chosen_graphs = [], []
     input_graphs = input_graphs[:]
-    current_f_score = min_fscore
-    while input_graphs and current_f_score < 0.9 and len(all_chosen_graphs) < 3:
+    while input_graphs and len(all_chosen_graphs) == 0:
         s_g = input_graphs.pop(0)
         chosen_graphs, not_chosen_graphs = ground_one_with_gold(s_g, gold_answers, min_fscore)
         all_chosen_graphs += chosen_graphs
         all_not_chosen_graphs += not_chosen_graphs
-        if all_chosen_graphs:
-            current_f_score = max(g[1][2] if len(g) > 1 else 0.0 for g in all_chosen_graphs)
     if len(all_chosen_graphs) > 3:
         all_chosen_graphs = sorted(all_chosen_graphs, key=lambda x: x[1][2], reverse=True)[:3]
     logger.debug("Number of chosen groundings: {}".format(len(all_chosen_graphs)))
@@ -213,8 +210,8 @@ def generate_without_gold(ungrounded_graph,
     :return: a list of generated grounded graphs
     """
     pool = [ungrounded_graph]  # pool of possible parses
-    wikidata_actions_restrict = wikidata_actions & stages.RESTRICT_ACTIONS
-    wikidata_actions_expand = wikidata_actions & stages.EXPAND_ACTIONS
+    wikidata_actions_restrict = wikidata_actions & set(stages.RESTRICT_ACTIONS)
+    wikidata_actions_expand = wikidata_actions & set(stages.EXPAND_ACTIONS)
     generated_graphs = []
     iterations = 0
     while pool:
