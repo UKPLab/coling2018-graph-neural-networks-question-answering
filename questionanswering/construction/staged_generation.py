@@ -7,7 +7,7 @@ from construction import stages, graph
 from datasets import evaluation
 
 generation_p = {
-    'label.query.results': False,
+    'label.query.results': True,
     'logger': logging.getLogger(__name__),
 }
 
@@ -23,6 +23,11 @@ def generate_with_gold(ungrounded_graph, gold_answers):
     :param ungrounded_graph: the starting graph that should contain a list of tokens and a list of entities
     :param gold_answers: list of gold answers for the encoded question
     :return: a list of generated grounded graphs
+    >>> max(g[1][2] if len(g) > 1 else 0.0 for g in generate_with_gold({'edgeSet': [], 'entities': [(['Nobel', 'Peace', 'Prize'], 'URL'), (['the', 'winner'], 'NN'), (['2009'], 'CD')]}, gold_answers=['barack obama']))
+    1.0
+    >>> max(g[1][2] if len(g) > 1 else 0.0 for g in generate_with_gold({'edgeSet': [], 'entities': [(['Texas', 'Rangers'], 'URL')], \
+            'tokens': ['when', 'were', 'the', 'texas', 'rangers', 'started', '?']}, gold_answers=['1972']))
+    1.0
     """
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
     positive_graphs, negative_graphs = [], []

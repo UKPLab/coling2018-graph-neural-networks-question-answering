@@ -82,6 +82,13 @@ sparql_label_entity = """
         }
         """
 
+sparql_year_entity = """
+        {
+        VALUES ?e2 { %entityids }
+        GRAPH <http://wikidata.org/statements> { ?e2 base:time ?et. BIND (YEAR(?et) AS ?label) }
+        }
+        """
+
 sparql_canoncial_label_entity = """
         {
         GRAPH <http://wikidata.org/terms> { ?e2 rdfs:label ?label }
@@ -138,6 +145,9 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exce
         if groundings is None:  # If there was an exception
             return None if pass_exception else []
         groundings = [r for r in groundings if not any(r[b][:-1] in property_blacklist or r[b] in TEMPORAL_RELATIONS or r[b][-1] in FILTER_ENDINGS for b in r)]
+        question_text = " ".join(g.get('tokens', []))
+        if not question_text.startswith("when") and not question_text.startswith("what year"):
+            groundings = [r for r in groundings if not any(r[b] in TEMPORAL_RELATIONS for b in r)]
         return groundings
     return [{}]
 
@@ -153,9 +163,13 @@ def query_graph_denotations(g):
     []
     >>> query_graph_denotations({'edgeSet': [{'type': 'reverse', 'rightkbID': 'Q35637', 'kbID':"P1346v", 'num':['2009']}]})
     [{'e1': 'Q76'}]
+    >>> query_graph_denotations({'edgeSet': [{'type': 'reverse', 'rightkbID': 'Q329816', 'kbID':"P571v"}], 'tokens':["when", "did","start"]})
+    [{'e1': 'VTfb0eeb812ca69194eaaa87efa0c6d51d'}]
     """
     denotations = query_wikidata(graph_to_query(g, return_var_values=True))
-    denotations = [r for r in denotations if any('-' not in r[b] and r[b][0] in 'pqPQ' for b in r)]  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
+    question_text = " ".join(g.get('tokens', []))
+    if not question_text.startswith("when") and not question_text.startswith("what year"):
+        denotations = [r for r in denotations if any('-' not in r[b] and r[b][0] in 'pqPQ' for b in r)]  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
     return denotations
 
 
@@ -379,7 +393,12 @@ def multientity_label_query(entities, limit=10):
     variables = []
     query += sparql_select
     query += "{"
-    sparql_label_entity_inst = sparql_label_entity.replace("%entityids", " ".join(["e:" + entity for entity in entities]))
+    if all(e[0] not in 'qQ' or '-' in e for e in entities):
+        sparql_label_entity_inst = sparql_year_entity
+    else:
+        entities = [e for e in entities if '-' not in e and e[0] in 'pqPQ']
+        sparql_label_entity_inst = sparql_label_entity
+    sparql_label_entity_inst = sparql_label_entity_inst.replace("%entityids", " ".join(["e:" + entity for entity in entities]))
     sparql_label_entity_inst = sparql_label_entity_inst.replace("?label", "?label" + str(0))
     variables.append("?e2")
     variables.append("?label" + str(0))
@@ -530,6 +549,8 @@ def label_many_entities_with_alt_labels(entities):
     >>> dict(label_many_entities_with_alt_labels(["Q76", "Q188984", "Q194339"])) == \
     {"Q188984": ["New York Rangers"], "Q76": ["Barack Obama", "Barack Hussein Obama II", "Obama", "Barack Hussein Obama", "Barack Obama II"], "Q194339": ["Bahamian dollar"]}
     True
+    >>> dict(label_many_entities_with_alt_labels(["VTfb0eeb812ca69194eaaa87efa0c6d51d"]))
+    {'VTfb0eeb812ca69194eaaa87efa0c6d51d': ['1972']}
     """
     results = query_wikidata(multientity_label_query(entities), starts_with="", use_cache=False)
     if len(results) > 0:
@@ -552,7 +573,7 @@ def label_query_results(query_results, question_variable='e1'):
     [['barack obama', 'barack hussein obama ii', 'obama', 'barack hussein obama', 'barack obama ii'], ['james i of scotland', 'james i, king of scots']]
     """
     answers = [r[question_variable] for r in query_results]
-    answers = [a for a in answers if '-' not in a and a[0] in 'pqPQ']  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
+    # answers = [a for a in answers if '-' not in a and a[0] in 'pqPQ']  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
     answers = [[l.lower() for l in labels] for _, labels in label_many_entities_with_alt_labels(answers).items()]
     # answers = [[l.get('label0').lower() for l in query_wikidata(label_query(a), starts_with="", use_cache=True)] for a in answers]
     return answers
