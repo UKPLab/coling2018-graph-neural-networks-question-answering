@@ -80,7 +80,7 @@ def ground_with_gold(input_graphs, gold_answers, min_fscore=0.0):
     post_process_results = wdaccess.label_query_results if generation_p['label.query.results'] else wdaccess.map_query_results
     retrieved_answers = [post_process_results(answer_set) for answer_set in retrieved_answers]
     logger.debug(
-        "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[:1]))
+        "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[0][:10] if len(retrieved_answers) > 0 else []))
 
     evaluation_results = [evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers[i]) for i in
                           range(len(grounded_graphs))]
