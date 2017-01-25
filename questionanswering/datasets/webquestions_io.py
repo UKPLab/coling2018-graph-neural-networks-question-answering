@@ -20,7 +20,7 @@ class WebQuestions(Loggable):
         self._p = parameters
         path_to_dataset = self._p["path.to.dataset"]
         self.logger.debug("Loading data")
-        # Load the tagged version. This part should be lways present.
+        # Load the tagged version. This part should be always present.
         with open(path_to_dataset["train_tagged"]) as f:
             self._dataset_tagged = json.load(f)
         self.logger.debug("Tagged: {}".format(len(self._dataset_tagged)))
