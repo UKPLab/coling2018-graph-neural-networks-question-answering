@@ -94,7 +94,7 @@ def ground_with_gold(input_graphs, gold_answers, min_fscore=0.0):
 
 
 def ground_one_with_gold(s_g, gold_answers, min_fscore):
-    grounded_graphs = [apply_grounding(s_g, p) for p in wdaccess.query_graph_groundings(s_g)]
+    grounded_graphs = [apply_grounding(s_g, p) for p in find_groundings(s_g)]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     logger.debug("First one: {}".format(grounded_graphs[:1]))
     retrieved_answers = [wdaccess.query_graph_denotations(s_g) for s_g in grounded_graphs]
@@ -150,7 +150,26 @@ def find_groundings(g):
 
     :param g: the graph to ground
     :return: a list of graph groundings.
-    >>> len(find_groundings({'edgeSet': [{'right': ['Percy', 'Jackson'], 'rightkbID': 'Q3899725'}, {'rightkbID': 'Q571', 'right': ['book']}]}))
+    """
+    query_results = []
+    num_edges_to_ground = sum(1 for e in g.get('edgeSet', []) if not('type' in e and 'kbID' in e))
+    edge_type_combinations = list(itertools.product(*[['direct', 'reverse']]*num_edges_to_ground))
+    for type_combindation in edge_type_combinations:
+        t = graph.copy_graph(g)
+        for i, edge in enumerate([e for e in t.get('edgeSet', []) if not('type' in e and 'kbID' in e)]):
+            edge['type'] = type_combindation[i]
+        query_results += wdaccess.query_graph_groundings(t)
+    return query_results
+
+
+def find_groundings_with_gold(g):
+    """
+    Retrieve possible groundings for a given graph.
+    Doesn't work for complex graphs yet.
+
+    :param g: the graph to ground
+    :return: a list of graph groundings.
+    >>> len(find_groundings_with_gold({'edgeSet': [{'right': ['Percy', 'Jackson'], 'rightkbID': 'Q3899725'}, {'rightkbID': 'Q571', 'right': ['book']}]}))
     1
     """
     graph_groundings = []
@@ -245,7 +264,7 @@ def ground_without_gold(input_graphs):
     :param input_graphs: a list of ungrounded graphs
     :return: a list of graph groundings
     """
-    grounded_graphs = [p for s_g in tqdm.tqdm(input_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) for p in find_groundings(s_g)]
+    grounded_graphs = [p for s_g in tqdm.tqdm(input_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) for p in find_groundings_with_gold(s_g)]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     logger.debug("First one: {}".format(grounded_graphs[:1]))
 

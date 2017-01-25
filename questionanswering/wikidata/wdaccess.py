@@ -40,7 +40,6 @@ sparql_ask = """
         ASK WHERE
         """
 
-
 sparql_relation = {
     "direct": """
         {GRAPH <http://wikidata.org/statements> { ?e1 ?p ?m . ?m ?rd ?e2 . %restriction% }}
