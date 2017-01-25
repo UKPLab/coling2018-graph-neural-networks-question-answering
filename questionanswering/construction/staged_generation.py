@@ -25,9 +25,9 @@ def generate_with_gold(ungrounded_graph, gold_answers):
     :return: a list of generated grounded graphs
     """
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
-    generated_graphs = []
+    positive_graphs, negative_graphs = [], []
     iterations = 0
-    while pool and (generated_graphs[-1][1][2] if len(generated_graphs) > 0 else 0.0) < 0.9:
+    while pool and (positive_graphs[-1][1][2] if len(positive_graphs) > 0 else 0.0) < 0.9:
         iterations += 1
         g = pool.pop(0)
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
@@ -35,27 +35,29 @@ def generate_with_gold(ungrounded_graph, gold_answers):
         if master_g_fscore < 0.7:
             logger.debug("Restricting")
             restricted_graphs = stages.restrict(g[0])
+            restricted_graphs = [add_canonical_labels_to_entities(r_g) for r_g in restricted_graphs]
             logger.debug("Suggested graphs: {}".format(restricted_graphs))
-            chosen_graphs = ground_with_gold(restricted_graphs, gold_answers, min_fscore=master_g_fscore)
+            chosen_graphs, not_chosen_graphs = ground_with_gold(restricted_graphs, gold_answers, min_fscore=master_g_fscore)
+            negative_graphs += not_chosen_graphs
             logger.debug("Chosen graphs length: {}".format(len(chosen_graphs)))
             if not chosen_graphs:
                 logger.debug("Expanding")
                 expanded_graphs = [e_g for c_g in restricted_graphs for e_g in stages.expand(c_g)]
                 logger.debug("Expanded graphs (10): {}".format(expanded_graphs[:10]))
-                chosen_graphs = ground_with_gold(expanded_graphs, gold_answers, min_fscore=master_g_fscore)
+                chosen_graphs, not_chosen_graphs = ground_with_gold(expanded_graphs, gold_answers, min_fscore=master_g_fscore)
+                negative_graphs += not_chosen_graphs
             if len(chosen_graphs) > 0:
                 logger.debug("Extending the pool.")
                 pool.extend(chosen_graphs)
             else:
-                g = (add_canonical_labels_to_entities(g[0]), g[1], g[2])
                 logger.debug("Extending the generated graph set: {}".format(g))
-                generated_graphs.append(g)
+                positive_graphs.append(g)
         else:
-            g = (add_canonical_labels_to_entities(g[0]), g[1], g[2])
             logger.debug("Extending the generated graph set: {}".format(g))
-            generated_graphs.append(g)
+            positive_graphs.append(g)
     logger.debug("Iterations {}".format(iterations))
-    return generated_graphs
+    logger.debug("Negative {}".format(len(negative_graphs)))
+    return positive_graphs + negative_graphs
 
 
 def ground_with_gold(input_graphs, gold_answers, min_fscore=0.0):
@@ -66,6 +68,7 @@ def ground_with_gold(input_graphs, gold_answers, min_fscore=0.0):
 
     :param input_graphs: a list of ungrounded graphs
     :param gold_answers: a set of gold answers
+    :param min_fscore: lower bound on f-score for returned positive graphs
     :return: a list of graph groundings
     """
     logger.debug("Input graphs: {}".format(input_graphs))
@@ -83,10 +86,11 @@ def ground_with_gold(input_graphs, gold_answers, min_fscore=0.0):
                           range(len(grounded_graphs))]
     chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
                      for i in range(len(grounded_graphs)) if evaluation_results[i][2] > min_fscore]
+    not_chosen_graphs = [(grounded_graphs[i],) for i in range(len(grounded_graphs)) if evaluation_results[i][2] < 0.01]
     if len(chosen_graphs) > 3:
         chosen_graphs = sorted(chosen_graphs, key=lambda x: x[1][2], reverse=True)[:3]
     logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
-    return chosen_graphs
+    return chosen_graphs, not_chosen_graphs
 
 
 def approximate_groundings(g):
