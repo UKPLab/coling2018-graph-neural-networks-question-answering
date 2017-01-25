@@ -77,24 +77,39 @@ def ground_with_gold(input_graphs, gold_answers, min_fscore=0.0):
     :return: a list of graph groundings
     """
     logger.debug("Input graphs: {}".format(input_graphs))
-    grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in wdaccess.query_graph_groundings(s_g)]
+    all_chosen_graphs, all_not_chosen_graphs = [], []
+    input_graphs = input_graphs[:]
+    current_f_score = min_fscore
+    while input_graphs and current_f_score < 0.9:
+        s_g = input_graphs.pop(0)
+        chosen_graphs, not_chosen_graphs = ground_one_with_gold(s_g, gold_answers, min_fscore)
+        all_chosen_graphs += chosen_graphs
+        all_not_chosen_graphs += not_chosen_graphs
+        if all_chosen_graphs:
+            current_f_score = max(g[1][2] if len(g) > 1 else 0.0 for g in all_chosen_graphs)
+    if len(all_chosen_graphs) > 3:
+        all_chosen_graphs = sorted(all_chosen_graphs, key=lambda x: x[1][2], reverse=True)[:3]
+    logger.debug("Number of chosen groundings: {}".format(len(all_chosen_graphs)))
+    return all_chosen_graphs, all_not_chosen_graphs
+
+
+def ground_one_with_gold(s_g, gold_answers, min_fscore):
+    grounded_graphs = [apply_grounding(s_g, p) for p in wdaccess.query_graph_groundings(s_g)]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     logger.debug("First one: {}".format(grounded_graphs[:1]))
-
     retrieved_answers = [wdaccess.query_graph_denotations(s_g) for s_g in grounded_graphs]
-    post_process_results = wdaccess.label_query_results if generation_p['label.query.results'] else wdaccess.map_query_results
+    post_process_results = wdaccess.label_query_results if generation_p[
+        'label.query.results'] else wdaccess.map_query_results
     retrieved_answers = [post_process_results(answer_set) for answer_set in retrieved_answers]
     logger.debug(
-        "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers), retrieved_answers[0][:10] if len(retrieved_answers) > 0 else []))
-
+        "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers),
+                                                                  retrieved_answers[0][:10] if len(
+                                                                      retrieved_answers) > 0 else []))
     evaluation_results = [evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, retrieved_answers[i]) for i in
                           range(len(grounded_graphs))]
     chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
                      for i in range(len(grounded_graphs)) if evaluation_results[i][2] > min_fscore]
     not_chosen_graphs = [(grounded_graphs[i],) for i in range(len(grounded_graphs)) if evaluation_results[i][2] < 0.01]
-    if len(chosen_graphs) > 3:
-        chosen_graphs = sorted(chosen_graphs, key=lambda x: x[1][2], reverse=True)[:3]
-    logger.debug("Number of chosen groundings: {}".format(len(chosen_graphs)))
     return chosen_graphs, not_chosen_graphs
 
 
