@@ -29,26 +29,29 @@ def last_relation_subentities(g):
     return new_graphs
 
 
-def last_relation_hop_up(g):
+def last_relation_hop(g):
     """
     Takes a graph with an existing relation and an intermediate variable by performing a hop-up for the second entity.
 
     :param g: a graph with an non-empty edgeSet
     :return: a list of suggested graphs
-    >>> last_relation_hop_up({'edgeSet': [], 'entities': [[4, 5, 6]]})
+    >>> last_relation_hop({'edgeSet': [], 'entities': [[4, 5, 6]]})
     []
-    >>> last_relation_hop_up({'edgeSet': [{'right':[4,5,6]}], 'entities': []}) == [{'edgeSet': [{'right':[4,5,6], 'hopUp': None}], 'entities': []}]
+    >>> last_relation_hop({'edgeSet': [{'right':[4,5,6]}], 'entities': []}) == [{'edgeSet': [{'right':[4,5,6], 'hopUp': None}], 'entities': []}, {'edgeSet': [{'right':[4,5,6], 'hopDown': None}], 'entities': []}]
     True
-    >>> last_relation_hop_up({'edgeSet': [{'right':[4,5,6], 'hopUp': None}], 'entities': []})
+    >>> last_relation_hop({'edgeSet': [{'right':[4,5,6], 'hopUp': None}], 'entities': []})
     []
-    >>> last_relation_hop_up({'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754"}], 'entities': []}) == [{'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754", 'hopUp': None}], 'entities': []}]
+    >>> last_relation_hop({'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754"}], 'entities': []}) == [{'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754", 'hopUp': None}], 'entities': []}, {'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754", 'hopDown': None}], 'entities': []}]
     True
     """
-    if len(g.get('edgeSet', [])) == 0 or 'hopUp' in g['edgeSet'][-1] or g['edgeSet'][-1].get('type') in {'time'}:
+    if len(g.get('edgeSet', [])) == 0 or any(hop in g['edgeSet'][-1] for hop in {'hopUp', 'hopDown'}) or g['edgeSet'][-1].get('type') in {'time'}:
         return []
-    new_g = graph.copy_graph(g)
-    new_g['edgeSet'][-1]['hopUp'] = None
-    return [new_g]
+    new_graphs = []
+    for hop in ['hopUp', 'hopDown']:
+        new_g = graph.copy_graph(g)
+        new_g['edgeSet'][-1][hop] = None
+        new_graphs.append(new_g)
+    return new_graphs
 
 
 def add_entity_and_relation(g):
@@ -175,11 +178,11 @@ def add_temporal_relation(g):
 RESTRICT_ACTIONS = {add_entity_and_relation, last_relation_temporal, add_temporal_relation, last_relation_numeric}
 # - Expand actions change graph to extract another set of answers and should be
 #   applied to a graph that has empty denotation
-EXPAND_ACTIONS = {last_relation_hop_up}  # Expand actions
+EXPAND_ACTIONS = {last_relation_hop}  # Expand actions
 
 # This division is relevant for constructing all possible groundings without gold answers:
 # - WikiData actions need to be grounded in Wikidata in order to construct the next graph
-WIKIDATA_ACTIONS = {add_entity_and_relation, last_relation_hop_up}
+WIKIDATA_ACTIONS = {add_entity_and_relation, last_relation_hop}
 # - Non linking options just add options to the graph structure without checking if it is possible in WikiData.
 #   Hop-up is always possible anyway, temporal is possible most of the time.
 NON_LINKING_ACTIONS = {last_relation_temporal, add_temporal_relation, last_relation_numeric}
