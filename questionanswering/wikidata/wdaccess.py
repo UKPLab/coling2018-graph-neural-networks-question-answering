@@ -57,12 +57,9 @@ sparql_relation = {
 
 sparql_relation_complex = """
     {
-    { SELECT DISTINCT ?rd %complexvariables% WHERE {
     """ + sparql_relation['direct'] + """
-    } LIMIT """ + str(GLOBAL_RESULT_LIMIT) + """ } UNION
-    { SELECT DISTINCT ?rr %complexvariables% WHERE {
+    UNION
     """ + sparql_relation['reverse'] + """
-    } LIMIT """ + str(GLOBAL_RESULT_LIMIT) + """ }
     }
     """
 
@@ -198,6 +195,9 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
     >>> g = {'edgeSet': [{'kbID': 'P35v', 'type': 'reverse', 'rightkbID': 'Q155', 'right': [5]}], 'entities': []}
     >>> len(query_wikidata(graph_to_query(g, return_var_values = True)))
     6
+    >>> g = {'edgeSet': [{'right': ["Missouri"]}], 'entities': [[4]], 'tokens': ['who', 'are', 'the', 'current', 'senator', 'from', 'missouri', '?']}
+    >>> len(query_wikidata(graph_to_query(g, return_var_values = False)))
+    152
     """
     variables = []
     order_by = []
@@ -233,9 +233,6 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
             else:
                 sparql_relation_inst = sparql_hopup_values + sparql_relation_inst
                 local_variables.append("?hop{}v".format(i))
-                sparql_relation_inst = sparql_relation_inst.replace("%complexvariables%", "?hop{}v".format(i))
-        else:
-            sparql_relation_inst = sparql_relation_inst.replace("%complexvariables%", "")
 
         if any(arg_type in edge for arg_type in ['argmax', 'argmin']):
             sparql_relation_inst = sparql_relation_inst.replace("%restriction%", sparql_restriction_time_argmax)
