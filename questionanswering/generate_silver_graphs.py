@@ -58,6 +58,8 @@ def generate(config_file_path):
             if not any(e == url_entity[0] for e, t in question_entities):
                 # question_entities = [url_entity] + [(e, t) for e, t in question_entities if e != url_entity[0]]
                 question_entities = [url_entity] + question_entities
+        if "max.num.entities" in config['generation']:
+            question_entities = question_entities[:config['generation']["max.num.entities"]]
         ungrounded_graph = {'tokens': webquestions_tokens[i],
                             'edgeSet': [],
                             'entities': question_entities}
