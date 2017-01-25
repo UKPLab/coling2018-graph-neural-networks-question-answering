@@ -110,7 +110,8 @@ TEMPORAL_RELATIONS_Q = {"P585q", "P580q", "P582q", "P577q", "P571q"}
 TEMPORAL_RELATIONS_V = {"P580v", "P582v", "P577v", "P571v", "P569v", "P570v"}
 TEMPORAL_RELATIONS = TEMPORAL_RELATIONS_Q | TEMPORAL_RELATIONS_V
 
-sparql_entity_abstract = "[ ?hopups [ ?hopupv ?e2]]"
+sparql_entity_abstract = "?e3 ?hopups [ ?hopupv ?e2]."
+sparql_entity_specify = " ?e2 ?hopups [ ?hopupv ?e3]. "
 #Can we also have something like [ [?e2 ?hopups ] ?hopupv ]
 sparql_hopup_values = ""
 sparql_temporal_values_q = "VALUES ?a {" + " ".join(["e:{}".format(r) for r in TEMPORAL_RELATIONS_Q]) + "}"
@@ -144,7 +145,7 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exce
         groundings = query_wikidata(graph_to_query(g, limit=GLOBAL_RESULT_LIMIT*(10 if with_denotations else 1), return_var_values=with_denotations), use_cache=use_cache)
         if groundings is None:  # If there was an exception
             return None if pass_exception else []
-        groundings = [r for r in groundings if not any(r[b][:-1] in property_blacklist or r[b] in TEMPORAL_RELATIONS or r[b][-1] in FILTER_ENDINGS for b in r)]
+        groundings = [r for r in groundings if not any(r[b][:-1] in property_blacklist or r[b][-1] in FILTER_ENDINGS for b in r)]
         question_text = " ".join(g.get('tokens', []))
         if not question_text.startswith("when") and not question_text.startswith("what year"):
             groundings = [r for r in groundings if not any(r[b] in TEMPORAL_RELATIONS for b in r)]
