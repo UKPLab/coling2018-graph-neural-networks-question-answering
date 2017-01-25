@@ -67,7 +67,7 @@ def generate(config_file_path):
         silver_dataset.append(generated_graphs)
         if i % 200 == 0:
             logger.debug("Average f1 so far: {}".format(
-                np.average([np.max([g[1][2] for g in graphs]) if len(graphs) > 0 else 0.0 for graphs in silver_dataset])))
+                np.average([np.max([g[1][2] if len(g) > 1 else 0.0 for g in graphs]) if len(graphs) > 0 else 0.0 for graphs in silver_dataset])))
             # Dump the data set once in while
             with open(config['generation']["save.silver.to"], 'w') as out:
                 json.dump(silver_dataset, out, sort_keys=True, indent=4)
@@ -78,9 +78,9 @@ def generate(config_file_path):
 
     print("Query cache: {}".format(len(wdaccess.query_cache)))
     print("Number of answers covered: {}".format(
-        len([1 for graphs in silver_dataset if len(graphs) > 0 and any([g[1][2] > 0.0 for g in graphs])]) / len_webquestion ))
+        len([1 for graphs in silver_dataset if len(graphs) > 0 and any([len(g) > 1 and g[1][2] > 0.0 for g in graphs])]) / len_webquestion ))
     print("Average f1 of the silver data: {}".format(
-        np.average([np.max([g[1][2] for g in graphs]) if len(graphs) > 0 else 0.0 for graphs in silver_dataset])))
+        np.average([np.max([g[1][2] if len(g) > 1 else 0.0 for g in graphs]) if len(graphs) > 0 else 0.0 for graphs in silver_dataset])))
 
 
 if __name__ == "__main__":
