@@ -19,10 +19,16 @@ wdaccess_p = {
 logger = wdaccess_p['logger']
 logger.setLevel(logging.ERROR)
 
-sparql = SPARQLWrapper(wdaccess_p.get('wikidata_url', "http://knowledgebase:8890/sparql"))
-sparql.setReturnFormat(JSON)
-sparql.setMethod("GET")
-sparql.setTimeout(wdaccess_p.get('timeout', 40))
+
+def sparql_init():
+    global sparql
+    sparql = SPARQLWrapper(wdaccess_p.get('wikidata_url', "http://knowledgebase:8890/sparql"))
+    sparql.setReturnFormat(JSON)
+    sparql.setMethod("GET")
+    sparql.setTimeout(wdaccess_p.get('timeout', 40))
+
+sparql = None
+sparql_init()
 GLOBAL_RESULT_LIMIT = wdaccess_p['global_result_limit']
 
 

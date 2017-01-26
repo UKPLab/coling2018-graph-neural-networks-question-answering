@@ -66,6 +66,7 @@ model:
   sibling.activation: relu
 
 wikidata:
+  backend: "http://knowledgebase:8890/sparql"
   evaluate: True
   restrict.hop: True
 
