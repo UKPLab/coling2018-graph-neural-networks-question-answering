@@ -10,7 +10,7 @@ WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 
 wdaccess_p = {
     'wikidata_url': "http://knowledgebase:8890/sparql",
-    'timeout': 40,
+    'timeout': 20,
     'global_result_limit': 1000,
     'logger': logging.getLogger(__name__),
     'restrict.hop': False
@@ -256,6 +256,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
 
         sparql_relation_inst = sparql_relation_inst.replace("?p", "?p" + str(i))
         sparql_relation_inst = sparql_relation_inst.replace("?m", "?m" + str(i))
+        sparql_relation_inst = sparql_relation_inst.replace("?e3", "?e3" + str(i))
         sparql_relation_inst = sparql_relation_inst.replace("?hop", "?hop" + str(i))
 
         if 'rightkbID' in edge:
