@@ -12,9 +12,80 @@ roman_nums_pattern = re.compile("^(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$")
 stop_words_en = set(nltk.corpus.stopwords.words('english'))
 
 
+def possible_variants(entity_tokens, entity_type):
+    """
+    Construct all possible variants of the given entity,
+
+    :param entity_tokens: a list of entity tokens
+    :param entity_type:  type of the entity
+    :return: a list of entity variants
+    >>> possible_variants(['the', 'current', 'senators'], 'NN')
+    [('The', 'Current', 'Senators'), ('the', 'current', 'senator')]
+    >>> possible_variants(["awards"], "NN")
+    [('Awards',), ('award',)]
+    >>> possible_variants(["senators"], "NN")
+    [('Senators',), ('senator',)]
+    >>> possible_variants(["star", "wars"], "NN")
+    [('Star', 'Wars'), ('star', 'war')]
+    >>> possible_variants(["rings"], "NN")
+    [('Rings',), ('ring',)]
+    >>> possible_variants(["Jfk"], "NNP")
+    [('JFK',)]
+    >>> possible_variants(['the', 'president', 'after', 'jfk'], 'NN')
+    [('The', 'President', 'After', 'Jfk')]
+    >>> possible_variants(['Jj', 'Thomson'], 'PERSON')
+    [('J. J.', 'Thomson')]
+    >>> possible_variants(['J', 'J', 'Thomson'], 'URL')
+    [['J.', 'J.', 'Thomson']]
+    >>> possible_variants(['W', 'Bush'], 'PERSON')
+    [('W.', 'Bush')]
+    >>> possible_variants(["Us"], "LOCATION")
+    [('US',)]
+    >>> possible_variants(['Atlanta', 'United', 'States'], "LOCATION")
+    []
+    >>> possible_variants(['Names', 'Of', 'Walt', 'Disney'], 'ORGANIZATION')
+    []
+    >>> possible_variants(['Mcdonalds'], 'URL')
+    [('McDonalds',)]
+    >>> possible_variants(['Super', 'Bowl', 'Xliv'], 'NNP')
+    [('Super', 'Bowl', 'XLIV')]
+    >>> possible_variants(['2009'], 'CD')
+    []
+    >>> possible_variants(['102', 'dalmatians'], 'NN')
+    [('102', 'Dalmatians'), ('102', 'dalmatian')]
+    """
+    new_entities = []
+    entity_lemmas = []
+    if entity_type is "NN":
+        entity_lemmas = [lemmatizer.lemmatize(n) for n in entity_tokens]
+
+    if entity_type is "PERSON":
+        if len(entity_tokens) > 1:
+            if len(entity_tokens[0]) < 3:
+                new_entities.append((" ".join([c.upper() + "." for c in entity_tokens[0]]),) + tuple(entity_tokens[1:]))
+            if any(t.startswith("Mc") for t in entity_tokens):
+                new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
+    elif entity_type == "URL":
+        new_entity = [t + "." if len(t) == 1 else t for t in entity_tokens]
+        if new_entity != entity_tokens:
+            new_entities.append(new_entity)
+        if any(t.startswith("Mc") for t in entity_tokens):
+            new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
+    else:
+        if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP', 'NN'] and len(entity_tokens) == 1:
+            new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en])
+        if entity_type in ['NN']:
+            new_entities.append(tuple([ne.title() for ne in entity_tokens]))
+            if entity_lemmas != entity_tokens:
+                new_entities.append(tuple(entity_lemmas))
+    if any(roman_nums_pattern.match(ne.upper()) for ne in entity_tokens):
+        new_entities.append(tuple([ne.upper() if roman_nums_pattern.match(ne.upper()) else ne for ne in entity_tokens]))
+    return new_entities
+
+
 def possible_subentities(entity_tokens, entity_type):
     """
-    Retrive all possible sub-entities of the given entity. Short title tokens are also capitalized.
+    Construct all possible sub-entities of the given entity. Short title tokens are also capitalized.
 
     :param entity_tokens: a list of entity tokens
     :param entity_type:  type of the entity
@@ -22,13 +93,13 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(["Nfl", "Redskins"], "ORGANIZATION")
     [('NFL',), ('Nfl',), ('Redskins',)]
     >>> possible_subentities(["senators"], "NN")
-    [('Senators',), ('senator',)]
+    []
     >>> possible_subentities(['the', 'current', 'senators'], 'NN')
-    [('the', 'current'), ('current', 'senators'), ('The', 'Current', 'Senators'), ('the', 'current', 'senator'), ('current',), ('senators',), ('senator',)]
+    [('the', 'current'), ('current', 'senators'), ('current',), ('senators',), ('senator',)]
     >>> possible_subentities(["awards"], "NN")
-    [('Awards',), ('award',)]
+    []
     >>> possible_subentities(["star", "wars"], "NN")
-    [('Star', 'Wars'), ('star', 'war'), ('star',), ('wars',), ('war',)]
+    [('star',), ('wars',), ('war',)]
     >>> possible_subentities(["Grand", "Bahama", "Island"], "LOCATION")
     [('Grand', 'Bahama'), ('Bahama', 'Island'), ('Grand',), ('Bahama',), ('Island',)]
     >>> possible_subentities(["Dmitri", "Mendeleev"], "PERSON")
@@ -38,19 +109,19 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(["Victoria"], "PERSON")
     []
     >>> possible_subentities(["Jfk"], "NNP")
-    [('JFK',)]
+    []
     >>> possible_subentities(['the', 'president', 'after', 'jfk'], 'NN')
-    [('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('The', 'President', 'After', 'Jfk'), ('president',), ('jfk',)]
+    [('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',)]
     >>> possible_subentities(['Jj', 'Thomson'], 'PERSON')
-    [('J. J.', 'Thomson'), ('Thomson',), ('Jj',)]
+    [('Thomson',), ('Jj',)]
     >>> possible_subentities(['J', 'J', 'Thomson'], 'URL')
-    [['J.', 'J.', 'Thomson']]
+    []
     >>> possible_subentities(['Natalie', 'Portman'], 'URL')
     []
     >>> possible_subentities(['W', 'Bush'], 'PERSON')
-    [('W.', 'Bush'), ('Bush',), ('W',)]
+    [('Bush',), ('W',)]
     >>> possible_subentities(["Us"], "LOCATION")
-    [('US',)]
+    []
     >>> possible_subentities(['Atlanta', 'Texas'], "LOCATION")
     [('Atlanta',), ('Texas',)]
     >>> possible_subentities(['Atlanta', 'United', 'States'], "LOCATION")
@@ -58,16 +129,18 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(['Names', 'Of', 'Walt', 'Disney'], 'ORGANIZATION')
     [('Names', 'Of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('Names',), ('Walt',), ('Disney',)]
     >>> possible_subentities(['Timothy', 'Mcveigh'], 'PERSON')
-    [('Timothy', 'McVeigh'), ('Mcveigh',), ('Timothy',)]
+    [('Mcveigh',), ('Timothy',)]
     >>> possible_subentities(['Mcdonalds'], 'URL')
-    [('McDonalds',)]
+    []
     >>> possible_subentities(['Super', 'Bowl', 'Xliv'], 'NNP')
-    [('Super', 'Bowl'), ('Bowl', 'Xliv'), ('Super',), ('Bowl',), ('Xliv',), ('Super', 'Bowl', 'XLIV')]
+    [('Super', 'Bowl'), ('Bowl', 'Xliv'), ('Super',), ('Bowl',), ('Xliv',)]
     >>> possible_subentities(['2009'], 'CD')
     []
     >>> possible_subentities(['102', 'dalmatians'], 'NN')
-    [('102', 'Dalmatians'), ('102', 'dalmatian'), ('dalmatians',), ('dalmatian',)]
+    [('dalmatians',), ('dalmatian',)]
     """
+    if len(entity_tokens) == 1:
+        return []
     new_entities = []
     entity_lemmas = []
     if entity_type is "NN":
@@ -77,36 +150,17 @@ def possible_subentities(entity_tokens, entity_type):
         if len(entity_tokens) > 2:
             new_entities.append((entity_tokens[0], entity_tokens[-1]))
         if len(entity_tokens) > 1:
-            if len(entity_tokens[0]) < 3:
-                new_entities.append((" ".join([c.upper() + "." for c in entity_tokens[0]]),) + tuple(entity_tokens[1:]))
-            if any(t.startswith("Mc") for t in entity_tokens):
-                new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
             new_entities.extend([(entity_tokens[-1],), (entity_tokens[0],)])
-    elif entity_type == "URL":
-        new_entity = [t + "." if len(t) == 1 else t for t in entity_tokens]
-        if new_entity != entity_tokens:
-            new_entities.append(new_entity)
-        if any(t.startswith("Mc") for t in entity_tokens):
-            new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
-    else:
-        if entity_type != "URL":
-            for i in range(len(entity_tokens) - 1, 1, -1):
-                ngrams = nltk.ngrams(entity_tokens, i)
-                for new_entity in ngrams:
-                    new_entities.append(new_entity)
+    elif entity_type != "URL":
+        for i in range(len(entity_tokens) - 1, 1, -1):
+            ngrams = nltk.ngrams(entity_tokens, i)
+            for new_entity in ngrams:
+                new_entities.append(new_entity)
         if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP', 'NN']:
             new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en])
-        # if entity_type in ['LOCATION', 'URL'] and len(entity_tokens) > 1:
-        #     new_entities.extend([tuple(entity_tokens[:i]) + (entity_tokens[i] + ",", ) + tuple(entity_tokens[i+1:]) for i in range(len(entity_tokens)-1)])
-        if entity_type in ['NN']:
-            new_entities.append(tuple([ne.title() for ne in entity_tokens]))
-            if entity_lemmas != entity_tokens:
-                new_entities.append(tuple(entity_lemmas))
         if len(entity_tokens) > 1:
             new_entities.extend([(ne,) for ne in entity_tokens if not ne.isnumeric() and ne.lower() not in stop_words_en])
             new_entities.extend([(ne,) for ne in entity_lemmas if ne not in entity_tokens and not ne.isnumeric() and ne.lower() not in stop_words_en])
-    if any(roman_nums_pattern.match(ne.upper()) for ne in entity_tokens):
-        new_entities.append(tuple([ne.upper() if roman_nums_pattern.match(ne.upper()) else ne for ne in entity_tokens]))
     return new_entities
 
 
@@ -121,7 +175,11 @@ def link_entity(entity, try_subentities=True):
     """
     entity_tokens, entity_type = entity
     linkings = wdaccess.query_wikidata(wdaccess.entity_query(" ".join(entity_tokens)))
-    if (try_subentities and not linkings) or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
+    if entity_type not in {"NN"} or not linkings:
+        entity_variants = possible_variants(entity_tokens, entity_type)
+        entity_variants = [" ".join(s) for s in entity_variants]
+        linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants), starts_with=None)
+    if try_subentities and not linkings: # or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
         subentities = possible_subentities(entity_tokens, entity_type)
         subentities = [" ".join(s) for s in subentities]
         linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(subentities), starts_with=None)
