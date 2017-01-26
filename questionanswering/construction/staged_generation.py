@@ -2,6 +2,7 @@ import logging
 import itertools
 import tqdm
 
+from wikidata import entity_linking
 from wikidata import wdaccess
 from construction import stages, graph
 from datasets import evaluation
@@ -29,6 +30,7 @@ def generate_with_gold(ungrounded_graph, gold_answers):
             'tokens': ['when', 'were', 'the', 'texas', 'rangers', 'started', '?']}, gold_answers=['1972']))
     1.0
     """
+    ungrounded_graph = link_entities_in_graph(ungrounded_graph)
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
     positive_graphs, negative_graphs = [], []
     iterations = 0
@@ -67,6 +69,21 @@ def generate_with_gold(ungrounded_graph, gold_answers):
     logger.debug("Iterations {}".format(iterations))
     logger.debug("Negative {}".format(len(negative_graphs)))
     return positive_graphs + negative_graphs
+
+
+def link_entities_in_graph(ungrounded_graph):
+    """
+    Link all free entities in the graph.
+
+    :param ungrounded_graph: graph as a dictionary with 'entities'
+    :return: graph with entity linkings in the 'entities' array
+    """
+    entities = []
+    for entity in ungrounded_graph.get('entities', []):
+        linkings = entity_linking.link_entity(entity)
+        entities.append(entity + (linkings,))
+    ungrounded_graph['entities'] = entities
+    return ungrounded_graph
 
 
 def ground_with_gold(input_graphs, gold_answers, min_fscore=0.0):
