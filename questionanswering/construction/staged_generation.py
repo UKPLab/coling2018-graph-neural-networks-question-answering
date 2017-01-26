@@ -88,8 +88,9 @@ def ground_with_gold(input_graphs, gold_answers, min_fscore=0.0):
         chosen_graphs, not_chosen_graphs = ground_one_with_gold(s_g, gold_answers, min_fscore)
         all_chosen_graphs += chosen_graphs
         all_not_chosen_graphs += not_chosen_graphs
+    all_chosen_graphs = sorted(all_chosen_graphs, key=lambda x: x[1][2], reverse=True)
     if len(all_chosen_graphs) > 3:
-        all_chosen_graphs = sorted(all_chosen_graphs, key=lambda x: x[1][2], reverse=True)[:3]
+        all_chosen_graphs = all_chosen_graphs[:3]
     logger.debug("Number of chosen groundings: {}".format(len(all_chosen_graphs)))
     return all_chosen_graphs, all_not_chosen_graphs
 
