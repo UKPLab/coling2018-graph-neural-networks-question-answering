@@ -116,7 +116,7 @@ def last_relation_numeric(g):
     """
     if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g):
         return []
-    if len(g.get('entities', [])) == 0 or not any(t == 'CD' for e, t in g['entities']):
+    if len(g.get('entities', [])) == 0 or not any(e[1] == 'CD' for e in g['entities'] if len(e) > 1):
         return []
     entities = copy.copy(g.get('entities', []))
     cd_entities = [e for e,t in entities if t == 'CD']
