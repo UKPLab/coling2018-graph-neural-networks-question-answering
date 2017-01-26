@@ -75,5 +75,6 @@ wikidata:
   backend: "http://knowledgebase:8890/sparql"
   evaluate: True
   restrict.hop: True
+  hop.types: ['hopUp', 'hopDown']
   timeout: 20
 

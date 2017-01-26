@@ -305,6 +305,11 @@ def ground_without_gold(input_graphs):
     return grounded_graphs
 
 
+def generate_with_model(ungrounded_graph, qa_model):
+
+    return None
+
+
 def apply_grounding(g, grounding):
     """
     Given a grounding obtained from WikiData apply it to the graph.

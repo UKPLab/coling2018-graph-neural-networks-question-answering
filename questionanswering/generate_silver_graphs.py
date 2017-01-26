@@ -7,6 +7,7 @@ import tqdm
 import sys
 
 import utils
+from construction import stages
 from wikidata import entity_linking
 from wikidata import wdaccess
 from datasets import webquestions_io
@@ -36,6 +37,8 @@ def generate(config_file_path):
     wdaccess.wdaccess_p["restrict.hop"] = config['wikidata'].get("restrict.hop", False)
     wdaccess.wdaccess_p["timeout"] = config['wikidata'].get("timeout", 20)
     wdaccess.update_sparql_clauses()
+    if 'hop.types' in config['wikidata']:
+        stages.HOP_TYPES = config['wikidata']['hop.types']
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
     logger.debug('Loaded WebQuestions, size: {}'.format(webquestions.get_dataset_size()))
@@ -54,7 +57,7 @@ def generate(config_file_path):
     if 'take_first' in config['generation']:
         print("Taking the first {} questions.".format(config['generation']['take_first']))
         len_webquestion = config['generation']['take_first']
-    for i in tqdm.trange(len_webquestion, ncols=50):
+    for i in tqdm.trange(len_webquestion, ncols=100):
         question_entities = webquestions_entities[i]
         if config['generation'].get('include_url_entities', False):
             url_entity = webquestions_io.get_main_entity_from_question(webquestions_questions[i])

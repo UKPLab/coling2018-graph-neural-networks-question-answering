@@ -51,7 +51,7 @@ def last_relation_hop(g):
     if len(g.get('edgeSet', [])) == 0 or any(hop in g['edgeSet'][-1] for hop in {'hopUp', 'hopDown'}) or graph.graph_has_temporal(g):
         return []
     new_graphs = []
-    for hop in ['hopUp', 'hopDown']:
+    for hop in HOP_TYPES:
         new_g = graph.copy_graph(g)
         new_g['edgeSet'][-1][hop] = None
         new_graphs.append(new_g)
@@ -195,6 +195,7 @@ WIKIDATA_ACTIONS = {add_entity_and_relation, last_relation_hop}
 NON_LINKING_ACTIONS = {last_relation_temporal, add_temporal_relation, last_relation_numeric}
 
 ARG_TYPES = ['argmax', 'argmin']
+HOP_TYPES = ['hopUp', 'hopDown']
 
 
 def expand(g):
