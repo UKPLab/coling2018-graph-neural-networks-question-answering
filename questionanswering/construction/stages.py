@@ -43,8 +43,12 @@ def last_relation_hop(g):
     []
     >>> last_relation_hop({'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754"}], 'entities': []}) == [{'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754", 'hopUp': None}], 'entities': []}, {'edgeSet': [{'right':["Bahama"], "rightkbID":"Q6754", 'hopDown': None}], 'entities': []}]
     True
+    >>> last_relation_hop({'edgeSet': [{'right':[4,5,6], 'argmax':'time'}], 'entities': []})
+    []
+    >>> last_relation_hop({'edgeSet': [{'right':[4,5,6], 'num':['2012']}], 'entities': []})
+    []
     """
-    if len(g.get('edgeSet', [])) == 0 or any(hop in g['edgeSet'][-1] for hop in {'hopUp', 'hopDown'}) or g['edgeSet'][-1].get('type') in {'time'}:
+    if len(g.get('edgeSet', [])) == 0 or any(hop in g['edgeSet'][-1] for hop in {'hopUp', 'hopDown'}) or graph.graph_has_temporal(g):
         return []
     new_graphs = []
     for hop in ['hopUp', 'hopDown']:
