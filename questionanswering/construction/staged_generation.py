@@ -80,8 +80,11 @@ def link_entities_in_graph(ungrounded_graph):
     """
     entities = []
     for entity in ungrounded_graph.get('entities', []):
-        linkings = entity_linking.link_entity(entity)
-        entities.append(entity + (linkings,))
+        if len(entity) == 2:
+            linkings = entity_linking.link_entity(entity)
+            entities.append(entity + (linkings,))
+        else:
+            entities.append(entity)
     ungrounded_graph['entities'] = entities
     return ungrounded_graph
 
