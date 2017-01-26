@@ -55,6 +55,8 @@ def possible_variants(entity_tokens, entity_type):
     [('102', 'Dalmatians'), ('102', 'dalmatian')]
     >>> possible_variants(['Martin', 'Luther', 'King', 'Jr'], 'PERSON')
     [('Martin', 'Luther', 'King', 'Jr.'), ('Martin', 'Luther', 'King,', 'Jr.')]
+    >>> possible_variants(['St', 'Louis', 'Rams'], 'ORGANIZATION')
+    [('St.', 'Louis', 'Rams')]
     """
     new_entities = []
     entity_lemmas = []
@@ -70,6 +72,9 @@ def possible_variants(entity_tokens, entity_type):
             if entity_tokens[-1].lower() == "jr":
                 new_entities.append(tuple(entity_tokens[:-1] + [entity_tokens[-1] + "."]))
                 new_entities.append(tuple(entity_tokens[:-2] + [entity_tokens[-2] + ","] + [entity_tokens[-1] + "."]))
+            if entity_tokens[0].lower() == "st":
+                new_entities.append(tuple(entity_tokens[:-1] + [entity_tokens[-1] + "."]))
+                new_entities.append(tuple(entity_tokens[:-2] + [entity_tokens[-2] + ","] + [entity_tokens[-1] + "."]))
     elif entity_type == "URL":
         new_entity = [t + "." if len(t) == 1 else t for t in entity_tokens]
         if new_entity != entity_tokens:
@@ -79,6 +84,8 @@ def possible_variants(entity_tokens, entity_type):
     else:
         if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP', 'NN'] and len(entity_tokens) == 1:
             new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en])
+        if "St" in entity_tokens or "st" in entity_tokens:
+            new_entities.append(tuple([ne + "." if ne in {'St', 'st'} else ne for ne in entity_tokens]))
         if entity_type in ['NN']:
             new_entities.append(tuple([ne.title() for ne in entity_tokens]))
             if entity_lemmas != entity_tokens:
