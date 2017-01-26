@@ -53,6 +53,8 @@ def possible_variants(entity_tokens, entity_type):
     []
     >>> possible_variants(['102', 'dalmatians'], 'NN')
     [('102', 'Dalmatians'), ('102', 'dalmatian')]
+    >>> possible_variants(['Martin', 'Luther', 'King', 'Jr'], 'PERSON')
+    [('Martin', 'Luther', 'King', 'Jr.'), ('Martin', 'Luther', 'King,', 'Jr.')]
     """
     new_entities = []
     entity_lemmas = []
@@ -65,6 +67,9 @@ def possible_variants(entity_tokens, entity_type):
                 new_entities.append((" ".join([c.upper() + "." for c in entity_tokens[0]]),) + tuple(entity_tokens[1:]))
             if any(t.startswith("Mc") for t in entity_tokens):
                 new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
+            if entity_tokens[-1].lower() == "jr":
+                new_entities.append(tuple(entity_tokens[:-1] + [entity_tokens[-1] + "."]))
+                new_entities.append(tuple(entity_tokens[:-2] + [entity_tokens[-2] + ","] + [entity_tokens[-1] + "."]))
     elif entity_type == "URL":
         new_entity = [t + "." if len(t) == 1 else t for t in entity_tokens]
         if new_entity != entity_tokens:
@@ -138,6 +143,8 @@ def possible_subentities(entity_tokens, entity_type):
     []
     >>> possible_subentities(['102', 'dalmatians'], 'NN')
     [('dalmatians',), ('dalmatian',)]
+    >>> possible_subentities(['Martin', 'Luther', 'King', 'Jr'], 'PERSON')
+    [('Martin', 'Luther', 'King'), ('Martin',)]
     """
     if len(entity_tokens) == 1:
         return []
@@ -147,10 +154,17 @@ def possible_subentities(entity_tokens, entity_type):
         entity_lemmas = [lemmatizer.lemmatize(n) for n in entity_tokens]
 
     if entity_type is "PERSON":
-        if len(entity_tokens) > 2:
-            new_entities.append((entity_tokens[0], entity_tokens[-1]))
-        if len(entity_tokens) > 1:
-            new_entities.extend([(entity_tokens[-1],), (entity_tokens[0],)])
+        if entity_tokens[-1].lower() == "jr":
+            new_entities.append(tuple(entity_tokens[:-1]))
+            if len(entity_tokens) > 1:
+                new_entities.append((entity_tokens[0],))
+        else:
+            if len(entity_tokens) > 2:
+                new_entities.append((entity_tokens[0], entity_tokens[-1]))
+            if len(entity_tokens) > 1:
+                new_entities.append((entity_tokens[-1],))
+                new_entities.append((entity_tokens[0],))
+
     elif entity_type != "URL":
         for i in range(len(entity_tokens) - 1, 1, -1):
             ngrams = nltk.ngrams(entity_tokens, i)
