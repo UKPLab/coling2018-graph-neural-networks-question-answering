@@ -11,7 +11,7 @@ WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 wdaccess_p = {
     'wikidata_url': "http://knowledgebase:8890/sparql",
     'timeout': 20,
-    'global_result_limit': 1000,
+    'global_result_limit': 2000,
     'logger': logging.getLogger(__name__),
     'restrict.hop': False
 }
@@ -282,8 +282,8 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
 
     if return_var_values and not ask:
         variables.append("?e1")
-        query += "BIND (xsd:integer(SUBSTR(STR(?e1), 33)) AS ?eid)"
-        order_by.append("?eid")
+        # query += "BIND (xsd:integer(SUBSTR(STR(?e1), 33)) AS ?eid)"
+        # order_by.append("?eid")
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
     if order_by and not ask:
