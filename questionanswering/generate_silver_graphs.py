@@ -34,6 +34,7 @@ def generate(config_file_path):
     wdaccess.wdaccess_p['wikidata_url'] = config['wikidata'].get("backend", "http://knowledgebase:8890/sparql")
     wdaccess.sparql_init()
     wdaccess.wdaccess_p["restrict.hop"] = config['wikidata'].get("restrict.hop", False)
+    wdaccess.wdaccess_p["timeout"] = config['wikidata'].get("timeout", 20)
     wdaccess.update_sparql_clauses()
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
@@ -53,7 +54,7 @@ def generate(config_file_path):
     if 'take_first' in config['generation']:
         print("Taking the first {} questions.".format(config['generation']['take_first']))
         len_webquestion = config['generation']['take_first']
-    for i in tqdm.trange(len_webquestion):
+    for i in tqdm.trange(len_webquestion, ncols=50):
         question_entities = webquestions_entities[i]
         if config['generation'].get('include_url_entities', False):
             url_entity = webquestions_io.get_main_entity_from_question(webquestions_questions[i])
