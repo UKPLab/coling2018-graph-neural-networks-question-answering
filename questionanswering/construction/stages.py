@@ -119,11 +119,11 @@ def last_relation_numeric(g):
     if len(g.get('entities', [])) == 0 or not any(e[1] == 'CD' for e in g['entities'] if len(e) > 1):
         return []
     entities = copy.copy(g.get('entities', []))
-    cd_entities = [e for e,t in entities if t == 'CD']
+    cd_entities = [e[0] for e in entities if e[1] == 'CD']
     if len(cd_entities) == 0:
         return []
     cd_entity = cd_entities[0]
-    entities = [(e, t) for e,t in entities if e != cd_entity]
+    entities = [e for e in entities if e[0] != cd_entity]
     new_g = graph.copy_graph(g)
     new_g['entities'] = entities
     new_g['edgeSet'][-1]['num'] = cd_entity

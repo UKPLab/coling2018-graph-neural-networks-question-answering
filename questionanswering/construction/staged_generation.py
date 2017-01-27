@@ -80,7 +80,7 @@ def link_entities_in_graph(ungrounded_graph):
     """
     entities = []
     for entity in ungrounded_graph.get('entities', []):
-        if len(entity) == 2:
+        if len(entity) == 2 and entity[1] != "CD":
             linkings = entity_linking.link_entity(entity)
             entities.append(entity + (linkings,))
         else:
