@@ -43,10 +43,12 @@ def generate(path_to_model, config_file_path):
     entity_linking.entity_linking_p["max.entity.options"] = config['evaluation']["max.entity.options"]
     wdaccess.wdaccess_p["restrict.hop"] = config['wikidata'].get("restrict.hop", False)
     wdaccess.update_sparql_clauses()
+    staged_generation.generation_p["replace.entities"] = config['webquestions'].get("replace.entities", False)
     logger.debug("max.entity.options: {}".format(entity_linking.entity_linking_p["max.entity.options"]))
 
     logger.debug('Extracting entities.')
     webquestions_entities = webquestions.extract_question_entities()
+    webquestions_tokens = webquestions.get_question_tokens()
 
     logger.debug('Loading the model from: {}'.format(path_to_model))
     qa_model = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
@@ -58,17 +60,20 @@ def generate(path_to_model, config_file_path):
     avg_metrics = np.zeros(3)
     len_webquestion = webquestions.get_dataset_size()
     for i in tqdm.trange(len_webquestion):
-        ungrounded_graph = {'edgeSet': [],
-                            'entities': webquestions_entities[i][:config['generation'].get("max.num.entities", 1)]}
+        ungrounded_graph = {'tokens': webquestions_tokens[i],
+                            'edgeSet': [],
+                            'entities': webquestions_entities[i][:config['evaluation'].get("max.num.entities", 1)]}
         gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
-        chosen_graphs = staged_generation.generate_with_model(ungrounded_graph, qa_model, beam_size=config['generation'].get("beam.size", 10))
+        chosen_graphs = staged_generation.generate_with_model(ungrounded_graph, qa_model, beam_size=config['evaluation'].get("beam.size", 10))
         model_answers = []
         if chosen_graphs:
-            while not model_answers and chosen_graphs:
-                g = chosen_graphs.popleft()
-                model_answers = wdaccess.query_graph_denotations(g)
+            j = 0
+            while not model_answers and j < len(chosen_graphs):
+                g = chosen_graphs.pop(0)
+                model_answers = wdaccess.query_graph_denotations(g[0])
+                j += 1
         model_answers_labels = wdaccess.label_query_results(model_answers)
-        metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers[i], model_answers_labels)
+        metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, model_answers_labels)
         avg_metrics += metrics
         global_answers.append((i, metrics, model_answers, model_answers_labels))
         if i % 200 == 0:

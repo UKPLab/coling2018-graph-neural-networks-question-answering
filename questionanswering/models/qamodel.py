@@ -65,6 +65,10 @@ class QAModel(Loggable, metaclass=abc.ABCMeta):
     def apply_on_instance(self, instance):
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def scores_for_instance(self, instance):
+        raise NotImplementedError
+
 
 class TrainableQAModel(QAModel, metaclass=abc.ABCMeta):
     def __init__(self, **kwargs):
@@ -209,7 +213,7 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
         self._sibling_model = self._model.get_layer(name="sibiling_model")
         self.logger.debug("Sibling model: {}".format(self._sibling_model))
 
-    def apply_on_instance(self, instance):
+    def scores_for_instance(self, instance):
         tokens_encoded, edges_encoded = self.encode_data_instance(instance)
         sentence_embedding = self._sibling_model.predict_on_batch(tokens_encoded)[0]
         edge_embeddings = self._sibling_model.predict_on_batch(edges_encoded)
@@ -219,7 +223,10 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
                 np.sum(sentence_embedding * sentence_embedding) * np.sum(edge_embeddings * edge_embeddings, axis=-1))
             denominator = np.maximum(denominator, keras.backend.common._EPSILON)
             predictions /= denominator
+        return predictions
 
+    def apply_on_instance(self, instance):
+        predictions = self.scores_for_instance(instance)
         return np.argsort(predictions)[::-1]
 
     def load_from_file(self, path_to_model):
@@ -246,7 +253,7 @@ class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
         self.logger.debug("Older model: {}".format(self._older_model))
         self.logger.debug("Younger model: {}".format(self._younger_model))
 
-    def apply_on_instance(self, instance):
+    def scores_for_instance(self, instance):
         tokens_encoded, edges_encoded = self.encode_data_instance(instance)
         sentence_embedding = self._older_model.predict_on_batch(tokens_encoded)[0]
         edge_embeddings = self._younger_model.predict_on_batch(edges_encoded)
@@ -256,13 +263,16 @@ class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
                 np.sum(sentence_embedding * sentence_embedding) * np.sum(edge_embeddings * edge_embeddings, axis=-1))
             denominator = np.maximum(denominator, keras.backend.common._EPSILON)
             predictions /= denominator
+        return predictions
 
+    def apply_on_instance(self, instance):
+        predictions = self.scores_for_instance(instance)
         return np.argsort(predictions)[::-1]
 
     def load_from_file(self, path_to_model):
         super(BrothersModel, self).load_from_file(path_to_model=path_to_model)
 
         self._older_model = self._model.get_layer(name=self._older_model_name)
-        self._younger_model = self._model.get_layer(name=self._younger_model_name)
+        self._younger_model = self._model.get_layer(name=self._younger_model_name).layer
         self.logger.debug("Older model: {}".format(self._older_model))
         self.logger.debug("Younger model: {}".format(self._younger_model))

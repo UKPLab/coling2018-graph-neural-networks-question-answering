@@ -10,6 +10,7 @@ from datasets import evaluation
 generation_p = {
     'label.query.results': True,
     'logger': logging.getLogger(__name__),
+    'replace.entities': True
 }
 
 logger = generation_p['logger']
@@ -306,10 +307,15 @@ def ground_without_gold(input_graphs):
 
 
 def ground_one_with_model(s_g, qa_model, min_score):
+    logger.debug("Graph: {}".format(s_g))
     grounded_graphs = [apply_grounding(s_g, p) for p in find_groundings(s_g)]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
+    grounded_graphs = [graph.add_string_representations_to_edges(g, wdaccess.property2label, generation_p.get("replace.entities", False)) for g in grounded_graphs]
     logger.debug("First one: {}".format(grounded_graphs[:1]))
-    model_scores = qa_model.apply_on_instance(grounded_graphs)
+    if len(grounded_graphs) == 0:
+        return []
+    model_scores = qa_model.scores_for_instance(grounded_graphs)
+    logger.debug("model_scores: {}".format(model_scores))
     assert len(model_scores) == len(grounded_graphs)
     chosen_graphs = [(grounded_graphs[i], model_scores[i])
                      for i in range(len(grounded_graphs)) if model_scores[i] > min_score]
@@ -352,8 +358,8 @@ def generate_with_model(ungrounded_graph, qa_model, beam_size=10):
         if len(chosen_graphs) > 0:
             logger.debug("Extending the pool.")
             pool.extend(chosen_graphs)
-            logger.debug("Extending the generated graph set: {}".format(g))
-            generated_graphs.append(g)
+            logger.debug("Extending the generated graph set: {}".format(len(chosen_graphs)))
+            generated_graphs.extend(chosen_graphs)
     logger.debug("Iterations {}".format(iterations))
     logger.debug("Generated graphs {}".format(len(generated_graphs)))
     generated_graphs = sorted(generated_graphs, key=lambda x: x[1], reverse=True)
