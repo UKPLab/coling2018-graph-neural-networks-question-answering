@@ -325,11 +325,20 @@ def ground_one_with_model(s_g, qa_model, min_score):
 def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
 
     logger.debug("Input graphs: {}".format(len(input_graphs)))
-    all_chosen_graphs = []
-    input_graphs = input_graphs[:]
-    while input_graphs:
-        s_g = input_graphs.pop(0)
-        all_chosen_graphs += ground_one_with_model(s_g, qa_model, min_score)
+    logger.debug("First input one: {}".format(input_graphs[:1]))
+
+    grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in find_groundings(s_g)]
+    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
+    grounded_graphs = [graph.add_string_representations_to_edges(g, wdaccess.property2label, generation_p.get("replace.entities", False)) for g in grounded_graphs]
+    logger.debug("First one: {}".format(grounded_graphs[:1]))
+    if len(grounded_graphs) == 0:
+        return []
+    model_scores = qa_model.scores_for_instance(grounded_graphs)
+    logger.debug("model_scores: {}".format(model_scores))
+    assert len(model_scores) == len(grounded_graphs)
+    all_chosen_graphs = [(grounded_graphs[i], model_scores[i])
+                     for i in range(len(grounded_graphs)) if model_scores[i] > min_score]
+
     all_chosen_graphs = sorted(all_chosen_graphs, key=lambda x: x[1], reverse=True)
     if len(all_chosen_graphs) > beam_size:
         all_chosen_graphs = all_chosen_graphs[:beam_size]
