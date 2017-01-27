@@ -74,7 +74,8 @@ def generate(config_file_path):
         generated_graphs = staged_generation.generate_with_gold(ungrounded_graph, gold_answers)
         silver_dataset.append(generated_graphs)
         if i % 200 == 0:
-            logger.debug("Average f1 so far: {}".format(
+            logger.debug("Coverage, avg. f1 so far: {} , {}".format(
+                (len([1 for graphs in silver_dataset if len(graphs) > 0 and any([len(g) > 1 and g[1][2] > 0.0 for g in graphs])]) / len_webquestion ),
                 np.average([np.max([g[1][2] if len(g) > 1 else 0.0 for g in graphs]) if len(graphs) > 0 else 0.0 for graphs in silver_dataset])))
             # Dump the data set once in while
             with open(config['generation']["save.silver.to"], 'w') as out:

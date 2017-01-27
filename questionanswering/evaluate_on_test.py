@@ -59,7 +59,7 @@ def generate(path_to_model, config_file_path):
     global_answers = []
     avg_metrics = np.zeros(3)
     len_webquestion = webquestions.get_dataset_size()
-    for i in tqdm.trange(len_webquestion):
+    for i in tqdm.trange(len_webquestion, ncols=100, ascii=True):
         ungrounded_graph = {'tokens': webquestions_tokens[i],
                             'edgeSet': [],
                             'entities': webquestions_entities[i][:config['evaluation'].get("max.num.entities", 1)]}
