@@ -305,9 +305,60 @@ def ground_without_gold(input_graphs):
     return grounded_graphs
 
 
-def generate_with_model(ungrounded_graph, qa_model):
+def ground_one_with_model(s_g, qa_model, min_score):
+    grounded_graphs = [apply_grounding(s_g, p) for p in find_groundings(s_g)]
+    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
+    logger.debug("First one: {}".format(grounded_graphs[:1]))
+    evaluation_results = [qa_model.apply_on_instance(grounded_graphs[i]) for i in
+                          range(len(grounded_graphs))]
+    chosen_graphs = [(grounded_graphs[i], evaluation_results[i])
+                     for i in range(len(grounded_graphs)) if evaluation_results[i][2] > min_score]
+    not_chosen_graphs = [(grounded_graphs[i],) for i in range(len(grounded_graphs)) if evaluation_results[i][2] < 0.01]
+    return chosen_graphs, not_chosen_graphs
 
-    return None
+
+def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
+
+    logger.debug("Input graphs: {}".format(len(input_graphs)))
+    all_chosen_graphs = []
+    input_graphs = input_graphs[:]
+    while input_graphs:
+        s_g = input_graphs.pop(0)
+        all_chosen_graphs += ground_one_with_model(s_g, qa_model, min_score)
+    all_chosen_graphs = sorted(all_chosen_graphs, key=lambda x: x[1][2], reverse=True)
+    if len(all_chosen_graphs) > beam_size:
+        all_chosen_graphs = all_chosen_graphs[:beam_size]
+    logger.debug("Number of chosen groundings: {}".format(len(all_chosen_graphs)))
+    return all_chosen_graphs
+
+
+def generate_with_model(ungrounded_graph, qa_model, beam_size=10):
+    ungrounded_graph = link_entities_in_graph(ungrounded_graph)
+    pool = [(ungrounded_graph, 0.0)]  # pool of possible parses
+    generated_graphs = []
+    iterations = 0
+    while pool:
+        iterations += 1
+        g = pool.pop(0)
+        logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
+        master_score = g[1]
+        logger.debug("Restricting")
+        restricted_graphs = stages.restrict(g[0])
+        restricted_graphs = [add_canonical_labels_to_entities(r_g) for r_g in restricted_graphs]
+        logger.debug("Suggested graphs: {}".format(restricted_graphs))
+        suggested_graphs = restricted_graphs[:]
+        suggested_graphs += [e_g for s_g in suggested_graphs for e_g in stages.expand(s_g)]
+        chosen_graphs = ground_with_model(suggested_graphs, qa_model, min_score=master_score, beam_size=beam_size)
+        logger.debug("Chosen graphs length: {}".format(len(chosen_graphs)))
+        if len(chosen_graphs) > 0:
+            logger.debug("Extending the pool.")
+            pool.extend(chosen_graphs)
+            logger.debug("Extending the generated graph set: {}".format(g))
+            generated_graphs.append(g)
+    logger.debug("Iterations {}".format(iterations))
+    logger.debug("Generated graphs {}".format(len(generated_graphs)))
+    generated_graphs = sorted(generated_graphs, key=lambda x: x[1], reverse=True)
+    return generated_graphs
 
 
 def apply_grounding(g, grounding):
