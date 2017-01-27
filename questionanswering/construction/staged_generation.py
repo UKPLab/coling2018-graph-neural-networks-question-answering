@@ -185,7 +185,7 @@ def find_groundings(g):
             for i, edge in enumerate([e for e in t.get('edgeSet', []) if not('type' in e and 'kbID' in e)]):
                 edge['type'] = type_combindation[i]
             query_results += wdaccess.query_graph_groundings(t)
-    if any(w in set(g.get('tokens', [])) for w in {'play', 'played', 'plays'}) and num_edges_to_ground == 1:
+    if any(w in set(g.get('tokens', [])) for w in {'play', 'played', 'plays', 'playing'}) and num_edges_to_ground == 1:
         t = graph.copy_graph(g)
         edge = [e for e in t.get('edgeSet', []) if not('type' in e and 'kbID' in e)][0]
         edge['type'] = 'v-structure'
