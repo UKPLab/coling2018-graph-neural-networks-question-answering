@@ -49,8 +49,8 @@ def generate(path_to_model, config_file_path):
     webquestions_entities = webquestions.extract_question_entities()
 
     logger.debug('Loading the model from: {}'.format(path_to_model))
-    trainablemodel = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
-    trainablemodel.load_from_file(path_to_model)
+    qa_model = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
+    qa_model.load_from_file(path_to_model)
 
     logger.debug('Testing')
     answers_out = open(config['evaluation']["save.answers.to"], 'w')
@@ -61,7 +61,12 @@ def generate(path_to_model, config_file_path):
         ungrounded_graph = {'edgeSet': [],
                             'entities': webquestions_entities[i][:config['generation'].get("max.num.entities", 1)]}
         gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
-        model_answers = staged_generation.generate_with_model(ungrounded_graph)
+        chosen_graphs = staged_generation.generate_with_model(ungrounded_graph, qa_model, beam_size=config['generation'].get("beam.size", 10))
+        model_answers = []
+        if chosen_graphs:
+            while not model_answers and chosen_graphs:
+                g = chosen_graphs.popleft()
+                model_answers = wdaccess.query_graph_denotations(g)
         model_answers_labels = wdaccess.label_query_results(model_answers)
         metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers[i], model_answers_labels)
         avg_metrics += metrics

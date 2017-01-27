@@ -309,12 +309,11 @@ def ground_one_with_model(s_g, qa_model, min_score):
     grounded_graphs = [apply_grounding(s_g, p) for p in find_groundings(s_g)]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     logger.debug("First one: {}".format(grounded_graphs[:1]))
-    evaluation_results = [qa_model.apply_on_instance(grounded_graphs[i]) for i in
-                          range(len(grounded_graphs))]
-    chosen_graphs = [(grounded_graphs[i], evaluation_results[i])
-                     for i in range(len(grounded_graphs)) if evaluation_results[i][2] > min_score]
-    not_chosen_graphs = [(grounded_graphs[i],) for i in range(len(grounded_graphs)) if evaluation_results[i][2] < 0.01]
-    return chosen_graphs, not_chosen_graphs
+    model_scores = qa_model.apply_on_instance(grounded_graphs)
+    assert len(model_scores) == len(grounded_graphs)
+    chosen_graphs = [(grounded_graphs[i], model_scores[i])
+                     for i in range(len(grounded_graphs)) if model_scores[i] > min_score]
+    return chosen_graphs
 
 
 def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
@@ -325,7 +324,7 @@ def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
     while input_graphs:
         s_g = input_graphs.pop(0)
         all_chosen_graphs += ground_one_with_model(s_g, qa_model, min_score)
-    all_chosen_graphs = sorted(all_chosen_graphs, key=lambda x: x[1][2], reverse=True)
+    all_chosen_graphs = sorted(all_chosen_graphs, key=lambda x: x[1], reverse=True)
     if len(all_chosen_graphs) > beam_size:
         all_chosen_graphs = all_chosen_graphs[:beam_size]
     logger.debug("Number of chosen groundings: {}".format(len(all_chosen_graphs)))

@@ -13,6 +13,7 @@ evaluation:
   max.entity.options: 1
   questions: "../data/input/webquestions.examples.test.json"
   save.answers.to: "../data/generated/webquestions.examples.test.answers.json"
+  beam.size: 10
 
 generation:
   max.num.entities: 2 # Only affects choice graphs generation
