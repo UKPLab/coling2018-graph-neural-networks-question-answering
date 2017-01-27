@@ -77,5 +77,6 @@ wikidata:
   evaluate: True
   restrict.hop: True
   hop.types: ['hopUp', 'hopDown']
+  arg.types: ['argmax', 'argmin']
   timeout: 20
 

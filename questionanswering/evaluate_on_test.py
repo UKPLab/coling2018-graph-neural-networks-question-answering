@@ -5,7 +5,7 @@ import sys
 import click
 import numpy as np
 import tqdm
-from construction import staged_generation
+from construction import staged_generation, stages
 from datasets import evaluation
 from datasets import webquestions_io
 import utils
@@ -32,10 +32,6 @@ def generate(path_to_model, config_file_path):
     logger.addHandler(ch)
     # logging.basicConfig(level=config['logger']['level'])
 
-    with open(config['evaluation']['questions']) as f:
-        webquestions_questions = json.load(f)
-    webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
-
     wdaccess.wdaccess_p["timeout"] = config['wikidata'].get("timeout", 20)
     wdaccess.wdaccess_p['wikidata_url'] = config['wikidata'].get("backend", "http://knowledgebase:8890/sparql")
     wdaccess.sparql_init()
@@ -45,6 +41,14 @@ def generate(path_to_model, config_file_path):
     wdaccess.update_sparql_clauses()
     staged_generation.generation_p["replace.entities"] = config['webquestions'].get("replace.entities", False)
     logger.debug("max.entity.options: {}".format(entity_linking.entity_linking_p["max.entity.options"]))
+    if 'hop.types' in config['wikidata']:
+        stages.HOP_TYPES = config['wikidata']['hop.types']
+    if 'arg.types' in config['wikidata']:
+        stages.ARG_TYPES = config['wikidata']['arg.types']
+
+    with open(config['evaluation']['questions']) as f:
+        webquestions_questions = json.load(f)
+    webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
 
     logger.debug('Extracting entities.')
     webquestions_entities = webquestions.extract_question_entities()
