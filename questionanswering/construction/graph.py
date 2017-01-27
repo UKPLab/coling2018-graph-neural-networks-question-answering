@@ -187,10 +187,9 @@ def copy_graph(g):
 
 np_grammar = r"""
     NP:
-    {(<PRP\$|DT><NN|NNS>|<NNP|NNPS>)<NNP|NN|NNS|NNPS>+}
-    {(<PRP\$|DT><NN|NNS>+|<NNP|NNPS>+)<IN|CC>(<PRP\$|DT><NN|NNS>+|<NNP|NNPS>+)}
-    {<PRP\$|DT><JJ|RB>*<NN|NNS>+<VB.*>?<RB>?}
-    {<JJ|RB|CD>*<NNP|NN|NNS|NNPS>+}
+    {(<NN|NNS>|<NNP|NNPS>)<NNP|NN|NNS|NNPS>+}
+    {(<NN|NNS>+|<NNP|NNPS>+)<IN|CC>(<PRP\$|DT><NN|NNS>+|<NNP|NNPS>+)}
+    {<JJ|RB|CD>*<NNP|NN|NNS|NNPS>+<VB.*>?<RB>?}
     {<JJ|RB>*<NNP|NN|NNS|NNPS>+<VB.>?<RB>?}
     {<NNP|NN|NNS|NNPS>+}
     CD:
@@ -234,24 +233,26 @@ def extract_entities(tokens_ne_pos):
     :param tokens_ne_pos: list of POS and NE tags.
     :return: list of entities in the order: NE>NNP>NN
     >>> extract_entities([('who', 'O', 'WP'), ('are', 'O', 'VBP'), ('the', 'O', 'DT'), ('current', 'O', 'JJ'), ('senators', 'O', 'NNS'), ('from', 'O', 'IN'), ('missouri', 'LOCATION', 'NNP'), ('?', 'O', '.')])
-    [(['Missouri'], 'LOCATION'), (['the', 'current', 'senators'], 'NN')]
+    [(['Missouri'], 'LOCATION'), (['current', 'senators'], 'NN')]
     >>> extract_entities([('what', 'O', 'WDT'), ('awards', 'O', 'NNS'), ('has', 'O', 'VBZ'), ('louis', 'PERSON', 'NNP'), ('sachar', 'PERSON', 'NNP'), ('won', 'O', 'NNP'), ('?', 'O', '.')])
-    [(['Louis', 'Sachar'], 'PERSON'), (['Won'], 'NNP'), (['awards'], 'NN')]
+    [(['Louis', 'Sachar'], 'PERSON'), (['Won'], 'NNP'), (['awards', 'has'], 'NN')]
     >>> extract_entities([('who', 'O', 'WP'), ('was', 'O', 'VBD'), ('the', 'O', 'DT'), ('president', 'O', 'NN'), ('after', 'O', 'IN'), ('jfk', 'O', 'NNP'), ('died', 'O', 'VBD'), ('?', 'O', '.')])
-    [(['the', 'president', 'after', 'jfk'], 'NN')]
+    [(['president', 'after', 'jfk'], 'NN')]
     >>> extract_entities([('who', 'O', 'WP'), ('natalie', 'PERSON', 'NN'), ('likes', 'O', 'VBP')])
     [(['Natalie'], 'PERSON')]
     >>> extract_entities([('what', 'O', 'WDT'), ('character', 'O', 'NN'), ('did', 'O', 'VBD'), ('john', 'O', 'NNP'), \
     ('noble', 'O', 'NNP'), ('play', 'O', 'VB'), ('in', 'O', 'IN'), ('lord', 'O', 'NNP'), ('of', 'O', 'IN'), ('the', 'O', 'DT'), ('rings', 'O', 'NNS'), ('?', 'O', '.')])
-    [(['John', 'Noble'], 'NNP'), (['character'], 'NN'), (['lord', 'of', 'the', 'rings'], 'NN')]
+    [(['John', 'Noble'], 'NNP'), (['character', 'did'], 'NN'), (['lord', 'of', 'the', 'rings'], 'NN')]
     >>> extract_entities([['who', 'O', 'WP'], ['plays', 'O', 'VBZ'], ['lois', 'PERSON', 'NNP'], ['lane', 'PERSON', 'NNP'], ['in', 'O', 'IN'], ['superman', 'O', 'NNP'], ['returns', 'O', 'NNS'], ['?', 'O', '.']])
     [(['Lois', 'Lane'], 'PERSON'), (['superman', 'returns'], 'NN')]
     >>> extract_entities([('the', 'O', 'DT'), ('empire', 'O', 'NN'), ('strikes', 'O', 'VBZ'), ('back', 'O', 'RB'), ('is', 'O', 'VBZ'), ('the', 'O', 'DT'), ('second', 'O', 'JJ'), ('movie', 'O', 'NN'), ('in', 'O', 'IN'), ('the', 'O', 'DT'), ('star', 'O', 'NN'), ('wars', 'O', 'NNS'), ('franchise', 'O', 'VBP')])
-    [(['the', 'empire', 'strikes', 'back'], 'NN'), (['the', 'second', 'movie'], 'NN'), (['the', 'star', 'wars'], 'NN')]
+    [(['empire', 'strikes', 'back'], 'NN'), (['second', 'movie'], 'NN'), (['star', 'wars'], 'NN')]
     >>> extract_entities([['who', 'O', 'WP'], ['played', 'O', 'VBD'], ['cruella', 'LOCATION', 'NNP'], ['deville', 'LOCATION', 'NNP'], ['in', 'O', 'IN'], ['102', 'O', 'CD'], ['dalmatians', 'O', 'NNS'], ['?', 'O', '.']])
     [(['Cruella', 'Deville'], 'LOCATION'), (['102', 'dalmatians'], 'NN')]
     >>> extract_entities([['who', 'O', 'WP'], ['was', 'O', 'VBD'], ['the', 'O', 'DT'], ['winner', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'], ['2009', 'O', 'CD'], ['nobel', 'O', 'NNP'], ['peace', 'O', 'NNP'], ['prize', 'O', 'NNP'], ['?', 'O', '.']])
-    [(['Nobel', 'Peace', 'Prize'], 'NNP'), (['the', 'winner'], 'NN'), (['2009'], 'CD')]
+    [(['Nobel', 'Peace', 'Prize'], 'NNP'), (['winner'], 'NN'), (['2009'], 'CD')]
+    >>> extract_entities([['who', 'O', 'WP'], ['is', 'O', 'VBZ'], ['the', 'O', 'DT'], ['senator', 'O', 'NN'], ['of', 'O', 'IN'], ['connecticut', 'LOCATION', 'NNP'], ['2010', 'O', 'CD'], ['?', 'O', '.']])
+    [(['Connecticut'], 'LOCATION'), (['senator'], 'NN'), (['2010'], 'CD')]
     """
     # >>> extract_entities([['who', 'O', 'WP'], ['played', 'O', 'VBD'], ['eowyn', 'PERSON', 'NNP'], ['in', 'O', 'IN'], ['the', 'O', 'DT'], ['lord', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'], ['rings', 'O', 'NNS'], ['movies', 'O', 'NNS'], ['?', 'O', '.']])
     # [(['Eowyn'], 'PERSON'), (['the', 'lord', 'of', 'the', 'rings', 'movies'], 'NN')]
