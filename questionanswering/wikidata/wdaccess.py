@@ -70,9 +70,12 @@ sparql_relation_complex = """
     """
 
 sparql_entity_label = """
-        { VALUES ?labelright { %entitylabels }
-        VALUES ?labelpredicate {rdfs:label skos:altLabel}
-        GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate ?labelright  }
+        { {VALUES ?labelright { %entitylabels }
+          VALUES ?labelpredicate {rdfs:label skos:altLabel}
+          GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate ?labelright  }}
+          UNION
+          {  VALUES ?labelright { %entitylabels }
+          GRAPH <http://wikidata.org/statements> { ?e2 e:P1549s [ e:P1549v ?labelright ] } }
         } FILTER NOT EXISTS {
             VALUES ?topic {e:Q4167410 e:Q21286738 e:Q11266439 e:Q13406463}
             GRAPH <http://wikidata.org/instances> {?e2 rdf:type ?topic}}

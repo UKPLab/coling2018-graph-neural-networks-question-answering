@@ -32,7 +32,7 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(["Jfk"], "NNP")
     [('JFK',)]
     >>> possible_variants(['the', 'president', 'after', 'jfk'], 'NN')
-    [('The', 'President', 'After', 'Jfk')]
+    [('The', 'President', 'after', 'Jfk')]
     >>> possible_variants(['Jj', 'Thomson'], 'PERSON')
     [('J. J.', 'Thomson')]
     >>> possible_variants(['J', 'J', 'Thomson'], 'URL')
@@ -57,6 +57,8 @@ def possible_variants(entity_tokens, entity_type):
     [('Martin', 'Luther', 'King', 'Jr.'), ('Martin', 'Luther', 'King,', 'Jr.')]
     >>> possible_variants(['St', 'Louis', 'Rams'], 'ORGANIZATION')
     [('St.', 'Louis', 'Rams')]
+    >>> possible_variants(['united', 'states', 'of', 'america'], 'LOCATION')
+    [('United', 'States', 'of', 'America')]
     """
     new_entities = []
     entity_lemmas = []
@@ -86,8 +88,10 @@ def possible_variants(entity_tokens, entity_type):
             new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en])
         if "St" in entity_tokens or "st" in entity_tokens:
             new_entities.append(tuple([ne + "." if ne in {'St', 'st'} else ne for ne in entity_tokens]))
+        proper_title = [ne.title() if ne.lower() not in stop_words_en or i == 0 else ne for i, ne in enumerate(entity_tokens)]
+        if proper_title != entity_tokens:
+            new_entities.append(tuple(proper_title))
         if entity_type in ['NN']:
-            new_entities.append(tuple([ne.title() for ne in entity_tokens]))
             if entity_lemmas != entity_tokens:
                 new_entities.append(tuple(entity_lemmas))
     if any(roman_nums_pattern.match(ne.upper()) for ne in entity_tokens):
@@ -107,11 +111,11 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(["senators"], "NN")
     []
     >>> possible_subentities(['the', 'current', 'senators'], 'NN')
-    [('the', 'current'), ('current', 'senators'), ('current',), ('senators',), ('senator',)]
+    [('the', 'current'), ('current', 'senators'), ('current',), ('senators',), ('senator',), ('Current',), ('Senators',)]
     >>> possible_subentities(["awards"], "NN")
     []
     >>> possible_subentities(["star", "wars"], "NN")
-    [('star',), ('wars',), ('war',)]
+    [('star',), ('wars',), ('war',), ('Star',), ('Wars',)]
     >>> possible_subentities(["Grand", "Bahama", "Island"], "LOCATION")
     [('Grand', 'Bahama'), ('Bahama', 'Island'), ('Grand',), ('Bahama',), ('Island',)]
     >>> possible_subentities(["Dmitri", "Mendeleev"], "PERSON")
@@ -123,7 +127,7 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(["Jfk"], "NNP")
     []
     >>> possible_subentities(['the', 'president', 'after', 'jfk'], 'NN')
-    [('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',)]
+    [('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',), ('President',), ('Jfk',)]
     >>> possible_subentities(['Jj', 'Thomson'], 'PERSON')
     [('Thomson',), ('Jj',)]
     >>> possible_subentities(['J', 'J', 'Thomson'], 'URL')
@@ -149,9 +153,11 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(['2009'], 'CD')
     []
     >>> possible_subentities(['102', 'dalmatians'], 'NN')
-    [('dalmatians',), ('dalmatian',)]
+    [('dalmatians',), ('dalmatian',), ('Dalmatians',)]
     >>> possible_subentities(['Martin', 'Luther', 'King', 'Jr'], 'PERSON')
     [('Martin', 'Luther', 'King'), ('Martin',)]
+    >>> possible_subentities(['romanian', 'people'], 'NN')
+    [('romanian',), ('people',), ('Romanian',), ('People',)]
     """
     if len(entity_tokens) == 1:
         return []
@@ -182,6 +188,8 @@ def possible_subentities(entity_tokens, entity_type):
         if len(entity_tokens) > 1:
             new_entities.extend([(ne,) for ne in entity_tokens if not ne.isnumeric() and ne.lower() not in stop_words_en])
             new_entities.extend([(ne,) for ne in entity_lemmas if ne not in entity_tokens and not ne.isnumeric() and ne.lower() not in stop_words_en])
+            if entity_type in {'NN'}:
+                new_entities.extend([(ne.title(),) for ne in entity_tokens if not ne.isnumeric() and ne.lower() not in stop_words_en])
     return new_entities
 
 
