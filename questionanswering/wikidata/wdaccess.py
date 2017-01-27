@@ -104,6 +104,49 @@ sparql_canoncial_label_entity = """
         }
         """
 
+def load_blacklist(path_to_list):
+    try:
+        with open(path_to_list) as f:
+            return_list = {l.strip() for l in f.readlines()}
+        return return_list
+    except Exception as ex:
+        logger.error("No list found. {}".format(ex))
+        return set()
+
+
+def load_property_labels(path_to_property_labels):
+    try:
+        with open(path_to_property_labels) as infile:
+            return_map = {l.split("\t")[0]: l.split("\t")[1].strip().lower() for l in infile.readlines()}
+        return return_map
+    except Exception as ex:
+        logger.error("No list found. {}".format(ex))
+        return {}
+
+
+def load_entity_map(path_to_map):
+    """
+    Load the map of entity labels from a file.
+
+    :param path_to_map: location of the map file
+    :return: entity map as an nltk.Index
+    """
+    try:
+        with open(path_to_map) as f:
+            return_map = [l.strip().split("\t") for l in f.readlines()]
+        return nltk.Index({(t[1], t[0]) for t in return_map})
+    except Exception as ex:
+        logger.error("No entity map found. {}".format(ex))
+        return {"Q76": ["Barack Obama"]}
+
+
+RESOURCES_FOLDER = "../resources/"
+entity_map = load_entity_map(RESOURCES_FOLDER + "entity_map.tsv")
+property_blacklist = load_blacklist(RESOURCES_FOLDER + "property_blacklist.txt")
+entity_blacklist = load_blacklist(RESOURCES_FOLDER + "entity_blacklist.txt")
+property_whitelist = load_blacklist(RESOURCES_FOLDER + "property_whitelist.txt")
+property2label = load_property_labels(RESOURCES_FOLDER + "properties-with-labels.txt")
+
 
 sparql_restriction_time_argmax = "?m ?a [base:time ?n]. FILTER (YEAR(?n) = ?yearvalue)"
 
@@ -113,7 +156,8 @@ sparql_close_order = " ORDER BY {}"
 sparql_close = " LIMIT {}"
 
 # TODO: Additional?: given name
-HOP_UP_RELATIONS = {"P131", "P31", "P279", "P17", "P361", "P1445", "P179"} # + P674 Depricated
+HOP_UP_RELATIONS = load_blacklist(RESOURCES_FOLDER + "property_hopup.txt") # {"P131", "P31", "P279", "P17", "P361", "P1445", "P179"} # + P674 Depricated
+HOP_DOWN_RELATIONS = load_blacklist(RESOURCES_FOLDER + "property_hopdown.txt") # {"P131", "P31", "P279", "P17", "P361", "P1445", "P179"} # + P674 Depricated
 TEMPORAL_RELATIONS_Q = {"P585q", "P580q", "P582q", "P577q", "P571q"}
 TEMPORAL_RELATIONS_V = {"P580v", "P582v", "P577v", "P571v", "P569v", "P570v"}
 TEMPORAL_RELATIONS = TEMPORAL_RELATIONS_Q | TEMPORAL_RELATIONS_V
@@ -121,6 +165,7 @@ TEMPORAL_RELATIONS = TEMPORAL_RELATIONS_Q | TEMPORAL_RELATIONS_V
 sparql_entity_abstract = "?e3 ?hops [ ?hopv ?e2]."
 sparql_entity_specify = " ?e2 ?hops [ ?hopv ?e3]. "
 sparql_hopup_values = ""
+sparql_hopdown_values = ""
 sparql_temporal_values_q = "VALUES ?a {" + " ".join(["e:{}".format(r) for r in TEMPORAL_RELATIONS_Q]) + "}"
 sparql_temporal_values_v = "VALUES ?a {" + " ".join(["e:{}".format(r) for r in TEMPORAL_RELATIONS_V]) + "}"
 
@@ -129,8 +174,10 @@ FILTER_ENDINGS = "r"
 
 def update_sparql_clauses():
     global sparql_hopup_values
+    global sparql_hopdown_values
     if wdaccess_p.get('restrict.hop'):
         sparql_hopup_values = "VALUES (?hops ?hopv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_UP_RELATIONS]) + "}"
+        sparql_hopdown_values = "VALUES (?hops ?hopv) {" + " ".join(["(e:{}s e:{}v)".format(r, r) for r in HOP_DOWN_RELATIONS]) + "}"
 
 
 def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exception=False):
@@ -485,42 +532,6 @@ def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False):
         return []
 
 
-def load_blacklist(path_to_list):
-    try:
-        with open(path_to_list) as f:
-            return_list = {l.strip() for l in f.readlines()}
-        return return_list
-    except Exception as ex:
-        logger.error("No list found. {}".format(ex))
-        return set()
-
-
-def load_property_labels(path_to_property_labels):
-    try:
-        with open(path_to_property_labels) as infile:
-            return_map = {l.split("\t")[0]: l.split("\t")[1].strip().lower() for l in infile.readlines()}
-        return return_map
-    except Exception as ex:
-        logger.error("No list found. {}".format(ex))
-        return {}
-
-
-def load_entity_map(path_to_map):
-    """
-    Load the map of entity labels from a file.
-
-    :param path_to_map: location of the map file
-    :return: entity map as an nltk.Index
-    """
-    try:
-        with open(path_to_map) as f:
-            return_map = [l.strip().split("\t") for l in f.readlines()]
-        return nltk.Index({(t[1], t[0]) for t in return_map})
-    except Exception as ex:
-        logger.error("No entity map found. {}".format(ex))
-        return {"Q76": ["Barack Obama"]}
-
-
 def map_query_results(query_results, question_variable='e1'):
     """
     Extract the variable values from the query results and map them to canonical WebQuestions strings.
@@ -590,11 +601,6 @@ def label_query_results(query_results, question_variable='e1'):
     # answers = [[l.get('label0').lower() for l in query_wikidata(label_query(a), starts_with="", use_cache=True)] for a in answers]
     return answers
 
-RESOURCES_FOLDER = "../resources/"
-entity_map = load_entity_map(RESOURCES_FOLDER + "entity_map.tsv")
-property_blacklist = load_blacklist(RESOURCES_FOLDER + "property_blacklist.txt")
-property_whitelist = load_blacklist(RESOURCES_FOLDER + "property_whitelist.txt")
-property2label = load_property_labels(RESOURCES_FOLDER + "properties-with-labels.txt")
 
 if __name__ == "__main__":
     import doctest
