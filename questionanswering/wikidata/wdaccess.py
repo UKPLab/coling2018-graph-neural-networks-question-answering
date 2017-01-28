@@ -281,6 +281,8 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
 
         if 'kbID' in edge:
             sparql_relation_inst = re.sub(r"\?r[drv]", "e:" + edge['kbID'], sparql_relation_inst)
+            if edge.get('type') == 'v-structure':
+                sparql_relation_inst = sparql_relation_inst.replace("VALUES ?rv { e:P161v e:P453q e:P175q}", "")
         elif edge.get('type') not in {'time'}:
             sparql_relation_inst = sparql_relation_inst.replace("?r", "?r" + str(i))
             local_variables.extend(["?r{}{}".format(i, t[0]) for t in ['direct', 'reverse']] if 'type' not in edge else ["?r{}{}".format(i, edge['type'][0])])
