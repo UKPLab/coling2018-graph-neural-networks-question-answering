@@ -54,7 +54,7 @@ sparql_relation = {
         {GRAPH <http://wikidata.org/statements> { ?e2 ?p ?m . ?m ?rr ?e1 . %restriction% }}
     """,
     "v-structure": """
-        {GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}
+        {VALUES ?rv { e:P161v e:P453q e:P175q}  GRAPH <http://wikidata.org/statements> { ?m ?p ?e2 . ?m ?rv ?e1 . %restriction% }}
     """,
     "time": """
         {GRAPH <http://wikidata.org/statements> { ?e1 ?o0 [ ?a [base:time ?n]]. }}
@@ -195,12 +195,14 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exce
     :param g: graph as a dictionary
     :param use_cache
     :return: graph groundings encoded as a list of dictionaries
-    >>> len(query_graph_groundings({'edgeSet': [{'right': ['book'], 'rightkbID': 'Q571', 'type':'direct', 'argmax':'time'}], 'entities': []}))
-    4
+    >>> query_graph_groundings({'edgeSet': [{'right': ['book'], 'rightkbID': 'Q571', 'type':'direct', 'argmax':'time'}], 'entities': []})
+    3
     >>> len(query_graph_groundings({'edgeSet': [{'rightkbID': 'Q127367', 'type':'reverse'}, {'type':'time'}], 'entities': []}))
     23
     >>> len(query_graph_groundings({'edgeSet': [{'rightkbID': 'Q127367', 'type':'reverse'}, {'type':'time', 'argmax':'time'}], 'entities': []}))
     23
+    >>> len(query_graph_groundings({'edgeSet': [{'rightkbID': 'Q37876', 'type':'v-structure'}], 'entities': []}))
+    2
     """
     if get_free_variables(g):
         groundings = query_wikidata(graph_to_query(g, limit=GLOBAL_RESULT_LIMIT*(10 if with_denotations else 1), return_var_values=with_denotations), use_cache=use_cache)
