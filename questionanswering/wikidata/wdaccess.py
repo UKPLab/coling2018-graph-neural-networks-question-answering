@@ -86,7 +86,6 @@ sparql_label_entity = """
         VALUES ?e2 { %entityids }
         VALUES ?labelpredicate {rdfs:label skos:altLabel}
         GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate ?label }
-        FILTER ( lang(?label) = "en" )
         }
         """
 
