@@ -15,8 +15,6 @@ def last_relation_subentities(g):
     []
     >>> len(last_relation_subentities({'edgeSet': [{'right': (['grand', 'bahama', 'island'], 'LOCATION')}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
     5
-    >>> last_relation_subentities({'edgeSet': [{'right':(['Jfk'], 'NNP')}], 'entities': []}) == [{'edgeSet': [{'right': ['JFK']}], 'entities': []}]
-    True
     """
     if len(g.get('edgeSet', [])) == 0 or len(g['edgeSet'][-1]['right']) < 1:
         return []
@@ -206,7 +204,7 @@ def expand(g):
     :return: a list of new graphs that are modified copies
     >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[["Barack", "Obama"]]})
     []
-    >>> expand({"edgeSet":[{"right":["Barack", "Obama"]}]}) == [{'edgeSet': [{'hopUp': None, 'right': ['Barack', 'Obama']}], 'entities': []}]
+    >>> expand({"edgeSet":[{"right":["Barack", "Obama"]}]}) == [{'edgeSet': [{'hopUp': None, 'right': ['Barack', 'Obama']}], 'entities': []}, {'edgeSet': [{'hopDown': None, 'right': ['Barack', 'Obama']}], 'entities': []}]
     True
     """
     if "edgeSet" not in g:

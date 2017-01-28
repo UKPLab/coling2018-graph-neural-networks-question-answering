@@ -194,7 +194,7 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exce
     :param g: graph as a dictionary
     :param use_cache
     :return: graph groundings encoded as a list of dictionaries
-    >>> query_graph_groundings({'edgeSet': [{'right': ['book'], 'rightkbID': 'Q571', 'type':'direct', 'argmax':'time'}], 'entities': []})
+    >>> len(query_graph_groundings({'edgeSet': [{'right': ['book'], 'rightkbID': 'Q571', 'type':'direct', 'argmax':'time'}], 'entities': []}))
     3
     >>> len(query_graph_groundings({'edgeSet': [{'rightkbID': 'Q127367', 'type':'reverse'}, {'type':'time'}], 'entities': []}))
     23
@@ -432,7 +432,7 @@ def label_query(entity, limit=10):
     :param limit: limit on the result list size
     :return: a WikiData query
     >>> query_wikidata(label_query("Q36"), starts_with=None)
-    [{'label0': 'Poland'}, {'label0': 'Republic of Poland'}, {'label0': 'Polska'}, {'label0': 'PL'}, {'label0': 'pl'}, {'label0': 'POL'}]
+    [{'label0': 'Poland'}, {'label0': 'Polen'}, {'label0': 'Republic of Poland'}, {'label0': 'Polska'}, {'label0': 'PL'}, {'label0': 'pl'}, {'label0': 'POL'}]
     """
     query = sparql_prefix
     variables = []
@@ -602,8 +602,8 @@ def label_query_results(query_results, question_variable='e1'):
     :param query_results: list of dictionaries returned by the sparql endpoint
     :param question_variable: the variable to extract
     :return: list of answers as entity labels or an original id if no canonical label was found.
-    >>> sorted(label_query_results([{'e1':'Q76'}, {'e1':'Q235234'}, {'e1':'r68123123-12dd222'}]))
-    [['barack obama', 'barack hussein obama ii', 'obama', 'barack hussein obama', 'barack obama ii'], ['james i of scotland', 'james i, king of scots']]
+    >>> sorted(sorted(label_query_results([{'e1':'Q76'}, {'e1':'Q235234'}, {'e1':'r68123123-12dd222'}]))[0])
+    ['barack h. obama', 'barack hussein obama', 'barack hussein obama ii', 'barack hussein obama, jr.', 'barack obama', 'barack obama ii', 'obama']
     """
     answers = [r[question_variable] for r in query_results]
     # answers = [a for a in answers if '-' not in a and a[0] in 'pqPQ']  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48

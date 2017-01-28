@@ -145,8 +145,6 @@ def approximate_groundings(g):
 
     :param g: the graph to ground
     :return: a list of graph groundings.
-    >>> len(approximate_groundings({'edgeSet': [{'right': ['Percy', 'Jackson'], 'kbID': 'P179v', 'type': 'direct', 'hopUp': 'P674v', 'rightkbID': 'Q3899725'}, {'rightkbID': 'Q571', 'right': ['book']}], 'entities': []}))
-    38
     """
     separate_groundings = []
     logger.debug("Approximating graph groundings: {}".format(g))
@@ -389,7 +387,7 @@ def apply_grounding(g, grounding):
     True
     >>> apply_grounding({'edgeSet':[{}]}, {'r0v':'P31v'}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v'}], 'entities': []}
     True
-    >>> apply_grounding({'edgeSet':[{}]}, {'r0v':'P31v', 'hopup0v':'P131v'}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v', 'hopUp':'P131v'}], 'entities': []}
+    >>> apply_grounding({'edgeSet':[{"hopUp":None}]}, {'r0v':'P31v', 'hop0v':'P131v'}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v', 'hopUp':'P131v'}], 'entities': []}
     True
     >>> apply_grounding({'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v', 'hopUp':'P131v'}], 'tokens': []}, {}) == {'edgeSet': [{'type': 'v-structure', 'kbID': 'P31v', 'hopUp':'P131v'}], 'entities': [], 'tokens': []}
     True
