@@ -1,0 +1,8 @@
+language
+languages
+people
+human
+film
+films
+movie
+movies
