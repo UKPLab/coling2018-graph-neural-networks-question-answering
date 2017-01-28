@@ -39,8 +39,14 @@ def generate(config_file_path):
     wdaccess.update_sparql_clauses()
     if 'hop.types' in config['wikidata']:
         stages.HOP_TYPES = config['wikidata']['hop.types']
+    logger.debug("Hop types set to: {}".format(stages.HOP_TYPES))
     if 'arg.types' in config['wikidata']:
         stages.ARG_TYPES = config['wikidata']['arg.types']
+    logger.debug("Arg types set to: {}".format(stages.ARG_TYPES))
+
+    if wdaccess.wdaccess_p["restrict.hop"]:
+        logger.debug("HOP UP relations set to: {}".format(wdaccess.HOP_UP_RELATIONS))
+        logger.debug("HOP DOWN relations set to: {}".format(wdaccess.HOP_DOWN_RELATIONS))
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
     logger.debug('Loaded WebQuestions, size: {}'.format(webquestions.get_dataset_size()))
