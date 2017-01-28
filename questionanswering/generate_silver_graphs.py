@@ -46,7 +46,9 @@ def generate(config_file_path):
 
     if wdaccess.wdaccess_p["restrict.hop"]:
         logger.debug("HOP UP relations set to: {}".format(wdaccess.HOP_UP_RELATIONS))
+        logger.debug("HOP UP relations set to: {}".format(wdaccess.sparql_hopup_values))
         logger.debug("HOP DOWN relations set to: {}".format(wdaccess.HOP_DOWN_RELATIONS))
+        logger.debug("HOP UP relations set to: {}".format(wdaccess.sparql_hopdown_values))
 
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
     logger.debug('Loaded WebQuestions, size: {}'.format(webquestions.get_dataset_size()))
