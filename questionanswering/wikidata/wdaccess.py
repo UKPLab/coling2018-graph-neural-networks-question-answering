@@ -389,7 +389,7 @@ def entity_query(label, limit=100):
     query += "{"
     sparql_entity_label_inst = sparql_entity_label.replace("VALUES ?labelright { %entitylabels }", "")
     sparql_entity_label_inst = sparql_entity_label_inst.replace("?e2", "?e2" + str(0))
-    sparql_entity_label_inst = sparql_entity_label_inst.replace("?labelright", "\"{}\"@en".format(label))
+    sparql_entity_label_inst = sparql_entity_label_inst.replace("?labelright", "\"{}\"@en".format(label, label))
     variables.append("?e2" + str(0))
     query += sparql_entity_label_inst
     query += "}"
@@ -412,7 +412,7 @@ def multi_entity_query(labels, limit=100):
     query += sparql_select
     query += "{"
     sparql_entity_label_inst = sparql_entity_label.replace("?e2", "?e2" + str(0))
-    labels = ["\"{}\"@en".format(l) for l in labels]
+    labels = ["\"{}\"@en \"{}\"@de".format(l, l) for l in labels]
     sparql_entity_label_inst = sparql_entity_label_inst.replace("%entitylabels", " ".join(labels))
     variables.append("?e2" + str(0))
     variables.append("?labelright")
@@ -580,17 +580,17 @@ def label_many_entities_with_alt_labels(entities):
     :param entities: a list of entity ids.
     :return: a dictionary mapping entity id to a list of labels
     >>> dict(label_many_entities_with_alt_labels(["Q76", "Q188984", "Q194339"])) == \
-    {"Q188984": ["New York Rangers"], "Q76": ["Barack Obama", "Barack Hussein Obama II", "Obama", "Barack Hussein Obama", "Barack Obama II"], "Q194339": ["Bahamian dollar"]}
+    {'Q188984': {'NY Rangers', 'Blue-Shirts', 'Blue Shirts', 'Broadway Blueshirts', 'New York Rangers', 'NYR'}, 'Q194339': {'Bahamian dollar', 'Bahama-Dollar', 'B$', 'Bahamas-Dollar'}, 'Q76': {'Barack Obama', 'Barack Hussein Obama II', 'Barack H. Obama', 'Barack Obama II', 'Barack Hussein Obama, Jr.', 'Barack Hussein Obama', 'Obama'}}
     True
     >>> dict(label_many_entities_with_alt_labels(["VTfb0eeb812ca69194eaaa87efa0c6d51d"]))
-    {'VTfb0eeb812ca69194eaaa87efa0c6d51d': ['1972']}
+    {'VTfb0eeb812ca69194eaaa87efa0c6d51d': {'1972'}}
     """
     results = query_wikidata(multientity_label_query(entities), starts_with="", use_cache=False)
     if len(results) > 0:
-        retrieved_labels = defaultdict(list)
+        retrieved_labels = defaultdict(set)
         for result in results:
             entity_id = result.get("e2", "").replace(WIKIDATA_ENTITY_PREFIX, "")
-            retrieved_labels[entity_id].append(result.get("label0", ""))
+            retrieved_labels[entity_id].add(result.get("label0", ""))
         return retrieved_labels
     return {}
 
