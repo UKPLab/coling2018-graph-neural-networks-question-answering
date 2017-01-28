@@ -9,6 +9,7 @@ entity_linking_p = {
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
 roman_nums_pattern = re.compile("^(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$")
+labels_blacklist = wdaccess.load_blacklist(wdaccess.RESOURCES_FOLDER + "labels_blacklist.txt")
 stop_words_en = set(nltk.corpus.stopwords.words('english'))
 
 
@@ -171,7 +172,7 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(['Martin', 'Luther', 'King', 'Jr'], 'PERSON')
     [('Martin', 'Luther', 'King'), ('Martin',)]
     >>> possible_subentities(['romanian', 'people'], 'NN')
-    [('romanian',), ('people',), ('Romanian',), ('People',)]
+    [('romanian',), ('Romanian',)]
     """
     if len(entity_tokens) == 1:
         return []
@@ -198,12 +199,12 @@ def possible_subentities(entity_tokens, entity_type):
             for new_entity in ngrams:
                 new_entities.append(new_entity)
         if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP', 'NN']:
-            new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en])
+            new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en | labels_blacklist])
         if len(entity_tokens) > 1:
-            new_entities.extend([(ne,) for ne in entity_tokens if not ne.isnumeric() and ne.lower() not in stop_words_en])
-            new_entities.extend([(ne,) for ne in entity_lemmas if ne not in entity_tokens and not ne.isnumeric() and ne.lower() not in stop_words_en])
+            new_entities.extend([(ne,) for ne in entity_tokens if not ne.isnumeric() and ne.lower() not in stop_words_en | labels_blacklist])
+            new_entities.extend([(ne,) for ne in entity_lemmas if ne not in entity_tokens and not ne.isnumeric() and ne.lower() not in stop_words_en | labels_blacklist])
             if entity_type in {'NN'}:
-                new_entities.extend([(ne.title(),) for ne in entity_tokens if not ne.isnumeric() and ne.lower() not in stop_words_en])
+                new_entities.extend([(ne.title(),) for ne in entity_tokens if not ne.isnumeric() and ne.lower() not in stop_words_en | labels_blacklist])
     return new_entities
 
 
@@ -215,8 +216,18 @@ def link_entity(entity, try_subentities=True):
     :param entity: list of entity tokens
     :param try_subentities:
     :return: list of KB ids
+    >>> link_entity((['Martin', 'Luther', 'King', 'Junior'], 'PERSON'))
+    ['Q8027', 'Q6776048']
+    >>> link_entity((['movies', 'does'], 'NN'))
+    []
+    >>> link_entity((['lord', 'of', 'the', 'rings'], 'NN'))
+    ['Q15228', 'Q127367', 'Q378913']
+    >>> link_entity((["The", "People", "vs.", "Larry", "Flynt"], 'NNP'))
+    ['Q750077']
     """
     entity_tokens, entity_type = entity
+    if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
+        return []
     linkings = wdaccess.query_wikidata(wdaccess.entity_query(" ".join(entity_tokens)))
     if entity_type not in {"NN"} or not linkings:
         entity_variants = possible_variants(entity_tokens, entity_type)

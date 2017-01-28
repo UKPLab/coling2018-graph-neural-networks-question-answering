@@ -104,9 +104,16 @@ sparql_canoncial_label_entity = """
         }
         """
 
+
 def load_blacklist(path_to_list):
     try:
         with open(path_to_list) as f:
+            return_list = {l.strip() for l in f.readlines()}
+        return return_list
+    except Exception as ex:
+        logger.error("No list found. {}".format(ex))
+    try:
+        with open("../" + path_to_list) as f:
             return_list = {l.strip() for l in f.readlines()}
         return return_list
     except Exception as ex:
