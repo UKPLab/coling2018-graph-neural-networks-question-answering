@@ -64,10 +64,16 @@ def generate(config_file_path):
 
     silver_dataset = []
     len_webquestion = webquestions.get_dataset_size()
+    start_with = 0
+    if 'start.with' in config['generation']:
+        start_with = config['generation']['start.witht']
+        print("Starting with {}.".format(start_with))
+
     if 'take_first' in config['generation']:
         print("Taking the first {} questions.".format(config['generation']['take_first']))
         len_webquestion = config['generation']['take_first']
-    for i in tqdm.trange(len_webquestion, ncols=100):
+    logger.debug("First question: {} {}".format(start_with, webquestions_questions[start_with]))
+    for i in tqdm.tqdm(range(start_with, len_webquestion), ncols=100):
         question_entities = webquestions_entities[i]
         if "max.num.entities" in config['generation']:
             question_entities = question_entities[:config['generation']["max.num.entities"]]

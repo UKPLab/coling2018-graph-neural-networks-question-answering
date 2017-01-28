@@ -22,6 +22,7 @@ generation:
   save.choice.to: "../data/generated/webquestions.examples.train.choice_graphs.extended.json"
   save.silver.to: "../data/generated/webquestions.examples.train.silvergraphs.200.2.json"
   take_first: 200
+  start.with: 0
   include_url_entities: True
   label.query.results: True
 
