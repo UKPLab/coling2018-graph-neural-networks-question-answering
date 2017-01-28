@@ -6,3 +6,5 @@ film
 films
 movie
 movies
+voice
+voices
