@@ -234,7 +234,9 @@ def query_graph_denotations(g):
     >>> query_graph_denotations({'edgeSet': [{'type': 'reverse', 'rightkbID': 'Q329816', 'kbID':"P571v"}], 'tokens':["when", "did","start"]})
     [{'e1': 'VTfb0eeb812ca69194eaaa87efa0c6d51d'}]
     >>> query_graph_denotations({'edgeSet': [{'rightkbID': 'Q1297', 'kbID':'P281v', 'type':'reverse'}], 'tokens':["what", "zip", "code"]})
-    [{'e1': '10000'}, {'e1': '10499'}, {'e1': '11004'}, {'e1': '11005'}]
+    [{'e1': '60601'}, {'e1': '60827'}, {'e1': '60601'}, {'e1': '60827'}]
+    >>> label_query_results(query_graph_denotations({'filter':'importance', 'edgeSet': [{'kbID': 'P206v', 'rightkbID': 'Q19686', 'type': 'direct'}]}))
+    [['london, united kingdom', 'london, uk', 'london', 'london, england'], ['square mile', 'city and county of the city of london', 'the city', 'city of london'], ['oxford']]
     """
     if "zip" in g.get('tokens', []) and any(e.get('kbID') == "P281v" for e in g.get('edgeSet',[])):
         denotations = query_wikidata(graph_to_query(g, return_var_values=True), starts_with="")
@@ -253,6 +255,27 @@ def query_graph_denotations(g):
     question_text = " ".join(g.get('tokens', []))
     if not question_text.startswith("when") and not question_text.startswith("what year"):
         denotations = [r for r in denotations if any('-' not in r[b] and r[b][0] in 'pqPQ' for b in r)]  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
+    if 'filter' in g and g['filter'] == 'importance':
+        denotations = filter_denotation_by_importance(denotations)
+    return denotations
+
+
+def filter_denotation_by_importance(denotations, keep=3):
+    """
+    Keep only top most important entities judging by their ids.
+
+    :param denotations: a list of entity ids
+    :param keep: how many entities to keep
+    :return: list of entitiy ids
+    >>> filter_denotation_by_importance(['Q161491', 'Q523651', 'Q1143278', 'Q179385', 'Q592123', 'Q62378', 'Q617407', 'Q858775'])
+    ['Q62378', 'Q161491', 'Q179385']
+    >>> filter_denotation_by_importance([{'e1': 'Q161491'}, {'e1': 'Q523651'}, {'e1': 'Q1143278'}, {'e1': 'Q179385'}, {'e1': 'Q592123'}, {'e1': 'Q62378'}])
+    [{'e1': 'Q62378'}, {'e1': 'Q161491'}, {'e1': 'Q179385'}]
+    """
+    if denotations and type(denotations[0]) == dict:
+        denotations = sorted(denotations, key=lambda k: int(k.get('e1'," ")[1:]))[:keep]
+    else:
+        denotations = sorted(denotations, key=lambda k: int(k[1:]))[:keep]
     return denotations
 
 
