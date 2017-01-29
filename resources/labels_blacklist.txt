@@ -8,3 +8,4 @@ movie
 movies
 voice
 voices
+new

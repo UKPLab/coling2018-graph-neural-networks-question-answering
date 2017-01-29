@@ -656,8 +656,28 @@ def label_query_results(query_results, question_variable='e1'):
     # answers = [a for a in answers if '-' not in a and a[0] in 'pqPQ']  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
     answers_to_label = [a for a in answers if not a.isnumeric() and len(a) > 0]
     rest_answers = [[a] for a in answers if a.isnumeric()]
-    answers = [[l.lower() for l in labels] for _, labels in label_many_entities_with_alt_labels(answers_to_label).items()] + rest_answers
+    answers = [[l.lower() for l in labels] for _, labels in label_many_entities_with_alt_labels(answers_to_label).items()]
+    answers = normalize_answer_strings(answers)
     # answers = [[l.get('label0').lower() for l in query_wikidata(label_query(a), starts_with="", use_cache=True)] for a in answers]
+    return answers + rest_answers
+
+
+def normalize_answer_strings(answers):
+    """
+    Add normalized alternative labels.
+
+    :param answers: list of lists of string answers
+    :return: list of lists of string answers
+    >>> normalize_answer_strings([['twilight saga: breaking dawn - part 2'], ['the twilight saga: new moon', 'twilight saga: new moon']])
+    [['twilight saga: breaking dawn - part 2', 'twilight saga', 'breaking dawn - part 2', 'twilight saga: breaking dawn', 'part 2', 'breaking dawn', 'part 2', 'twilight saga', 'breaking dawn'], ['the twilight saga: new moon', 'twilight saga: new moon', 'the twilight saga', 'new moon', 'twilight saga', 'new moon']]
+    """
+    answers = [[a.replace("–", "-") for a in answer_set] for answer_set in answers]
+    for answer_set in answers:
+        for a in answer_set:
+            if ":" in a:
+                answer_set.extend([w.strip() for w in a.split(":")])
+            if " - " in a:
+                answer_set.extend([w.strip() for w in a.split(" - ")])
     return answers
 
 
