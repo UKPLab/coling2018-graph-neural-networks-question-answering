@@ -82,7 +82,7 @@ def add_entity_and_relation(g):
         if entity[1] == 'CD':
             skipped.append(entity)
         else:
-            if len(entities) == 3:
+            if len(entity) == 3:
                 linkings = entity[2]
             else:
                 linkings = entity_linking.link_entity(entity[:2])
