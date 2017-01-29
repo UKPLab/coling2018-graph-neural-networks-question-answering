@@ -678,6 +678,8 @@ def normalize_answer_strings(answers):
                 answer_set.extend([w.strip() for w in a.split(":")])
             if " - " in a:
                 answer_set.extend([w.strip() for w in a.split(" - ")])
+            if "standard time" in a:
+                answer_set.append(a.replace("standard time", "time zone"))
     return answers
 
 
