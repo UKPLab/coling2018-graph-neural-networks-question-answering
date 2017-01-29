@@ -536,7 +536,7 @@ def main_label_query(entity):
     query = sparql_prefix
     query += sparql_select
     query += "{"
-    sparql_label_entity_inst = sparql_label_entity.replace("VALUES ?e2 { %entityids }", "")
+    sparql_label_entity_inst = sparql_canoncial_label_entity.replace("VALUES ?e2 { %entityids }", "")
     sparql_label_entity_inst = sparql_label_entity_inst.replace("?e2", "e:" + entity)
     sparql_label_entity_inst = sparql_label_entity_inst.replace("?label", "?label" + str(0))
     sparql_label_entity_inst = sparql_label_entity_inst.replace("skos:altLabel", "")
@@ -611,6 +611,8 @@ def label_entity(entity):
 
     :param entity: entity KB ID
     :return: entity label as a string
+    >>> label_entity("Q12143")
+    'time zone'
     """
     results = query_wikidata(main_label_query(entity), starts_with="", use_cache=True)
     if results and 'label0' in results[0]:
