@@ -74,6 +74,7 @@ def generate_with_gold(ungrounded_graph, gold_answers):
             if len(chosen_graphs) > 0:
                 logger.debug("Extending the pool.")
                 pool.extend(chosen_graphs)
+                pool = sorted(pool, key=lambda x: x[1][2], reverse=True)
             else:
                 logger.debug("Extending the generated graph set: {}".format(g))
                 positive_graphs.append(g)
