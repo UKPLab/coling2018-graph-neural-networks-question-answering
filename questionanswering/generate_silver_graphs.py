@@ -66,7 +66,7 @@ def generate(config_file_path):
     len_webquestion = webquestions.get_dataset_size()
     start_with = 0
     if 'start.with' in config['generation']:
-        start_with = config['generation']['start.witht']
+        start_with = config['generation']['start.with']
         print("Starting with {}.".format(start_with))
 
     if 'take_first' in config['generation']:
