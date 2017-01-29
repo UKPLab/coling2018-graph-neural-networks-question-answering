@@ -32,6 +32,9 @@ def generate_with_gold(ungrounded_graph, gold_answers):
     >>> max(g[1][2] if len(g) > 1 else 0.0 for g in generate_with_gold({'edgeSet': [], 'entities': [(['Texas', 'Rangers'], 'URL')], \
             'tokens': ['when', 'were', 'the', 'texas', 'rangers', 'started', '?']}, gold_answers=['1972']))
     1.0
+    >>> max(g[1][2] if len(g) > 1 else 0.0 for g in generate_with_gold({'edgeSet': [], 'entities': [(['Chicago'], 'LOCATION')], \
+    'tokens': ['what','is','the','zip','code','of','chicago','?']}, gold_answers=['60605', '60604', '60607', '60606', '60601', '60610', '60603', '60602', '60290', '60608'])) > 0.05
+    True
     """
     ungrounded_graph = link_entities_in_graph(ungrounded_graph)
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses

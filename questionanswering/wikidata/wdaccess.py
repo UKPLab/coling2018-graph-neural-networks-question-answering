@@ -233,7 +233,22 @@ def query_graph_denotations(g):
     [{'e1': 'Q76'}]
     >>> query_graph_denotations({'edgeSet': [{'type': 'reverse', 'rightkbID': 'Q329816', 'kbID':"P571v"}], 'tokens':["when", "did","start"]})
     [{'e1': 'VTfb0eeb812ca69194eaaa87efa0c6d51d'}]
+    >>> query_graph_denotations({'edgeSet': [{'rightkbID': 'Q1297', 'kbID':'P281v', 'type':'reverse'}], 'tokens':["what", "zip", "code"]})
+    [{'e1': '10000'}, {'e1': '10499'}, {'e1': '11004'}, {'e1': '11005'}]
     """
+    if "zip" in g.get('tokens', []) and any(e.get('kbID') == "P281v" for e in g.get('edgeSet',[])):
+        denotations = query_wikidata(graph_to_query(g, return_var_values=True), starts_with="")
+        denotations = [r for r in denotations if any('x' not in r[b] for b in r)]  # Post process zip codes
+        post_processed = []
+        for r in denotations:
+            for b in r:
+                codes = re.split("[-–]", r[b])
+                for p in codes:
+                    if p:
+                        if len(p) < len(codes[0]):
+                            p = codes[0][:(len(codes[0])) - len(p)] + p
+                        post_processed.append({b: p})
+        return post_processed
     denotations = query_wikidata(graph_to_query(g, return_var_values=True))
     question_text = " ".join(g.get('tokens', []))
     if not question_text.startswith("when") and not question_text.startswith("what year"):
@@ -609,10 +624,14 @@ def label_query_results(query_results, question_variable='e1'):
     :return: list of answers as entity labels or an original id if no canonical label was found.
     >>> sorted(sorted(label_query_results([{'e1':'Q76'}, {'e1':'Q235234'}, {'e1':'r68123123-12dd222'}]))[0])
     ['barack h. obama', 'barack hussein obama', 'barack hussein obama ii', 'barack hussein obama, jr.', 'barack obama', 'barack obama ii', 'obama']
+    >>> label_query_results([{'e1': '10000'}, {'e1': '10499'}, {'e1': '11004'}, {'e1': '05'}, {'e1': ""}])
+    ['10000', '10499', '11004', '05']
     """
     answers = [r[question_variable] for r in query_results]
     # answers = [a for a in answers if '-' not in a and a[0] in 'pqPQ']  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
-    answers = [[l.lower() for l in labels] for _, labels in label_many_entities_with_alt_labels(answers).items()]
+    answers_to_label = [a for a in answers if not a.isnumeric() and len(a) > 0]
+    rest_answers = [[a] for a in answers if a.isnumeric()]
+    answers = [[l.lower() for l in labels] for _, labels in label_many_entities_with_alt_labels(answers_to_label).items()] + rest_answers
     # answers = [[l.get('label0').lower() for l in query_wikidata(label_query(a), starts_with="", use_cache=True)] for a in answers]
     return answers
 
