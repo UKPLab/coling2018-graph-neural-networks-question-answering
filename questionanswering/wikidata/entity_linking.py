@@ -116,7 +116,7 @@ def possible_variants(entity_tokens, entity_type):
             no_stop_title = [ne for ne in entity_tokens if ne.lower() not in stop_words_en]
             if no_stop_title != entity_tokens:
                 new_entities.append(tuple(no_stop_title))
-        if entity_type in {'ORGANIZATION'} and all(w not in {t.lower() for t in entity_tokens} for w in {'us', 'university', 'company', 'brothers', 'computer'}):
+        if entity_type in {'ORGANIZATION'} and all(w not in {t.lower() for t in entity_tokens} for w in {'us', 'university', 'company', 'brothers', 'computer', 'united', 'states'}):
             new_entities.append(("US", ) + tuple(proper_title))
     if any(roman_nums_pattern.match(ne.upper()) for ne in entity_tokens):
         new_entities.append(tuple([ne.upper() if roman_nums_pattern.match(ne.upper()) else ne for ne in entity_tokens]))
@@ -243,12 +243,14 @@ def link_entity(entity, try_subentities=True):
     ['Q189004', 'Q23002039']
     >>> link_entity((['House', 'Of', 'Representatives'], 'ORGANIZATION'))
     ['Q11701', 'Q233262', 'Q320256']
+    >>> link_entity((['senator', 'of', 'the', 'state'], 'NN'))
+    ['Q13217683', 'Q15686806']
     """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
         return []
-    if " ".join(entity_tokens) in wdaccess.entity_map:
-        return wdaccess.entity_map.get(" ".join(entity_tokens), [])[:entity_linking_p.get("max.entity.options", 3)]
+    if any(t in wdaccess.entity_map for t in entity_tokens):
+        return [e for t in entity_tokens for e in wdaccess.entity_map.get(t, [])][:entity_linking_p.get("max.entity.options", 3)]
     linkings = wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(entity_tokens)]), starts_with=None)
     if entity_type not in {"NN"} or not linkings:
         entity_variants = possible_variants(entity_tokens, entity_type)
