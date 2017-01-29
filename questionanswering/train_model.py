@@ -51,10 +51,12 @@ def train(config_file_path):
         trainablemodel.prepare_model(webquestions.get_training_tokens())
     if config['training'].get('train.generator', False):
         trainablemodel.train_on_generator(webquestions.get_training_generator(config['model'].get("batch.size", 128)),
-                                          validation_with_targets=webquestions.get_validation_samples())
+                                          validation_with_targets=webquestions.get_validation_samples()
+                                          if 'train_validation' in config['webquestions']['path.to.dataset'] else None)
     else:
         trainablemodel.train(webquestions.get_training_samples(),
-                             validation_with_targets=webquestions.get_validation_samples())
+                             validation_with_targets=webquestions.get_validation_samples()
+                             if 'train_validation' in config['webquestions']['path.to.dataset'] else None)
 
     accuracy_on_silver = trainablemodel.test_on_silver(webquestions.get_validation_samples())
     print("Accuracy on silver data: {}".format(accuracy_on_silver))
