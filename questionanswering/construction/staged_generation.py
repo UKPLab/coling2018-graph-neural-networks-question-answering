@@ -51,6 +51,8 @@ def generate_with_gold(ungrounded_graph, gold_answers):
             suggested_graphs = restricted_graphs[:]
             bonus_round = False
             while (not chosen_graphs or bonus_round) and suggested_graphs:
+                if bonus_round:
+                    logger.debug("Bonus round!")
                 bonus_round = False
                 s_g = suggested_graphs.pop(0)
                 chosen_graphs, not_chosen_graphs = ground_with_gold([s_g], gold_answers, min_fscore=master_g_fscore)
