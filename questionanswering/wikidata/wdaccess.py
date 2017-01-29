@@ -273,8 +273,10 @@ def filter_denotation_by_importance(denotations, keep=3):
     [{'e1': 'Q62378'}, {'e1': 'Q161491'}, {'e1': 'Q179385'}]
     """
     if denotations and type(denotations[0]) == dict:
+        denotations = [r for r in denotations if any('-' not in r[b] and r[b][0] in 'pqPQ' for b in r)]
         denotations = sorted(denotations, key=lambda k: int(k.get('e1'," ")[1:]))[:keep]
     else:
+        denotations = [r for r in denotations if any('-' not in r and r[0] in 'pqPQ')]
         denotations = sorted(denotations, key=lambda k: int(k[1:]))[:keep]
     return denotations
 
