@@ -20,6 +20,7 @@ generation:
   max.entity.options: 3
   questions: "../data/input/webquestions.examples.train.json"
   save.choice.to: "../data/generated/webquestions.examples.train.choice_graphs.extended.json"
+#  previous: "../data/generated/webquestions.examples.train.silvergraphs.full_01_15.json"
   save.silver.to: "../data/generated/webquestions.examples.train.silvergraphs.200.2.json"
   take_first: 200
   start.with: 0

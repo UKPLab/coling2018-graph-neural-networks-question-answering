@@ -183,6 +183,8 @@ def copy_graph(g):
              'entities': copy.copy(g.get('entities', []))}
     if 'tokens' in g:
         new_g['tokens'] = g.get('tokens', [])
+    if 'filter' in g:
+        new_g['filter'] = g['filter']
     return new_g
 
 np_grammar = r"""
