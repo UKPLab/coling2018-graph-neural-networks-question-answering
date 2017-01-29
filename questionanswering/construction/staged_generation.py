@@ -55,17 +55,22 @@ def generate_with_gold(ungrounded_graph, gold_answers):
                     logger.debug("Bonus round!")
                 bonus_round = False
                 s_g = suggested_graphs.pop(0)
-                chosen_graphs, not_chosen_graphs = ground_with_gold([s_g], gold_answers, min_fscore=master_g_fscore)
+                temp_chosen, not_chosen_graphs = ground_with_gold([s_g], gold_answers, min_fscore=master_g_fscore)
+                chosen_graphs += temp_chosen
                 negative_graphs += not_chosen_graphs
                 logger.debug("Chosen graphs length: {}".format(len(chosen_graphs)))
                 if not chosen_graphs:
                     logger.debug("Expanding")
                     expanded_graphs = stages.expand(s_g)
                     logger.debug("Expanded graphs (10): {}".format(expanded_graphs[:10]))
-                    chosen_graphs, not_chosen_graphs = ground_with_gold(expanded_graphs, gold_answers, min_fscore=master_g_fscore)
+                    temp_chosen, not_chosen_graphs = ground_with_gold(expanded_graphs, gold_answers, min_fscore=master_g_fscore)
+                    chosen_graphs += temp_chosen
                     negative_graphs += not_chosen_graphs
-                if max(g[1][2] for g in chosen_graphs) < 0.3:
-                    bonus_round = True
+                if chosen_graphs:
+                    current_f1 = max(g[1][2] for g in chosen_graphs)
+                    if current_f1 < 0.05:
+                        bonus_round = True
+                        master_g_fscore = current_f1
             if len(chosen_graphs) > 0:
                 logger.debug("Extending the pool.")
                 pool.extend(chosen_graphs)
