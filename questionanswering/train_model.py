@@ -62,6 +62,12 @@ def train(config_file_path):
         results_logger.info("Accuracy on silver data: {}".format(accuracy_on_silver))
 
     if config['wikidata'].get('evaluate', False):
+        wdaccess.wdaccess_p['wikidata_url'] = config['wikidata'].get("backend", "http://knowledgebase:8890/sparql")
+        wdaccess.wdaccess_p["restrict.hop"] = config['wikidata'].get("restrict.hop", False)
+        wdaccess.wdaccess_p["timeout"] = config['wikidata'].get("timeout", 20)
+        wdaccess.sparql_init()
+        wdaccess.update_sparql_clauses()
+
         validation_graph_lists, validation_gold_answers = webquestions.get_validation_with_gold()
         print("Evaluate on {} validation questions.".format(len(validation_gold_answers)))
         successes, avg_metrics = trainablemodel.test((validation_graph_lists, validation_gold_answers), verbose=True)

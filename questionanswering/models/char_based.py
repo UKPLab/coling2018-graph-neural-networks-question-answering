@@ -245,6 +245,9 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
                                                self._p['vocab.size'],), dtype='float32', name='edge_input')
         edge_vectors = keras.layers.TimeDistributed(self._get_sibling_model())(edge_input)
         graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
+        graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                          activation=self._p.get("sibling.activation", 'tanh'),
+                                          init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
         graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
         self.logger.debug("Graph model is finished: {}".format(graph_model))
 
@@ -276,8 +279,7 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
         for i in range(self._p.get("sem.layer.depth", 1)):
             semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
                                                  activation=self._p.get("sibling.activation", 'tanh'),
-                                                 init=self._p.get("sibling.weight.init", 'glorot_uniform'))(
-                semantic_vector)
+                                                 init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._older_model_name)
         self.logger.debug("Sibling model is finished.")
