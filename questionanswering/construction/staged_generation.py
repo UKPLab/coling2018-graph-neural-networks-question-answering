@@ -149,7 +149,7 @@ def ground_one_with_gold(s_g, gold_answers, min_fscore):
                           range(len(grounded_graphs))]
     chosen_graphs = [(grounded_graphs[i], evaluation_results[i], retrieved_answers[i])
                      for i in range(len(grounded_graphs)) if evaluation_results[i][2] > min_fscore]
-    not_chosen_graphs = [(grounded_graphs[i],) for i in range(len(grounded_graphs)) if evaluation_results[i][2] < 0.01]
+    not_chosen_graphs = [(grounded_graphs[i], (0.0, 0.0, 0.0), len(retrieved_answers[i])) for i in range(len(grounded_graphs)) if evaluation_results[i][2] < 0.01]
     return chosen_graphs, not_chosen_graphs
 
 
