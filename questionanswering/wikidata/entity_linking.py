@@ -226,6 +226,10 @@ def link_entity(entity, try_subentities=True):
     ['Q298', 'Q272795', 'Q1045129']
     >>> link_entity((["Bela", "Fleck"], 'NNP'))
     ['Q561390']
+    >>> link_entity((["thai"], 'NN'))
+    ['Q869', 'Q9217', 'Q42732']
+    >>> link_entity((['romanian', 'people'], 'NN'))
+    ['Q218', 'Q7913']
     """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
