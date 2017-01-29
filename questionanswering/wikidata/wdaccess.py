@@ -143,11 +143,16 @@ def load_entity_map(path_to_map):
         return nltk.Index({(t[1], t[0]) for t in return_map})
     except Exception as ex:
         logger.error("No entity map found. {}".format(ex))
+    try:
+        with open("../" + path_to_map) as f:
+            return_map = [l.strip().split("\t") for l in f.readlines()]
+        return nltk.Index({(t[1], t[0]) for t in return_map})
+    except Exception as ex:
+        logger.error("No entity map found. {}".format(ex))
         return {"Q76": ["Barack Obama"]}
 
-
 RESOURCES_FOLDER = "../resources/"
-entity_map = load_entity_map(RESOURCES_FOLDER + "entity_map.tsv")
+entity_map = load_entity_map(RESOURCES_FOLDER + "manual_entity_map.tsv")
 property_blacklist = load_blacklist(RESOURCES_FOLDER + "property_blacklist.txt")
 entity_blacklist = load_blacklist(RESOURCES_FOLDER + "entity_blacklist.txt")
 property_whitelist = load_blacklist(RESOURCES_FOLDER + "property_whitelist.txt")

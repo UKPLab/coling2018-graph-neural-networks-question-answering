@@ -35,7 +35,7 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(["Jfk"], "NNP")
     [('JFK',)]
     >>> possible_variants(['the', 'president', 'after', 'jfk'], 'NN')
-    [('The', 'President', 'after', 'Jfk'), ('president', 'jfk')]
+    [('the', 'president', 'after', 'JFK'), ('The', 'President', 'after', 'Jfk'), ('president', 'jfk')]
     >>> possible_variants(['Jj', 'Thomson'], 'PERSON')
     [('J. J.', 'Thomson')]
     >>> possible_variants(['J', 'J', 'Thomson'], 'URL')
@@ -47,7 +47,7 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(['Atlanta', 'United', 'States'], "LOCATION")
     []
     >>> possible_variants(['Names', 'Of', 'Walt', 'Disney'], 'ORGANIZATION')
-    [('Names', 'of', 'Walt', 'Disney'), ('Names', 'of', 'walt', 'disney')]
+    [('Names', 'of', 'Walt', 'Disney'), ('Names', 'of', 'walt', 'disney'), ('US', 'Names', 'of', 'Walt', 'Disney')]
     >>> possible_variants(['Mcdonalds'], 'URL')
     [('McDonalds',)]
     >>> possible_variants(['Super', 'Bowl', 'Xliv'], 'NNP')
@@ -59,7 +59,7 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(['Martin', 'Luther', 'King', 'Jr'], 'PERSON')
     [('Martin', 'Luther', 'King', 'Jr.'), ('Martin', 'Luther', 'King,', 'Jr.')]
     >>> possible_variants(['St', 'Louis', 'Rams'], 'ORGANIZATION')
-    [('St.', 'Louis', 'Rams'), ('St', 'louis', 'rams')]
+    [('ST', 'Louis', 'Rams'), ('St.', 'Louis', 'Rams'), ('St', 'louis', 'rams'), ('US', 'St', 'Louis', 'Rams')]
     >>> possible_variants(['united', 'states', 'of', 'america'], 'LOCATION')
     [('United', 'States', 'of', 'America')]
     >>> possible_variants(['character', 'did'], 'NN')
@@ -68,6 +68,12 @@ def possible_variants(entity_tokens, entity_type):
     [('Wright', 'brothers')]
     >>> possible_variants(['University', 'Of', 'Leeds'], 'ORGANIZATION')
     [('University', 'of', 'Leeds'), ('University', 'of', 'leeds')]
+    >>> possible_variants(['Navy'], 'ORGANIZATION')
+    [('US', 'Navy')]
+    >>> possible_variants(['Us', 'Army'], 'ORGANIZATION')
+    [('US', 'Army'), ('Us', 'army')]
+    >>> possible_variants(['House', 'Of', 'Representatives'], 'ORGANIZATION')
+    [('House', 'of', 'Representatives'), ('House', 'of', 'representatives'), ('US', 'House', 'of', 'Representatives')]
     """
     new_entities = []
     entity_lemmas = []
@@ -94,8 +100,9 @@ def possible_variants(entity_tokens, entity_type):
         if any(t.startswith("Mc") for t in entity_tokens):
             new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
     else:
-        if entity_type in ['LOCATION', 'ORGANIZATION', 'NNP', 'NN'] and len(entity_tokens) == 1:
-            new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en])
+        upper_cased = [ne.upper() if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en else ne for ne in entity_tokens]
+        if upper_cased != entity_tokens:
+            new_entities.append(tuple(upper_cased))
         if "St" in entity_tokens or "st" in entity_tokens:
             new_entities.append(tuple([ne + "." if ne in {'St', 'st'} else ne for ne in entity_tokens]))
         proper_title = [ne.title() if ne.lower() not in stop_words_en or i == 0 else ne.lower() for i, ne in enumerate(entity_tokens)]
@@ -109,6 +116,8 @@ def possible_variants(entity_tokens, entity_type):
             no_stop_title = [ne for ne in entity_tokens if ne.lower() not in stop_words_en]
             if no_stop_title != entity_tokens:
                 new_entities.append(tuple(no_stop_title))
+        if entity_type in {'ORGANIZATION'} and all(w not in {t.lower() for t in entity_tokens} for w in {'us', 'university', 'company', 'brothers', 'computer'}):
+            new_entities.append(("US", ) + tuple(proper_title))
     if any(roman_nums_pattern.match(ne.upper()) for ne in entity_tokens):
         new_entities.append(tuple([ne.upper() if roman_nums_pattern.match(ne.upper()) else ne for ne in entity_tokens]))
     return new_entities
@@ -230,10 +239,16 @@ def link_entity(entity, try_subentities=True):
     ['Q869', 'Q9217', 'Q42732']
     >>> link_entity((['romanian', 'people'], 'NN'))
     ['Q218', 'Q7913']
+    >>> link_entity((['college'], 'NN'))
+    ['Q189004', 'Q23002039']
+    >>> link_entity((['House', 'Of', 'Representatives'], 'ORGANIZATION'))
+    ['Q11701', 'Q233262', 'Q320256']
     """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
         return []
+    if " ".join(entity_tokens) in wdaccess.entity_map:
+        return wdaccess.entity_map.get(" ".join(entity_tokens), [])[:entity_linking_p.get("max.entity.options", 3)]
     linkings = wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(entity_tokens)]), starts_with=None)
     if entity_type not in {"NN"} or not linkings:
         entity_variants = possible_variants(entity_tokens, entity_type)
