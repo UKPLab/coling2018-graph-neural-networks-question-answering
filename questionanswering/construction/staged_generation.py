@@ -49,7 +49,9 @@ def generate_with_gold(ungrounded_graph, gold_answers):
             logger.debug("Suggested graphs: {}".format(restricted_graphs))
             chosen_graphs = []
             suggested_graphs = restricted_graphs[:]
-            while not chosen_graphs and suggested_graphs:
+            bonus_round = False
+            while (not chosen_graphs or bonus_round) and suggested_graphs:
+                bonus_round = False
                 s_g = suggested_graphs.pop(0)
                 chosen_graphs, not_chosen_graphs = ground_with_gold([s_g], gold_answers, min_fscore=master_g_fscore)
                 negative_graphs += not_chosen_graphs
@@ -60,6 +62,8 @@ def generate_with_gold(ungrounded_graph, gold_answers):
                     logger.debug("Expanded graphs (10): {}".format(expanded_graphs[:10]))
                     chosen_graphs, not_chosen_graphs = ground_with_gold(expanded_graphs, gold_answers, min_fscore=master_g_fscore)
                     negative_graphs += not_chosen_graphs
+                if max(g[1][2] for g in chosen_graphs) < 0.3:
+                    bonus_round = True
             if len(chosen_graphs) > 0:
                 logger.debug("Extending the pool.")
                 pool.extend(chosen_graphs)
