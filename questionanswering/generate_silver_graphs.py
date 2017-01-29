@@ -72,7 +72,8 @@ def generate(config_file_path):
     if 'take_first' in config['generation']:
         print("Taking the first {} questions.".format(config['generation']['take_first']))
         len_webquestion = config['generation']['take_first']
-    logger.debug("First question: {} {}".format(start_with, webquestions_questions[start_with]))
+    logger.debug("First question: {} {}\n {}".format(start_with, webquestions_questions[start_with],
+                                                     webquestions_io.get_answers_from_question(webquestions_questions[start_with])))
     for i in tqdm.tqdm(range(start_with, len_webquestion), ncols=100):
         question_entities = webquestions_entities[i]
         if "max.num.entities" in config['generation']:
@@ -89,7 +90,7 @@ def generate(config_file_path):
         gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
         generated_graphs = staged_generation.generate_with_gold(ungrounded_graph, gold_answers)
         silver_dataset.append(generated_graphs)
-        if i % 200 == 0:
+        if i % 100 == 0:
             logger.debug("Cov., avg. f1: {}, {}".format(
                 (len([1 for graphs in silver_dataset if len(graphs) > 0 and any([len(g) > 1 and g[1][2] > 0.0 for g in graphs])]) / (i+1) ),
                 np.average([np.max([g[1][2] if len(g) > 1 else 0.0 for g in graphs]) if len(graphs) > 0 else 0.0 for graphs in silver_dataset])))
