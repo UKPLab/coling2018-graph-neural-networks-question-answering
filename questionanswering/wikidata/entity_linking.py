@@ -76,6 +76,8 @@ def possible_variants(entity_tokens, entity_type):
     [('House', 'of', 'Representatives'), ('House', 'of', 'representatives'), ('US', 'House', 'of', 'Representatives')]
     >>> possible_variants(['Michael', 'J', 'Fox'], 'PERSON')
     [('Michael', 'J.', 'Fox')]
+    >>> possible_variants(['M.C.', 'Escher'], 'PERSON')
+    [('M. C.', 'Escher')]
     """
     new_entities = []
     entity_lemmas = []
@@ -85,8 +87,9 @@ def possible_variants(entity_tokens, entity_type):
         if entity_tokens[-1].lower() == "junior":
             entity_tokens[-1] = "Jr"
         if len(entity_tokens) > 1:
-            if any(len(t) < 3 and t.lower() not in {"jr", "st"} for t in entity_tokens):
-                new_entities.append(tuple([" ".join([c.upper() + "." for c in t]) if len(t) < 3 and t.lower() not in {"jr", "st"} else t for t in entity_tokens]))
+            entity_tokens_no_dots = [t.replace(".","") for t in entity_tokens]
+            if any(len(t) < 3 and t.lower() not in {"jr", "st"} for t in entity_tokens_no_dots):
+                new_entities.append(tuple([" ".join([c.upper() + "." for c in t]) if len(t) < 3 and t.lower() not in {"jr", "st"} else t for t in entity_tokens_no_dots]))
             if any(t.startswith("Mc") for t in entity_tokens):
                 new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
             if entity_tokens[-1].lower() == "jr":
