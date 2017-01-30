@@ -101,6 +101,8 @@ def link_entities_in_graph(ungrounded_graph):
     [(['Bella'], 'PERSON', ['Q223757', 'Q52533', 'Q156571']), (['Twilight'], 'NNP', ['Q44523', 'Q160071', 'Q189378'])]
     """
     entities = []
+    if all(len(e) == 3 for e in ungrounded_graph.get('entities', [])):
+        return ungrounded_graph
     for entity in ungrounded_graph.get('entities', []):
         if len(entity) == 2 and entity[1] != "CD":
             linkings = entity_linking.link_entity(entity)
