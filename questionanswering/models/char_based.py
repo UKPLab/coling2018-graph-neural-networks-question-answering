@@ -269,7 +269,7 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
 
     def _get_sibling_model(self):
         # Sibling model
-        if self._sibling_model and self._p.get(['sibling.singleton'], False):
+        if self._sibling_model and self._p.get('sibling.singleton', False):
             return self._sibling_model
         word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32',
                                         name='sentence_input')
