@@ -99,8 +99,8 @@ class WebQuestions(Loggable):
 
     def _get_sample_indices(self, questions):
         indices = [q_obj['index'] for q_obj in questions
-                   if any(len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
-                          for g in self._silver_graphs[q_obj['index']]) and (self._choice_graphs[q_obj['index']] or len(self._choice_graphs) == 0)
+                   if any(len(g) > 1 and len(g[1]) == 3 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
+                          for g in self._silver_graphs[q_obj['index']]) and (len(self._choice_graphs) == 0 or self._choice_graphs[q_obj['index']])
                    ]
         return indices
 
@@ -109,13 +109,14 @@ class WebQuestions(Loggable):
         graph_lists = []
         targets = []
         for index in indices:
-            graph_list = [p_g for p_g in self._silver_graphs[index] if len(p_g) > 1 and p_g[1][2] > self._p.get("f1.samples.threshold", 0.1)]
+            graph_list = [p_g for p_g in self._silver_graphs[index]
+                          if len(p_g) > 1 and len(p_g[1]) == 3 and p_g[1][2] > self._p.get("f1.samples.threshold", 0.1)]
             if len(self._choice_graphs) > 0:
                 negative_pool = [n_g for n_g in self._choice_graphs[index]
                                  if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
             else:
                 negative_pool = [n_g[0] for n_g in self._silver_graphs[index]
-                                 if (len(n_g) < 2 or n_g[1][2] <= self._p.get("f1.samples.threshold", 0.1))
+                                 if (len(n_g) < 2 or len(n_g[1]) < 3 or n_g[1][2] <= self._p.get("f1.samples.threshold", 0.1))
                                  and all(n_g[0].get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
 
             if len(graph_list) > self._p.get("max.silver.samples", 15):
