@@ -251,7 +251,7 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
         graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
         self.logger.debug("Graph model is finished: {}".format(graph_model))
 
-        # Twins model
+        # Brothers model
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
         graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
                                                self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='graph_input')
@@ -331,6 +331,43 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
                     edge_encoded = edge_encoded[:self._p.get('max.sent.len', 10)]
                     graph_matrix[index, i, j, :len(edge_encoded)] = edge_encoded
         return sentences_matrix, graph_matrix
+
+
+class TrigramCNNGraphModel(TrigramCNNEdgeSumModel):
+
+    def _get_keras_model(self):
+        self.logger.debug("Create keras model.")
+
+        # Brothers model
+        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
+        graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
+                                                self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='graph_input')
+        sentence_vector = self._get_sibling_model()(sentence_input)
+        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(graph_input)
+
+        main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
+                                         dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
+        main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
+        model = keras.models.Model(input=[sentence_input, graph_input], output=[main_output])
+        self.logger.debug("Model structured is finished")
+        model.compile(optimizer='adam', loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
+        self.logger.debug("Model is compiled")
+        return model
+
+    def _get_graph_model(self):
+        #Graph Model
+        # Encode edges with property emebddings
+        # Encode filter,
+        edge_input = keras.layers.Input(shape=(self._p['max.graph.size'], self._p['max.sent.len'],
+                                               self._p['vocab.size'],), dtype='float32', name='edge_input')
+        edge_vectors = keras.layers.TimeDistributed(self._get_sibling_model())(edge_input)
+        graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
+        graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                          activation=self._p.get("sibling.activation", 'tanh'),
+                                          init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
+        graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
+        self.logger.debug("Graph model is finished: {}".format(graph_model))
+        return graph_model
 
 
 def string_to_unigrams(input_string, character2idx):
