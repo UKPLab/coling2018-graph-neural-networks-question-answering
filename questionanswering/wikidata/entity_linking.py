@@ -241,12 +241,14 @@ def link_entity(entity, try_subentities=True):
     ['Q869', 'Q9217', 'Q42732']
     >>> link_entity((['romanian', 'people'], 'NN'))
     ['Q218', 'Q7913']
-    >>> link_entity((['college'], 'NN'))
+    >>> sorted(link_entity((['college'], 'NN')))
     ['Q189004', 'Q23002039']
     >>> link_entity((['House', 'Of', 'Representatives'], 'ORGANIZATION'))
     ['Q11701', 'Q233262', 'Q320256']
-    >>> link_entity((['senator', 'of', 'the', 'state'], 'NN'))
+    >>> sorted(link_entity((['senator', 'of', 'the', 'state'], 'NN')))
     ['Q13217683', 'Q15686806']
+    >>> link_entity((['Michael', 'J', 'Fox'], 'PERSON'))
+    ['Q395274']
     """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
