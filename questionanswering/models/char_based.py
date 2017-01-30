@@ -269,6 +269,8 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
 
     def _get_sibling_model(self):
         # Sibling model
+        if self._sibling_model and self._p.get(['sibling.singleton'], False):
+            return self._sibling_model
         word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32',
                                         name='sentence_input')
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
@@ -283,6 +285,7 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._older_model_name)
         self.logger.debug("Sibling model is finished.")
+        self._sibling_model = sibiling_model
         return sibiling_model
 
     def encode_data_instance(self, instance):
