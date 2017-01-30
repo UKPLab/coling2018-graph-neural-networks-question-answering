@@ -260,6 +260,11 @@ def link_entity(entity, try_subentities=True):
         subentities = possible_subentities(entity_tokens, entity_type)
         subentities = [" ".join(s) for s in subentities]
         linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(subentities), starts_with=None)
+    linkings = post_process_entity_linkings(linkings)
+    return linkings
+
+
+def post_process_entity_linkings(linkings):
     linkings = {l.get("e20", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, "") for l in linkings if l}
     linkings = [l for l in linkings if l not in wdaccess.entity_blacklist]
     linkings = sorted(linkings, key=lambda k: int(k[1:]))

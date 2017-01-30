@@ -89,6 +89,12 @@ sparql_label_entity = """
         }
         """
 
+sparql_character_label = """
+        {GRAPH <http://wikidata.org/terms> { ?e2 rdfs:label ?labelright }
+        GRAPH <http://wikidata.org/statements> { ?e1 ?p0 ?m0 . ?m0 e:P453q ?e2 .  }
+        FILTER CONTAINS(?labelright, %entitylabels)}
+"""
+
 sparql_year_entity = """
         {
         VALUES ?e2 { %entityids }
@@ -435,6 +441,34 @@ def entity_query(label, limit=100):
     sparql_entity_label_inst = sparql_entity_label.replace("VALUES ?labelright { %entitylabels }", "")
     sparql_entity_label_inst = sparql_entity_label_inst.replace("?e2", "?e2" + str(0))
     sparql_entity_label_inst = sparql_entity_label_inst.replace("?labelright", "\"{}\"@en".format(label, label))
+    variables.append("?e2" + str(0))
+    query += sparql_entity_label_inst
+    query += "}"
+    query = query.replace("%queryvariables%", " ".join(variables))
+    query += sparql_close.format(limit)
+    logger.debug("Querying for entity with variables: {}".format(variables))
+    return query
+
+
+def character_query(label, film_id, limit=3):
+    """
+    A method to look up a WikiData film character by a label.
+
+    :param label: label of the entity as str
+    :param limit: limit on the result list size
+    :return: a query that can be executed against WikiData
+    >>> query_wikidata(character_query("Bella", "Q160071"))
+    [{'e20': 'Q223757'}]
+    >>> query_wikidata(character_query("Anakin", "Q42051"))
+    [{'e20': 'Q51752'}]
+    """
+    query = sparql_prefix
+    variables = []
+    query += sparql_select
+    query += "{"
+    sparql_entity_label_inst = sparql_character_label.replace("?e2", "?e2" + str(0))
+    sparql_entity_label_inst = sparql_entity_label_inst.replace("?e1", "e:{}".format(film_id))
+    sparql_entity_label_inst = sparql_entity_label_inst.replace("%entitylabels", "\"{}\"".format(label, label))
     variables.append("?e2" + str(0))
     query += sparql_entity_label_inst
     query += "}"

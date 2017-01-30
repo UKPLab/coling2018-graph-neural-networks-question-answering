@@ -95,14 +95,26 @@ def link_entities_in_graph(ungrounded_graph):
 
     :param ungrounded_graph: graph as a dictionary with 'entities'
     :return: graph with entity linkings in the 'entities' array
+    >>> link_entities_in_graph({'entities': [(['Norway'], 'LOCATION'), (['oil'], 'NN')], 'tokens': ['where', 'does', 'norway', 'get', 'their', 'oil', '?']})['entities']
+    [(['Norway'], 'LOCATION', ['Q20', 'Q546607', 'Q944765']), (['oil'], 'NN', ['Q42962'])]
+    >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities']
+    [(['Bella'], 'PERSON', ['Q223757', 'Q52533', 'Q156571']), (['Twilight'], 'NNP', ['Q44523', 'Q160071', 'Q189378'])]
     """
     entities = []
     for entity in ungrounded_graph.get('entities', []):
         if len(entity) == 2 and entity[1] != "CD":
             linkings = entity_linking.link_entity(entity)
-            entities.append(entity + (linkings,))
+            entities.append(list(entity) + [linkings])
         else:
             entities.append(entity)
+    if any(w in set(ungrounded_graph.get('tokens', [])) for w in v_structure_markers):
+        for entity in [e for e in entities if e[1] == "PERSON" and len(e[0]) == 1 and len(e) == 3]:
+            for film_id in [e_id for e in entities for e_id in e[2] if e != entity and len(e) == 3]:
+                character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity[0]), film_id))
+                character_linkings = entity_linking.post_process_entity_linkings(character_linkings)
+                entity[2] = character_linkings + entity[2]
+                entity[2] = entity[2][:entity_linking.entity_linking_p.get("max.entity.options", 3)]
+    entities = [tuple(e) for e in entities]
     ungrounded_graph['entities'] = entities
     return ungrounded_graph
 
