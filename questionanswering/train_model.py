@@ -57,13 +57,15 @@ def train(config_file_path):
         trainablemodel.train(webquestions.get_training_samples(),
                              validation_with_targets=webquestions.get_validation_samples()
                              if 'train_validation' in config['webquestions']['path.to.dataset'] else None)
-
-    accuracy_on_silver = trainablemodel.test_on_silver(webquestions.get_validation_samples())
+    if 'train_validation' in config['webquestions']['path.to.dataset']:
+        accuracy_on_silver = trainablemodel.test_on_silver(webquestions.get_validation_samples())
+    else:
+        accuracy_on_silver = trainablemodel.test_on_silver(webquestions.get_training_samples())
     print("Accuracy on silver data: {}".format(accuracy_on_silver))
     if results_logger:
         results_logger.info("Accuracy on silver data: {}".format(accuracy_on_silver))
 
-    if config['wikidata'].get('evaluate', False):
+    if config['wikidata'].get('evaluate', False) and 'train_validation' in config['webquestions']['path.to.dataset']:
         wdaccess.wdaccess_p['wikidata_url'] = config['wikidata'].get("backend", "http://knowledgebase:8890/sparql")
         wdaccess.wdaccess_p["restrict.hop"] = config['wikidata'].get("restrict.hop", False)
         wdaccess.wdaccess_p["timeout"] = config['wikidata'].get("timeout", 20)
