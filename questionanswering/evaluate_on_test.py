@@ -73,14 +73,14 @@ def generate(path_to_model, config_file_path):
         if chosen_graphs:
             j = 0
             while not model_answers and j < len(chosen_graphs):
-                g = chosen_graphs.pop(0)
+                g = chosen_graphs[j]
                 model_answers = wdaccess.query_graph_denotations(g[0])
                 j += 1
         model_answers_labels = wdaccess.label_query_results(model_answers)
         metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, model_answers_labels)
         avg_metrics += metrics
-        global_answers.append((i, metrics, model_answers, model_answers_labels))
-        if i % 200 == 0:
+        global_answers.append((i, metrics, model_answers, model_answers_labels, chosen_graphs[:10]))
+        if i % 100 == 0:
             logger.debug("Average f1 so far: {}".format((avg_metrics/(i+1))))
             json.dump(global_answers, answers_out, sort_keys=True, indent=4)
 
