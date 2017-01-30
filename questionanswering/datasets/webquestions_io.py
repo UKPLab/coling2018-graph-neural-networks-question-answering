@@ -185,8 +185,12 @@ class WebQuestions(Loggable):
 
         :return: list of lists of tokens
         """
-        return [[w for w, _, _ in self._dataset_tagged[i]] +
+        if len(self._choice_graphs) > 0:
+            return [[w for w, _, _ in self._dataset_tagged[i]] +
                 [w for g in self._choice_graphs[i] for e in g.get('edgeSet', []) for w in e.get('label', '').split()]
+                for i in self._get_sample_indices(self._questions_train)]
+        return [[w for w, _, _ in self._dataset_tagged[i]] +
+                [w for g in self._silver_graphs[i] for e in g[0].get('edgeSet', []) for w in e.get('label', '').split()]
                 for i in self._get_sample_indices(self._questions_train)]
 
     def get_validation_samples(self):
