@@ -90,7 +90,7 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     >>> get_property_str_representation({'canonical_right': 'Meg Griffin', 'kbID': 'P161v', 'type': 'v-structure'}, {'P161': "cast member"}, use_placeholder=True)
     'cast member <e>'
     >>> get_property_str_representation({'canonical_right': 'Washington Redskins', 'hopDown': 'P361v', 'kbID': 'P361v', 'type': 'direct', 'argmax':'time'}, {'P361': 'part of'}, use_placeholder=True)
-    'part of <e> part of <x>'
+    '<argmax> part of <e> part of <x>'
     """
     e_type = edge.get('type', 'direct')
     if e_type == "time":
