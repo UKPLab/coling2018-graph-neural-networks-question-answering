@@ -114,9 +114,9 @@ class WebQuestions(Loggable):
                 negative_pool = [n_g for n_g in self._choice_graphs[index]
                                  if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
             else:
-                negative_pool = [n_g for n_g in self._silver_graphs[index]
-                                 if (len(n_g) < 2 or n_g[1][2] < self._p.get("f1.samples.threshold", 0.1))
-                                 and all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
+                negative_pool = [n_g[0] for n_g in self._silver_graphs[index]
+                                 if (len(n_g) < 2 or n_g[1][2] <= self._p.get("f1.samples.threshold", 0.1))
+                                 and all(n_g[0].get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
 
             if len(graph_list) > self._p.get("max.silver.samples", 15):
                 graph_list = [graph_list[i] for i in np.random.choice(range(len(graph_list)),
