@@ -80,7 +80,7 @@ class WebQuestions(Loggable):
             self.logger.debug("Normalizing tokens in questions")
             self._choice_graphs = [[graph.normalize_tokens(g) for g in graph_set] for graph_set in
                                    self._choice_graphs]
-            self._silver_graphs = [[(graph.normalize_tokens(g[0]), g[1],) for g in graph_set] for graph_set in
+            self._silver_graphs = [[(graph.normalize_tokens(g[0]), g[1] if len(g) > 0 else (0.0, 0.0, 0.0),) for g in graph_set] for graph_set in
                                    self._silver_graphs]
 
         self.logger.debug("Constructing string representations for entities")
