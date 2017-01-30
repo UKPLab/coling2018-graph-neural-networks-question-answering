@@ -74,20 +74,23 @@ class WebQuestions(Loggable):
             self.logger.debug("Replacing entities in questions")
             self._choice_graphs = [[graph.replace_first_entity(g) for g in graph_set] for graph_set in
                                    self._choice_graphs]
-            self._silver_graphs = [[(graph.replace_first_entity(g[0]), g[1] if len(g) > 0 else (0.0, 0.0, 0.0),) if len(g) > 0 else ({}, (0.0, 0.0, 0.0)) for g in graph_set] for graph_set in
-                                   self._silver_graphs]
+            for graph_set in self._silver_graphs:
+                for g in graph_set:
+                    g[0] = graph.replace_first_entity(g[0])
         if self._p.get("normalize.tokens", False):
             self.logger.debug("Normalizing tokens in questions")
             self._choice_graphs = [[graph.normalize_tokens(g) for g in graph_set] for graph_set in
                                    self._choice_graphs]
-            self._silver_graphs = [[(graph.normalize_tokens(g[0]), g[1] if len(g) > 0 else (0.0, 0.0, 0.0),) for g in graph_set] for graph_set in
-                                   self._silver_graphs]
+            for graph_set in self._silver_graphs:
+                for g in graph_set:
+                    g[0] = graph.normalize_tokens(g[0])
 
         self.logger.debug("Constructing string representations for entities")
         self._choice_graphs = [[graph.add_string_representations_to_edges(g, wdaccess.property2label, self._p.get("replace.entities", False)) for g in graph_set]
                                for graph_set in self._choice_graphs]
-        self._silver_graphs = [[(graph.add_string_representations_to_edges(g[0], wdaccess.property2label, self._p.get("replace.entities", False)), g[1] if len(g) > 0 else (0.0, 0.0, 0.0),) for g in graph_set]
-                               for graph_set in self._silver_graphs]
+        for graph_set in self._silver_graphs:
+            for g in graph_set:
+                g[0] = graph.add_string_representations_to_edges(g[0], wdaccess.property2label, self._p.get("replace.entities", False))
 
     def _get_samples(self, questions):
         indices = self._get_sample_indices(questions)
