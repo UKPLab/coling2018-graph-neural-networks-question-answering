@@ -171,13 +171,13 @@ class WebQuestions(Loggable):
 
     def get_training_tokens(self):
         """
-        Generate a list of tokens that appear in the training data i the questions and in the edge labels.
+        Generate a list of tokens that appear in the training data in the questions and in the edge labels.
 
         :return: list of lists of tokens
         """
         return [[w for w, _, _ in self._dataset_tagged[i]] +
                 [w for g in self._choice_graphs[i] for e in g.get('edgeSet', []) for w in e.get('label', '').split()]
-                for i in self._get_sample_indices(self._questions_val)]
+                for i in self._get_sample_indices(self._questions_train)]
 
     def get_validation_samples(self):
         """

@@ -160,7 +160,7 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
     def train_on_generator(self, data_with_targets_generator, validation_with_targets=None):
         self.logger.debug('Training process with a generator started.')
 
-        callbacks = self.init_callbacks(monitor_validation=validation_with_targets)
+        callbacks = self.init_callbacks(monitor_validation=validation_with_targets is not None)
 
         if validation_with_targets:
             self.logger.debug("Start training with a validation sample.")
