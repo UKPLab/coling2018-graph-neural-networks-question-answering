@@ -129,14 +129,18 @@ def add_string_representations_to_edges(g, property2label, use_placeholder=False
     return g
 
 
-def replace_first_entity(g):
+def replace_entities(g):
     """
     Replaces an entity participating in the first relation in the graph with <e>
 
     :param g: graph as a dictionary
     :return: the original graph modified
-    >>> replace_first_entity({'edgeSet': [{'right': ['Nfl', 'Redskins']}], 'tokens': ['where', 'are', 'the', 'nfl', 'redskins', 'from', '?']}) == {'edgeSet': [{'right': ['Nfl', 'Redskins']}], 'tokens': ['where', 'are', 'the', '<e>', 'from', '?']}
+    >>> replace_entities({'edgeSet': [{'right': ['Nfl', 'Redskins']}], 'tokens': ['where', 'are', 'the', 'nfl', 'redskins', 'from', '?']}) == {'edgeSet': [{'right': ['Nfl', 'Redskins']}], 'tokens': ['where', 'are', 'the', '<e>', 'from', '?']}
     True
+    >>> replace_entities({'edgeSet': [{'canonical_right': 'Vasco Núñez de Balboa', 'right': ['Vasco', 'Nunez', 'De', 'Balboa'], 'kbID': 'P106v', 'type': 'reverse'},\
+   {'canonical_right': 'Reise', 'hopUp': 'P279v', 'kbID': 'P425v', 'type': 'direct', 'right': ['journey']}], \
+   'tokens': ['what', 'was', 'vasco', 'nunez', 'de', 'balboa', 'original', 'purpose', 'of', 'his', 'journey', '?']})['tokens']
+   ['what', 'was', '<e>', 'original', 'purpose', 'of', 'his', 'journey', '?']
     """
     tokens = g.get('tokens', [])
     edge = get_graph_first_edge(g)

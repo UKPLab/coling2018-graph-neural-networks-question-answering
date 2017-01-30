@@ -72,11 +72,11 @@ class WebQuestions(Loggable):
 
         if self._p.get("replace.entities", False):
             self.logger.debug("Replacing entities in questions")
-            self._choice_graphs = [[graph.replace_first_entity(g) for g in graph_set] for graph_set in
+            self._choice_graphs = [[graph.replace_entities(g) for g in graph_set] for graph_set in
                                    self._choice_graphs]
             for graph_set in self._silver_graphs:
                 for g in graph_set:
-                    g[0] = graph.replace_first_entity(g[0])
+                    g[0] = graph.replace_entities(g[0])
         if self._p.get("normalize.tokens", False):
             self.logger.debug("Normalizing tokens in questions")
             self._choice_graphs = [[graph.normalize_tokens(g) for g in graph_set] for graph_set in
