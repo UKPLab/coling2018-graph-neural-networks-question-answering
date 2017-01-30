@@ -62,6 +62,8 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     'country Iceland'
     >>> get_property_str_representation({'kbID': 'P17v','right': ['Iceland'],'rightkbID': 'Q189','type': 'direct'}, {'P17': "country"}, use_placeholder=True)
     'country <e>'
+    >>> get_property_str_representation({'argmax':'time','type': 'time'}, {'P17': "country"}, use_placeholder=True)
+    '<argmax> <e>'
     >>> get_property_str_representation({'kbID': 'P31v',   'right': ['Australia'], \
    'rightkbID': 'Q408', 'type': 'reverse'}, {'P31': "instance of"}, use_placeholder=True)
     '<e> instance of'
@@ -77,17 +79,36 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     >>> get_property_str_representation({'hopUp': None, 'kbID': 'P140v',  'right': ['Russia'], \
     'rightkbID': 'Q159', 'type': 'reverse'}, {'P17': "country", 'P140': 'religion'}, use_placeholder=True)
     '<e> religion'
+    >>> get_property_str_representation({'kbID': 'P453q', 'right': ['Natalie', 'Portman'], 'type': 'reverse', 'hopUp': 'P161v', 'rightkbID': 'Q37876', 'canonical_right': 'Natalie Portman'},  {'P453': "character role", "P161": "cast member" }, use_placeholder=True)
+    '<x> cast member <e> character role'
+    >>> get_property_str_representation({'canonical_right': 'Indiana', 'hopUp': 'P1001v', 'kbID': 'P39v', 'type': 'direct'}, {'P39': 'position held', 'P1001':'applies to territorial jurisdiction'}, use_placeholder=True)
+    'position held <x> applies to territorial jurisdiction <e>'
+    >>> get_property_str_representation({'canonical_right': 'Facebook','hopDown': 'P17v','kbID': 'P150v','type': 'reverse'}, {'P17':'country', 'P150':'contains administrative territorial entity'}, use_placeholder=True)
+    '<e> country <x> contains administrative territorial entity'
+    >>> get_property_str_representation({'canonical_right': 'Washington Redskins', 'hopDown': 'P361v', 'kbID': 'P361v', 'type': 'direct'}, {'P361': 'part of'}, use_placeholder=True)
+    'part of <e> part of <x>'
+    >>> get_property_str_representation({'canonical_right': 'Meg Griffin', 'kbID': 'P161v', 'type': 'v-structure'}, {'P161': "cast member"}, use_placeholder=True)
+    'cast member <e>'
+    >>> get_property_str_representation({'canonical_right': 'Washington Redskins', 'hopDown': 'P361v', 'kbID': 'P361v', 'type': 'direct', 'argmax':'time'}, {'P361': 'part of'}, use_placeholder=True)
+    'part of <e> part of <x>'
     """
-    property_label = property2label.get(edge.get('kbID', '')[:-1], utils.unknown_el)
     e_type = edge.get('type', 'direct')
+    if e_type == "time":
+        property_label = ""
+    else:
+        property_label = property2label.get(edge.get('kbID', '')[:-1], utils.unknown_el)
     e_arg = '<argmax> ' if 'argmax' in edge else '<argmin> ' if 'argmin' in edge else ""
-    hopUp_label = "<x> {} ".format(property2label.get(edge['hopUp'][:-1], utils.unknown_el)) \
-        if 'hopUp' in edge and edge['hopUp'] else ""
+    hopUp_label, hopDown_label = '', ''
+    if 'hopUp' in edge and edge['hopUp']:
+        hopUp_label = "<x> {} ".format(property2label.get(edge['hopUp'][:-1], utils.unknown_el))
+    elif 'hopDown' in edge and edge['hopDown']:
+        hopDown_label = " {} <x>".format(property2label.get(edge['hopDown'][:-1], utils.unknown_el))
     entity_name = "<e>" if use_placeholder \
         else edge["canonical_right"] if "canonical_right" in edge \
         else " ".join(edge.get('right', []))
-    property_label = ("{2}{0} {3}{1}" if e_type == 'direct' else "{2}{3}{1} {0}").format(
-        property_label, entity_name, e_arg, hopUp_label)
+    property_label = ("{2}{3}{1}{4} {0}" if e_type in {'reverse', 'time'}  else "{2}{0} {3}{1}{4}").format(
+        property_label, entity_name, e_arg, hopUp_label, hopDown_label)
+    property_label = property_label.strip()
     return property_label
 
 
