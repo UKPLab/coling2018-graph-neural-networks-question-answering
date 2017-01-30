@@ -706,8 +706,11 @@ def normalize_answer_strings(answers):
     :return: list of lists of string answers
     >>> normalize_answer_strings([['twilight saga: breaking dawn - part 2'], ['the twilight saga: new moon', 'twilight saga: new moon']])
     [['twilight saga: breaking dawn - part 2', 'twilight saga', 'breaking dawn - part 2', 'twilight saga: breaking dawn', 'part 2', 'breaking dawn', 'part 2', 'twilight saga', 'breaking dawn'], ['the twilight saga: new moon', 'twilight saga: new moon', 'the twilight saga', 'new moon', 'twilight saga', 'new moon']]
+    >>> normalize_answer_strings([['2010 world series', 'world series 2010'], ['2012 world series', 'world series 2012'], ['world series 2014', '2014 world series']])
+    [['2010 world series', 'world series 2010'], ['2012 world series', 'world series 2012']]
     """
     answers = [[a.replace("–", "-") for a in answer_set] for answer_set in answers]
+    new_answers = []
     for answer_set in answers:
         for a in answer_set:
             if ":" in a:
@@ -716,7 +719,9 @@ def normalize_answer_strings(answers):
                 answer_set.extend([w.strip() for w in a.split(" - ")])
             if "standard time" in a:
                 answer_set.append(a.replace("standard time", "time zone"))
-    return answers
+        if not any(re.search("\\b(2014|2015|2016|2017)\\b", a) for a in answer_set):
+            new_answers.append(answer_set)
+    return new_answers
 
 
 if __name__ == "__main__":
