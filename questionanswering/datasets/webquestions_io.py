@@ -270,6 +270,8 @@ def get_answers_from_question(question_object):
     >>> get_answers_from_question({"targetValue": "(list (description Abduction) (description Eclipse) (description \\"Valentine's Day\\") (description \\"New Moon\\"))"})
     ['Abduction', 'Eclipse', "Valentine's Day", 'New Moon']
     """
+    if 'answers' in question_object:
+        return question_object['answers']
     return re.findall("\(description \"?(.*?)\"?\)", question_object.get('targetValue'))
 
 
@@ -285,9 +287,13 @@ def get_main_entity_from_question(question_object):
     (['J', 'J', 'Thomson'], 'URL')
     >>> get_main_entity_from_question({"targetValue": "(list (description Abduction) (description Eclipse) (description \\"Valentine's Day\\") (description \\"New Moon\\"))"})
     ()
+    >>> get_main_entity_from_question({"url": "http://www.freebase.com/view/en/j_j_thomson"})
+    (['J', 'J', 'Thomson'], 'URL')
     """
     url = question_object.get('url')
     if url:
+        if "http://www.freebase.com/view/en/" not in url:
+            return [w.title() for w in url.split()], 'URL'
         entity_tokens = url.replace("http://www.freebase.com/view/en/", "").split("_")
         return [w.title() for w in entity_tokens], 'URL'
     return ()
