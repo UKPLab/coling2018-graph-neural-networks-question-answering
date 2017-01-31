@@ -364,7 +364,11 @@ class TrigramCNNGraphModel(TrigramCNNEdgeSumModel):
         edge_input = keras.layers.Input(shape=(self._p['max.graph.size'], self._p['max.sent.len'],
                                                self._p['vocab.size'],), dtype='float32', name='edge_input')
         edge_vectors = keras.layers.TimeDistributed(self._get_sibling_model())(edge_input)
-        graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
+        if self._p.get("graph.sum", 'sum') == 'sum':
+            graph_vector = keras.layers.Lambda(lambda x: K.sum(x, axis=1),
+                                              output_shape=(self._p['sem.layer.size'],))(edge_vectors)
+        else:
+            graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
         graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
                                           activation=self._p.get("sibling.activation", 'tanh'),
                                           init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
