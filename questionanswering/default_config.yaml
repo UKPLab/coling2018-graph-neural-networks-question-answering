@@ -14,6 +14,7 @@ evaluation:
   questions: "../data/input/webquestions.examples.test.json"
   save.answers.to: "../data/generated/webquestions.examples.test.answers.json"
   beam.size: 10
+  use.whitelist: False
 
 generation:
   max.num.entities: 2 # Only affects choice graphs generation

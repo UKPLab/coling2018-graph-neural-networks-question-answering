@@ -10,7 +10,8 @@ from datasets import evaluation
 generation_p = {
     'label.query.results': True,
     'logger': logging.getLogger(__name__),
-    'replace.entities': True
+    'replace.entities': True,
+    'use.whitelist': False
 }
 
 logger = generation_p['logger']
@@ -364,6 +365,8 @@ def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
     logger.debug("First input one: {}".format(input_graphs[:1]))
 
     grounded_graphs = [apply_grounding(s_g, p) for s_g in input_graphs for p in find_groundings(s_g)]
+    if generation_p.get('use.whitelist', False):
+        grounded_graphs = [g for g in grounded_graphs if all(e.get('type') in {'time', 'v-structure'} or e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g.get('edgeSet', []))]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     grounded_graphs = [graph.add_string_representations_to_edges(g, wdaccess.property2label, generation_p.get("replace.entities", False)) for g in grounded_graphs]
     logger.debug("First one: {}".format(grounded_graphs[:1]))
