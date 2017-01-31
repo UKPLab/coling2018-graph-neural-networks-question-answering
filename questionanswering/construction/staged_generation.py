@@ -476,7 +476,7 @@ def post_process_answers_given_graph(model_answers_labels, g):
     >>> post_process_answers_given_graph([['eng', 'english']], {'edgeSet':[{'kbID': 'P37v', 'rightKbID':'Q843'}]})
     [['eng', 'english', 'eng language', 'english language'], ['pakistani english', 'pakistani english language']]
     """
-    relevant_edge = [e for e in g.get('edgeSet', []) if e.get("kbID")[:-1] == "P37" ]
+    relevant_edge = [e for e in g.get('edgeSet', []) if e.get("kbID", "")[:-1] == "P37"]
     if len(relevant_edge) > 0:
         for answer_set in model_answers_labels:
             if all('language' not in a.lower() for a in answer_set):
