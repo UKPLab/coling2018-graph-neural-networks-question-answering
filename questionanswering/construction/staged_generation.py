@@ -483,6 +483,29 @@ def add_canonical_labels_to_entities(g):
     return g
 
 
+def post_process_answers_given_graph(model_answers_labels, g):
+    """
+    Post process some of the retrieved answers to match freebase canonical labels
+
+    :param model_answers_labels: list of list of answers
+    :param g: graph as a dictionary
+    :return: list of list of answers
+    >>> post_process_answers_given_graph([['eng', 'english']], {'edgeSet':[{'kbID': 'P37v', 'rightKbID':'Q843'}]})
+    [['eng', 'english', 'eng language', 'english language'], ['pakistani english', 'pakistani english language']]
+    """
+    relevant_edge = [e for e in g.get('edgeSet', []) if e.get("kbID")[:-1] == "P37" ]
+    if len(relevant_edge) > 0:
+        for answer_set in model_answers_labels:
+            if all('language' not in a.lower() for a in answer_set):
+                answer_set.extend([a + " language" for a in answer_set])
+            if 'english' in answer_set and relevant_edge[0].get('rightKbID'):
+                demonym = wdaccess.query_wikidata(wdaccess.demonym_query(relevant_edge[0].get('rightKbID')), starts_with="")
+                if demonym:
+                    demonym = demonym[0]['labelright'].lower()
+                    model_answers_labels.append([demonym + " english", demonym + " english language"])
+    return model_answers_labels
+
+
 if __name__ == "__main__":
     import doctest
 

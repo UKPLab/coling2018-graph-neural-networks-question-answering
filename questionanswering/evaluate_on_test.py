@@ -70,6 +70,7 @@ def generate(path_to_model, config_file_path):
         gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
         chosen_graphs = staged_generation.generate_with_model(ungrounded_graph, qa_model, beam_size=config['evaluation'].get("beam.size", 10))
         model_answers = []
+        g = ({},)
         if chosen_graphs:
             j = 0
             while not model_answers and j < len(chosen_graphs):
@@ -77,6 +78,7 @@ def generate(path_to_model, config_file_path):
                 model_answers = wdaccess.query_graph_denotations(g[0])
                 j += 1
         model_answers_labels = wdaccess.label_query_results(model_answers)
+        model_answers_labels = staged_generation.post_process_answers_given_graph(model_answers_labels, g[0])
         metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, model_answers_labels)
         avg_metrics += metrics
         global_answers.append((i, list(metrics), model_answers, model_answers_labels,

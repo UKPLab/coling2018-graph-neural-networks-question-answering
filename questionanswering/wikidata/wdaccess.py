@@ -109,6 +109,13 @@ sparql_canoncial_label_entity = """
         }
         """
 
+sparql_get_demonym = """
+        {
+        GRAPH <http://wikidata.org/statements> { ?e2 e:P1549s [ e:P1549v ?labelright ] }
+        FILTER ( lang(?labelright) = "en" )
+        }
+        """
+
 
 def load_blacklist(path_to_list):
     try:
@@ -581,6 +588,27 @@ def main_label_query(entity):
     return query
 
 
+def demonym_query(entity):
+    """
+    Construct a WikiData query to retrieve the main entity label for the given entity id.
+
+    :param entity: entity kbID
+    :return: a WikiData query
+    >>> query_wikidata(demonym_query("Q183"), starts_with="")
+    [{'labelright': 'German'}]
+    """
+    query = sparql_prefix
+    query += sparql_select
+    query += "{"
+    sparql_label_entity_inst = sparql_get_demonym
+    sparql_label_entity_inst = sparql_label_entity_inst.replace("?e2", "e:" + entity)
+    query += sparql_label_entity_inst
+    query += "}"
+    query = query.replace("%queryvariables%", "?labelright")
+    query += sparql_close.format(1)
+    return query
+
+
 query_cache = {}
 
 
@@ -711,7 +739,7 @@ def normalize_answer_strings(answers):
     >>> normalize_answer_strings([['liste gegenwärtig amtierender staatsoberhäupter nach amtszeiten', 'list of heads of state by diplomatic precedence']])
     []
     """
-    answers = [[a.replace("–", "-") for a in answer_set] for answer_set in answers]
+    answers = [[a.replace("–", "-").lower() for a in answer_set] for answer_set in answers]
     new_answers = []
     for answer_set in answers:
         for a in answer_set:
