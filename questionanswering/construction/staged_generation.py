@@ -482,16 +482,22 @@ def post_process_answers_given_graph(model_answers_labels, g):
     >>> post_process_answers_given_graph([['eng', 'english']], {'edgeSet':[{'kbID': 'P37v', 'rightkbID':'Q843'}]})
     [['eng', 'english', 'eng language', 'english language'], ['pakistani english', 'pakistani english language']]
     """
+    # Language
     relevant_edge = [e for e in g.get('edgeSet', []) if e.get("kbID", "")[:-1] == "P37"]
     if len(relevant_edge) > 0:
         for answer_set in model_answers_labels:
             if all('language' not in a.lower() for a in answer_set):
                 answer_set.extend([a + " language" for a in answer_set])
             if 'english' in answer_set and relevant_edge[0].get('rightkbID'):
-                demonym = wdaccess.query_wikidata(wdaccess.demonym_query(relevant_edge[0].get('rightKbID')), starts_with="")
+                demonym = wdaccess.query_wikidata(wdaccess.demonym_query(relevant_edge[0].get('rightkbID')), starts_with="")
                 if demonym:
                     demonym = demonym[0]['labelright'].lower()
                     model_answers_labels.append([demonym + " english", demonym + " english language"])
+    # Chracter role
+    relevant_edge = [e for e in g.get('edgeSet', []) if e.get("kbID", "")[:-1] in {"P175", "P453", "P161"}]
+    if len(relevant_edge) > 0:
+        for answer_set in model_answers_labels:
+            answer_set.extend([a.split()[0].strip() for a in answer_set if len(a.split()) > 0])
     return model_answers_labels
 
 
