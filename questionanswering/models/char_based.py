@@ -400,15 +400,18 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
 
         # Brothers model
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
-        graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
-                                                self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='graph_input')
+
+        kbid_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3), 4), dtype='int32', name='kbid_input')
+        type_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3),), dtype='int32', name='type_input')
+        rel_type_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3),), dtype='int32', name='rel_type_input')
+
         sentence_vector = self._get_sibling_model()(sentence_input)
-        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(graph_input)
+        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)([kbid_input, type_input, rel_type_input])
 
         main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
                                          dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
-        model = keras.models.Model(input=[sentence_input, graph_input], output=[main_output])
+        model = keras.models.Model(input=[sentence_input, kbid_input, type_input, rel_type_input], output=[main_output])
         self.logger.debug("Model structured is finished")
         model.compile(optimizer='adam', loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
         self.logger.debug("Model is compiled")
@@ -501,7 +504,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                                                 utils.all_zeroes, 0)
                     ]
         graph_matrix = np.swapaxes(graph_matrix, 2, 3)
-        return sentences_matrix, [graph_matrix[:,:,:4], graph_matrix[:,:,4], graph_matrix[:,:,5]], targets
+        return sentences_matrix, graph_matrix[:,:,:4], graph_matrix[:,:,4], graph_matrix[:,:,5], targets
 
 
 def string_to_unigrams(input_string, character2idx):
