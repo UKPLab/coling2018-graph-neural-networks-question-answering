@@ -80,7 +80,8 @@ def generate(path_to_model, config_file_path):
         model_answers_labels = wdaccess.label_query_results(model_answers)
         metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, model_answers_labels)
         avg_metrics += metrics
-        global_answers.append((i, list(metrics), model_answers, model_answers_labels, chosen_graphs[:10]))
+        global_answers.append((i, list(metrics), model_answers, model_answers_labels,
+                               [(c_g[0], float(c_g[1])) for c_g in chosen_graphs[:10]]))
         if i % 100 == 0:
             logger.debug("Average f1 so far: {}".format((avg_metrics/(i+1))))
             json.dump(global_answers, answers_out, sort_keys=True, indent=4)
