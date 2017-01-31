@@ -91,6 +91,8 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     '<v> cast member <e>'
     >>> get_property_str_representation({'canonical_right': 'Washington Redskins', 'hopDown': 'P361v', 'kbID': 'P361v', 'type': 'direct', 'argmax':'time'}, {'P361': 'part of'}, use_placeholder=True)
     '<argmax> part of <e> part of <x>'
+    >>> get_property_str_representation({'canonical_right': 'Washington Redskins', 'hopDown': 'P361v', 'kbID': 'P361v', 'type': 'direct', 'filter':'importance'}, {'P361': 'part of'}, use_placeholder=True)
+    '<filter> part of <e> part of <x>'
     """
     e_type = edge.get('type', 'direct')
     if e_type == "time":
@@ -100,6 +102,8 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     if e_type == 'v-structure':
         property_label = "<v> " + property_label
     e_arg = '<argmax> ' if 'argmax' in edge else '<argmin> ' if 'argmin' in edge else ""
+    if 'filter' in edge and edge['filter'] == 'importance':
+        e_arg = e_arg + "<filter> "
     hopUp_label, hopDown_label = '', ''
     if 'hopUp' in edge and edge['hopUp']:
         hopUp_label = "<x> {} ".format(property2label.get(edge['hopUp'][:-1], utils.unknown_el))
