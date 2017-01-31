@@ -373,6 +373,12 @@ def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
     grounded_graphs = [graph.add_string_representations_to_edges(g, wdaccess.property2label, generation_p.get("replace.entities", False)) for g in grounded_graphs]
     if generation_p.get("replace.entities", False):
         grounded_graphs = [graph.replace_entities(g) for g in grounded_graphs]
+    direct_relations = {"{}-{}".format(graph.get_graph_last_edge(g).get('kbID'), graph.get_graph_last_edge(g).get('type'))
+                        for g in grounded_graphs if graph.get_graph_last_edge(g).get('type') in {'direct', 'reverse', 'v-structure'}}
+    grounded_graphs = [g for g in grounded_graphs if ('hopUp' not in graph.get_graph_last_edge(g) and 'hopDown' not in graph.get_graph_last_edge(g)) or
+                       ("{}-{}".format(graph.get_graph_last_edge(g).get('hopUp'), graph.get_graph_last_edge(g).get('type')) not in direct_relations and
+                        "{}-{}".format(graph.get_graph_last_edge(g).get('hopDown'), graph.get_graph_last_edge(g).get('type')) not in direct_relations)]
+    logger.debug("Filter out unnecessary hops: {}".format(len(grounded_graphs)))
     logger.debug("First one: {}".format(grounded_graphs[:1]))
     if len(grounded_graphs) == 0:
         return []

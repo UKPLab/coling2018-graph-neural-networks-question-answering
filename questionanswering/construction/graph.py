@@ -193,6 +193,16 @@ def get_graph_first_edge(g):
     return g["edgeSet"][0] if 'edgeSet' in g and g["edgeSet"] else {}
 
 
+def get_graph_last_edge(g):
+    """
+    Get the last edge of the graph or an empty edge if there is non
+
+    :param g: a graph as a dictionary
+    :return: an edge as a dictionary
+    """
+    return g["edgeSet"][-1] if 'edgeSet' in g and g["edgeSet"] else {}
+
+
 def copy_graph(g):
     """
     Create a copy of the given graph.
