@@ -88,7 +88,7 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     >>> get_property_str_representation({'canonical_right': 'Washington Redskins', 'hopDown': 'P361v', 'kbID': 'P361v', 'type': 'direct'}, {'P361': 'part of'}, use_placeholder=True)
     'part of <e> part of <x>'
     >>> get_property_str_representation({'canonical_right': 'Meg Griffin', 'kbID': 'P161v', 'type': 'v-structure'}, {'P161': "cast member"}, use_placeholder=True)
-    'cast member <e>'
+    '<v> cast member <e>'
     >>> get_property_str_representation({'canonical_right': 'Washington Redskins', 'hopDown': 'P361v', 'kbID': 'P361v', 'type': 'direct', 'argmax':'time'}, {'P361': 'part of'}, use_placeholder=True)
     '<argmax> part of <e> part of <x>'
     """
@@ -97,6 +97,8 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
         property_label = ""
     else:
         property_label = property2label.get(edge.get('kbID', '')[:-1], utils.unknown_el)
+    if e_type == 'v-structure':
+        property_label = "<v> " + property_label
     e_arg = '<argmax> ' if 'argmax' in edge else '<argmin> ' if 'argmin' in edge else ""
     hopUp_label, hopDown_label = '', ''
     if 'hopUp' in edge and edge['hopUp']:
@@ -106,7 +108,7 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     entity_name = "<e>" if use_placeholder \
         else edge["canonical_right"] if "canonical_right" in edge \
         else " ".join(edge.get('right', []))
-    property_label = ("{2}{3}{1}{4} {0}" if e_type in {'reverse', 'time'}  else "{2}{0} {3}{1}{4}").format(
+    property_label = ("{2}{3}{1}{4} {0}" if e_type in {'reverse', 'time'} else "{2}{0} {3}{1}{4}").format(
         property_label, entity_name, e_arg, hopUp_label, hopDown_label)
     property_label = property_label.strip()
     return property_label
