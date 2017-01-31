@@ -80,14 +80,14 @@ def generate(path_to_model, config_file_path):
         model_answers_labels = wdaccess.label_query_results(model_answers)
         metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, model_answers_labels)
         avg_metrics += metrics
-        global_answers.append((i, metrics, model_answers, model_answers_labels, chosen_graphs[:10]))
+        global_answers.append((i, list(metrics), model_answers, model_answers_labels, chosen_graphs[:10]))
         if i % 100 == 0:
             logger.debug("Average f1 so far: {}".format((avg_metrics/(i+1))))
             json.dump(global_answers, answers_out, sort_keys=True, indent=4)
 
     print("Average metrics: {}".format((avg_metrics/(len_webquestion))))
 
-    logger.debug('Tesing is finished')
+    logger.debug('Testing is finished')
     json.dump(global_answers, answers_out, sort_keys=True, indent=4)
     answers_out.close()
 
