@@ -3,8 +3,11 @@ import copy
 from construction import graph
 from wikidata import entity_linking
 
-argmax_markers = {"last", "latest", "president", "currency", "money"}
+argmax_markers = {"last", "latest", "currency", "money"}
 argmin_markers = {"first", "oldest"}
+argmax_time_markers = {"president", "2012"}
+argmin_time_markers = {"first", "oldest"}
+
 
 
 def last_relation_subentities(g):
@@ -137,7 +140,8 @@ def last_relation_temporal(g):
 
     :param g: a graph with a non-empty edgeSet
     :return: a list of suggested graphs
-    >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': [], 'tokens':['who','president']}) == [{'edgeSet': [{'right':[2]}, {'right':[8], 'argmax': 'time'}], 'entities': [], 'tokens':['who','president']}]
+    >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': [], 'tokens':['what','currency']}) == \
+    [{'edgeSet': [{'right':[2]}, {'right':[8], 'argmax': 'time'}], 'entities': [], 'tokens':['what','currency']}]
     True
     >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8], 'argmin':'time'}], 'entities': []})
     []
@@ -167,8 +171,8 @@ def add_temporal_relation(g):
 
     :param g: a graph with a non-empty edgeSet
     :return: a list of suggested graphs
-    >>> add_temporal_relation({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': []}) == \
-     [{'edgeSet': [{'right':[2]}, {'right':[8]}, {'type':'time', 'argmax':'time'}], 'entities': []}, {'edgeSet': [{'right':[2]}, {'right':[8]}, {'type':'time', 'argmin':'time'}], 'entities': []}]
+    >>> add_temporal_relation({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': [], 'tokens':['who', 'president']}) == \
+     [{'edgeSet': [{'right':[2]}, {'right':[8]}, {'type':'time', 'argmax':'time'}], 'entities': [], 'tokens':['who', 'president']}]
     True
     >>> add_temporal_relation({'edgeSet': [{'right':[2]}, {'right':[8], 'argmin':'time'}], 'entities': []})
     []
@@ -178,7 +182,12 @@ def add_temporal_relation(g):
     if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g):
         return []
     new_graphs = []
-    for t in ARG_TYPES:
+    consider_types = []
+    if any(t in argmax_time_markers for t in g.get('tokens',[])):
+        consider_types.append('argmax')
+    if any(t in argmin_time_markers for t in g.get('tokens',[])):
+        consider_types.append('argmin')
+    for t in consider_types:
         new_g = graph.copy_graph(g)
         new_edge = {'type': 'time', t: 'time'}
         new_g['edgeSet'].append(new_edge)
