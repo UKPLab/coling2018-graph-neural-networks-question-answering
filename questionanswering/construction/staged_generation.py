@@ -163,6 +163,7 @@ def ground_one_with_gold(s_g, gold_answers, min_fscore):
     post_process_results = wdaccess.label_query_results if generation_p[
         'label.query.results'] else wdaccess.map_query_results
     retrieved_answers = [post_process_results(answer_set) for answer_set in retrieved_answers]
+    retrieved_answers = [post_process_answers_given_graph(answer_set, grounded_graphs[i]) for i, answer_set in enumerate(retrieved_answers)]
     logger.debug(
         "Number of retrieved answer sets: {}. Example: {}".format(len(retrieved_answers),
                                                                   retrieved_answers[0][:10] if len(
@@ -341,24 +342,6 @@ def ground_without_gold(input_graphs):
     logger.debug("Number of chosen groundings: {}".format(len(grounded_graphs)))
     wdaccess.clear_cache()
     return grounded_graphs
-
-
-def ground_one_with_model(s_g, qa_model, min_score):
-    logger.debug("Graph: {}".format(s_g))
-    grounded_graphs = [apply_grounding(s_g, p) for p in find_groundings(s_g)]
-    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
-    grounded_graphs = [graph.add_string_representations_to_edges(g, wdaccess.property2label, generation_p.get("replace.entities", False)) for g in grounded_graphs]
-    if generation_p.get("replace.entities", False):
-        grounded_graphs = [graph.replace_entities(g) for g in grounded_graphs]
-    logger.debug("First one: {}".format(grounded_graphs[:1]))
-    if len(grounded_graphs) == 0:
-        return []
-    model_scores = qa_model.scores_for_instance(grounded_graphs)
-    logger.debug("model_scores: {}".format(model_scores))
-    assert len(model_scores) == len(grounded_graphs)
-    chosen_graphs = [(grounded_graphs[i], model_scores[i])
-                     for i in range(len(grounded_graphs)) if model_scores[i] > min_score]
-    return chosen_graphs
 
 
 def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
