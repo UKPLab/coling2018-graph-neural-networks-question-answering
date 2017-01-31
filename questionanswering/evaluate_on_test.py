@@ -40,6 +40,7 @@ def generate(path_to_model, config_file_path):
     wdaccess.wdaccess_p["restrict.hop"] = config['wikidata'].get("restrict.hop", False)
     wdaccess.update_sparql_clauses()
     staged_generation.generation_p["replace.entities"] = config['webquestions'].get("replace.entities", False)
+    staged_generation.generation_p["use.whitelist"] = config['evaluation'].get("use.whitelist", False)
     logger.debug("max.entity.options: {}".format(entity_linking.entity_linking_p["max.entity.options"]))
     if 'hop.types' in config['wikidata']:
         stages.HOP_TYPES = config['wikidata']['hop.types']
