@@ -319,9 +319,9 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
 
     def encode_batch_by_trigrams(self, graphs, verbose=False):
         graphs = [el for el in graphs if el]
-        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
+        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int16")
         graph_matrix = np.zeros((len(graphs), len(graphs[0]), self._p.get('max.graph.size', 3),
-                                 self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
+                                 self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int16")
 
         for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
             sentence_encoded, graphs_encoded = self.encode_by_trigram(graph_set)
@@ -392,6 +392,8 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
 
     def init_property_index(self, properties_set):
         self._property2idx.update({p:i for i, p in enumerate(properties_set, start=len(self._property2idx))})
+        with open(self._save_model_to + "property2idx_{}.json".format(self._model_number), 'w') as out:
+            json.dump(self._property2idx, out, indent=2)
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
@@ -452,7 +454,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
     def encode_data_instance(self, instance):
         sentence_encoded, _ = self.encode_by_trigram(instance[:1])
         sentence_ids = sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
-        graph_matrix = np.zeros((len(instance), self._p.get('max.graph.size', 3), 6), dtype="int8")
+        graph_matrix = np.zeros((len(instance), self._p.get('max.graph.size', 3), 6), dtype="int32")
         for i, g in enumerate(instance):
             for j, edge in enumerate(g.get("edgeSet", [])[:self._p.get('max.graph.size', 3)]):
                 edge_kbid = edge.get('kbID', utils.unknown_el) if edge.get('type') != 'time' \
@@ -470,6 +472,36 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                 ]
         graph_matrix = np.swapaxes(graph_matrix, 1, 2)
         return sentence_ids, [graph_matrix[:,:4], graph_matrix[:,4], graph_matrix[:,5]]
+
+    def encode_data_for_training(self, data_with_targets):
+        input_set, targets = data_with_targets
+        if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
+            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
+
+        sentences_matrix = np.zeros((len(input_set), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int32")
+        graph_matrix = np.zeros((len(input_set), len(input_set[0]), self._p.get('max.graph.size', 3), 6), dtype="int32")
+        for s in range(len(input_set)):
+            sentence_encoded, _ = self.encode_by_trigram(input_set[s][:1])
+            sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
+            sentences_matrix[s, :len(sentence_encoded)] = sentence_encoded
+
+            for i, g in enumerate(input_set[s]):
+                for j, edge in enumerate(g.get("edgeSet", [])[:self._p.get('max.graph.size', 3)]):
+                    edge_kbid = edge.get('kbID', utils.unknown_el) if edge.get('type') != 'time' \
+                        else "argmax" if "argmax" in edge else "argmin"
+                    graph_matrix[s, i, j] = [
+                        self._type2idx.get(edge.get('type', utils.unknown_el), 0),
+                        self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
+                        self._property2idx.get(edge_kbid, 0),
+                        self._property2idx.get(edge.get('hopUp', utils.all_zeroes), 0),
+                        self._property2idx.get(edge.get('hopDown', utils.all_zeroes), 0),
+                        self._property2idx.get("argmax" if "argmax" in edge
+                                               else "argmin" if "argmin" in edge
+                                                else "num" if "num" in edge else
+                                                utils.all_zeroes, 0)
+                    ]
+        graph_matrix = np.swapaxes(graph_matrix, 2, 3)
+        return sentences_matrix, [graph_matrix[:,:,:4], graph_matrix[:,:,4], graph_matrix[:,:,5]], targets
 
 
 def string_to_unigrams(input_string, character2idx):
