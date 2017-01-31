@@ -64,6 +64,19 @@ def generate(config_file_path):
     webquestions_tokens = webquestions.get_question_tokens()
 
     silver_dataset = []
+    previous_silver = []
+    if 'previous' in config['generation']:
+        logger.debug("Loading the previous result")
+        with open(config['generation']['previous']) as f:
+            previous_silver = json.load(f)
+        logger.debug("Previous length: {}".format(len(previous_silver)))
+        logger.debug("Previous number of answers covered: {}".format(
+            len([1 for graphs in previous_silver if len(graphs) > 0 and any([len(g) > 1 and g[1][2] > 0.0 for g in graphs])]) / len(previous_silver)))
+        logger.debug("Previous average f1: {}".format(
+            np.average([np.max([g[1][2] if len(g) > 1 else 0.0 for g in graphs]) if len(graphs) > 0 else 0.0 for graphs in previous_silver])))
+        logger.debug("Reusable: {}".format(
+            len([1 for graphs in previous_silver if len(graphs) > 0 and any([len(g) > 1 and g[1][2] > 0.9 for g in graphs])]) / len(previous_silver)))
+
     len_webquestion = webquestions.get_dataset_size()
     start_with = 0
     if 'start.with' in config['generation']:
@@ -76,21 +89,24 @@ def generate(config_file_path):
     logger.debug("First question: {} {}\n {}".format(start_with, webquestions_questions[start_with],
                                                      webquestions_io.get_answers_from_question(webquestions_questions[start_with])))
     for i in tqdm.tqdm(range(start_with, len_webquestion), ncols=100):
-        question_entities = webquestions_entities[i]
-        if "max.num.entities" in config['generation']:
-            question_entities = question_entities[:config['generation']["max.num.entities"]]
-        if config['generation'].get('include_url_entities', False):
-            url_entity = webquestions_io.get_main_entity_from_question(webquestions_questions[i])
-            if not any(e == url_entity[0] for e, t in question_entities):
-                # question_entities = [url_entity] + [(e, t) for e, t in question_entities if e != url_entity[0]]
-                question_entities = [url_entity] + question_entities
-        ungrounded_graph = {'tokens': webquestions_tokens[i],
-                            'edgeSet': [],
-                            'entities': question_entities}
-        logger.log(level=0, msg="Generating from: {}".format(ungrounded_graph))
-        gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
-        generated_graphs = staged_generation.generate_with_gold(ungrounded_graph, gold_answers)
-        silver_dataset.append(generated_graphs)
+        if len(previous_silver) > i and max(g[1][2] if len(g) > 1 and len(g[1]) > 2 else 0.0 for g in previous_silver[i]) > 0.9:
+            silver_dataset.append(previous_silver[i])
+        else:
+            question_entities = webquestions_entities[i]
+            if "max.num.entities" in config['generation']:
+                question_entities = question_entities[:config['generation']["max.num.entities"]]
+            if config['generation'].get('include_url_entities', False):
+                url_entity = webquestions_io.get_main_entity_from_question(webquestions_questions[i])
+                if not any(e == url_entity[0] for e, t in question_entities):
+                    # question_entities = [url_entity] + [(e, t) for e, t in question_entities if e != url_entity[0]]
+                    question_entities = [url_entity] + question_entities
+            ungrounded_graph = {'tokens': webquestions_tokens[i],
+                                'edgeSet': [],
+                                'entities': question_entities}
+            logger.log(level=0, msg="Generating from: {}".format(ungrounded_graph))
+            gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
+            generated_graphs = staged_generation.generate_with_gold(ungrounded_graph, gold_answers)
+            silver_dataset.append(generated_graphs)
         if i % 100 == 0:
             logger.debug("Cov., avg. f1: {}, {}".format(
                 (len([1 for graphs in silver_dataset if len(graphs) > 0 and any([len(g) > 1 and g[1][2] > 0.0 for g in graphs])]) / (i+1) ),
