@@ -134,7 +134,7 @@ def last_relation_temporal(g):
 
     :param g: a graph with a non-empty edgeSet
     :return: a list of suggested graphs
-    >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': []}) == [{'edgeSet': [{'right':[2]}, {'right':[8], 'argmax': 'time'}], 'entities': []}, {'edgeSet': [{'right':[2]}, {'right':[8], 'argmin': 'time'}], 'entities': []}]
+    >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': []}) == [{'edgeSet': [{'right':[2]}, {'right':[8], 'argmax': 'time'}], 'entities': []}]
     True
     >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'right':[8], 'argmin':'time'}], 'entities': []})
     []
@@ -146,7 +146,7 @@ def last_relation_temporal(g):
     if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g):
         return []
     new_graphs = []
-    for t in ARG_TYPES:
+    for t in ['argmax']:
         new_g = graph.copy_graph(g)
         new_g['edgeSet'][-1][t] = "time"
         new_graphs.append(new_g)
@@ -180,7 +180,7 @@ def add_temporal_relation(g):
 # This division of actions is relevant for grounding with gold answers:
 # - Restrict action limit the set of answers and should be applied
 #   to a graph that has groundings
-RESTRICT_ACTIONS = [add_entity_and_relation, add_temporal_relation, last_relation_numeric]
+RESTRICT_ACTIONS = [add_entity_and_relation, last_relation_temporal, add_temporal_relation, last_relation_numeric]
 # - Expand actions change graph to extract another set of answers and should be
 #   applied to a graph that has empty denotation
 EXPAND_ACTIONS = [last_relation_hop]  # Expand actions
