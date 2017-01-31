@@ -60,7 +60,6 @@ def generate(path_to_model, config_file_path):
     qa_model.load_from_file(path_to_model)
 
     logger.debug('Testing')
-    answers_out = open(config['evaluation']["save.answers.to"], 'w')
     global_answers = []
     avg_metrics = np.zeros(3)
     len_webquestion = webquestions.get_dataset_size()
@@ -84,13 +83,14 @@ def generate(path_to_model, config_file_path):
                                [(c_g[0], float(c_g[1])) for c_g in chosen_graphs[:10]]))
         if i % 100 == 0:
             logger.debug("Average f1 so far: {}".format((avg_metrics/(i+1))))
-            json.dump(global_answers, answers_out, sort_keys=True, indent=4)
+            with open(config['evaluation']["save.answers.to"], 'w') as answers_out:
+                json.dump(global_answers, answers_out, sort_keys=True, indent=4)
 
     print("Average metrics: {}".format((avg_metrics/(len_webquestion))))
 
     logger.debug('Testing is finished')
-    json.dump(global_answers, answers_out, sort_keys=True, indent=4)
-    answers_out.close()
+    with open(config['evaluation']["save.answers.to"], 'w') as answers_out:
+        json.dump(global_answers, answers_out, sort_keys=True, indent=4)
 
 if __name__ == "__main__":
     generate()
