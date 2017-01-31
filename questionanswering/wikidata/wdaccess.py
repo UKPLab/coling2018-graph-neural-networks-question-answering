@@ -162,7 +162,7 @@ entity_map = load_entity_map(RESOURCES_FOLDER + "manual_entity_map.tsv")
 property_blacklist = load_blacklist(RESOURCES_FOLDER + "property_blacklist.txt")
 entity_blacklist = load_blacklist(RESOURCES_FOLDER + "entity_blacklist.txt")
 property_whitelist = load_blacklist(RESOURCES_FOLDER + "property_whitelist.txt")
-property2label = load_property_labels(RESOURCES_FOLDER + "properties-with-labels.txt")
+property2label = load_property_labels(RESOURCES_FOLDER + "properties_with_labels.txt")
 
 
 sparql_restriction_time_argmax = "?m ?a [base:time ?n]. FILTER (YEAR(?n) = ?yearvalue)"
