@@ -423,10 +423,10 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                                                  input_length=4, init=self._p.get("emb.weight.init", 'uniform'),
                                                        trainable=True)
         type_embeddings_layer = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._type2idx),
-                                                       input_length=4, init=self._p.get("emb.weight.init", 'uniform'),
+                                                       input_length=3, init=self._p.get("emb.weight.init", 'uniform'),
                                                        trainable=True)
         rel_type_embeddings_layer = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._propertytype2idx),
-                                                       input_length=4, init=self._p.get("emb.weight.init", 'uniform'),
+                                                       input_length=3, init=self._p.get("emb.weight.init", 'uniform'),
                                                        trainable=True)
         kbid_embeddings = keras.layers.TimeDistributed(kbid_embeddings_layer)(kbid_input)
         kbid_embeddings = keras.layers.TimeDistributed(keras.layers.Flatten())(kbid_embeddings)
