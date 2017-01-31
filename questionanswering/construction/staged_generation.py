@@ -348,6 +348,8 @@ def ground_one_with_model(s_g, qa_model, min_score):
     grounded_graphs = [apply_grounding(s_g, p) for p in find_groundings(s_g)]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     grounded_graphs = [graph.add_string_representations_to_edges(g, wdaccess.property2label, generation_p.get("replace.entities", False)) for g in grounded_graphs]
+    if generation_p.get("replace.entities", False):
+        grounded_graphs = [graph.replace_entities(g) for g in grounded_graphs]
     logger.debug("First one: {}".format(grounded_graphs[:1]))
     if len(grounded_graphs) == 0:
         return []
@@ -369,6 +371,8 @@ def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
         grounded_graphs = [g for g in grounded_graphs if all(e.get('type') in {'time', 'v-structure'} or e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g.get('edgeSet', []))]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     grounded_graphs = [graph.add_string_representations_to_edges(g, wdaccess.property2label, generation_p.get("replace.entities", False)) for g in grounded_graphs]
+    if generation_p.get("replace.entities", False):
+        grounded_graphs = [graph.replace_entities(g) for g in grounded_graphs]
     logger.debug("First one: {}".format(grounded_graphs[:1]))
     if len(grounded_graphs) == 0:
         return []
@@ -387,7 +391,7 @@ def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
 
 def generate_with_model(ungrounded_graph, qa_model, beam_size=10):
     ungrounded_graph = link_entities_in_graph(ungrounded_graph)
-    pool = [(ungrounded_graph, 0.0)]  # pool of possible parses
+    pool = [(ungrounded_graph, -1.0)]  # pool of possible parses
     generated_graphs = []
     iterations = 0
     while pool:
