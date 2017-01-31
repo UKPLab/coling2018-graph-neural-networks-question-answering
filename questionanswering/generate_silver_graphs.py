@@ -31,6 +31,7 @@ def generate(config_file_path):
     # logging.basicConfig(level=logging.ERROR)
 
     staged_generation.generation_p['label.query.results'] = config['generation'].get('label.query.results', False)
+    staged_generation.generation_p["use.whitelist"] = config['evaluation'].get("use.whitelist", False)
     entity_linking.entity_linking_p["max.entity.options"] = config['generation']["max.entity.options"]
     wdaccess.wdaccess_p['wikidata_url'] = config['wikidata'].get("backend", "http://knowledgebase:8890/sparql")
     wdaccess.wdaccess_p["restrict.hop"] = config['wikidata'].get("restrict.hop", False)
