@@ -180,7 +180,7 @@ def add_temporal_relation(g):
 # This division of actions is relevant for grounding with gold answers:
 # - Restrict action limit the set of answers and should be applied
 #   to a graph that has groundings
-RESTRICT_ACTIONS = [add_entity_and_relation, last_relation_temporal, add_temporal_relation, last_relation_numeric]
+RESTRICT_ACTIONS = [add_entity_and_relation, add_temporal_relation, last_relation_numeric]
 # - Expand actions change graph to extract another set of answers and should be
 #   applied to a graph that has empty denotation
 EXPAND_ACTIONS = [last_relation_hop]  # Expand actions
