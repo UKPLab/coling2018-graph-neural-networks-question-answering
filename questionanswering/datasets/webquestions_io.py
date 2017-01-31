@@ -193,6 +193,19 @@ class WebQuestions(Loggable):
                 [w for g in self._silver_graphs[i] for e in g[0].get('edgeSet', []) for w in e.get('label', '').split()]
                 for i in self._get_sample_indices(self._questions_train)]
 
+    def get_property_set(self):
+        """
+        Generate a set of all properties appearing in the dataset.
+
+        :return: set of property ids
+        """
+        property_set = {e.get("kbID", "")[:-1] for graph_set in self._silver_graphs
+                for g in graph_set for e in g[0].get('edgeSet', []) if 'kbID' in e}
+        if len(self._choice_graphs) > 0:
+            property_set = property_set | {e.get("kbID", "")[:-1] for graph_set in self._choice_graphs
+             for g in graph_set for e in g[0].get('edgeSet', []) if 'kbID' in e}
+        return property_set
+
     def get_validation_samples(self):
         """
         See the documentation for get_training_samples

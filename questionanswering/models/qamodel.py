@@ -118,12 +118,13 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         self.logger.debug("Loaded successfully.")
 
     @abc.abstractmethod
-    def prepare_model(self, train_tokens):
+    def prepare_model(self, train_tokens, properties_set):
         """
         Method that should override to init objects and parameters that are needed for the model training.
         E.g. vocabulary index.
 
         :param train_tokens:
+        :param properties_set:
         """
         self.logger.debug(self._p)
         assert "graph.choices" in self._p
@@ -208,8 +209,8 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
         super(TwinsModel, self).__init__(**kwargs)
 
     @abc.abstractmethod
-    def prepare_model(self, train_tokens):
-        super(TwinsModel, self).prepare_model(train_tokens)
+    def prepare_model(self, train_tokens, properties_set):
+        super(TwinsModel, self).prepare_model(train_tokens, properties_set)
         self._sibling_model = self._model.get_layer(name="sibiling_model")
         self.logger.debug("Sibling model: {}".format(self._sibling_model))
 
@@ -246,8 +247,8 @@ class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
         super(BrothersModel, self).__init__(**kwargs)
 
     @abc.abstractmethod
-    def prepare_model(self, train_tokens):
-        KerasModel.prepare_model(self, train_tokens)
+    def prepare_model(self, train_tokens, properties_set):
+        KerasModel.prepare_model(self, train_tokens, properties_set)
         self._older_model = self._model.get_layer(name=self._older_model_name)
         self._younger_model = self._model.get_layer(name=self._younger_model_name).layer
         self.logger.debug("Older model: {}".format(self._older_model))

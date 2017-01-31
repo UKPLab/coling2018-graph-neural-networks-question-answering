@@ -154,7 +154,7 @@ def ground_one_with_gold(s_g, gold_answers, min_fscore):
     logger.debug("First one: {}".format(grounded_graphs[:1]))
     retrieved_answers = [wdaccess.query_graph_denotations(s_g) for s_g in grounded_graphs]
     for i, s_g in enumerate(grounded_graphs):
-        if len(retrieved_answers[i]) > 3:
+        if len(retrieved_answers[i]) > 3:  # basically means there is no temporal relations there
             t_g = graph.copy_graph(s_g)
             t_g['filter'] = 'importance'
             grounded_graphs.append(t_g)

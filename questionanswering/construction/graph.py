@@ -93,6 +93,9 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     '<argmax> part of <e> part of <x>'
     >>> get_property_str_representation({'canonical_right': 'Washington Redskins', 'hopDown': 'P361v', 'kbID': 'P361v', 'type': 'direct', 'filter':'importance'}, {'P361': 'part of'}, use_placeholder=True)
     '<filter> part of <e> part of <x>'
+    >>> get_property_str_representation({'kbID': 'P69s',  'right': ['Missouri'], \
+    'rightkbID': 'Q189', 'type': 'direct', 'num': '2012'}, {'P69': "educated at", 'P131': 'located in'}, use_placeholder=True)
+    'educated at <e> <num>'
     """
     e_type = edge.get('type', 'direct')
     if e_type == "time":
@@ -102,8 +105,9 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     if e_type == 'v-structure':
         property_label = "<v> " + property_label
     e_arg = '<argmax> ' if 'argmax' in edge else '<argmin> ' if 'argmin' in edge else ""
+    num = "<num>" if "num" in edge else ""
     if 'filter' in edge and edge['filter'] == 'importance':
-        e_arg = e_arg + "<filter> "
+        e_arg += "<filter> "
     hopUp_label, hopDown_label = '', ''
     if 'hopUp' in edge and edge['hopUp']:
         hopUp_label = "<x> {} ".format(property2label.get(edge['hopUp'][:-1], utils.unknown_el))
@@ -112,8 +116,8 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     entity_name = "<e>" if use_placeholder \
         else edge["canonical_right"] if "canonical_right" in edge \
         else " ".join(edge.get('right', []))
-    property_label = ("{2}{3}{1}{4} {0}" if e_type in {'reverse', 'time'} else "{2}{0} {3}{1}{4}").format(
-        property_label, entity_name, e_arg, hopUp_label, hopDown_label)
+    property_label = ("{2}{3}{1}{4} {0} {5}" if e_type in {'reverse', 'time'} else "{2}{0} {3}{1}{4} {5}").format(
+        property_label, entity_name, e_arg, hopUp_label, hopDown_label, num)
     property_label = property_label.strip()
     return property_label
 
