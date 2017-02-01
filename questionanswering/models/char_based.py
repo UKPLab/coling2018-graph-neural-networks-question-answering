@@ -478,8 +478,8 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                     edge_kbid = "argmax" if "argmax" in edge else "argmin"
                 graph_matrix[i, j] = [
                     self._property2idx.get(edge_kbid, 0),
-                    self._property2idx.get(edge.get('hopUp', utils.all_zeroes), 0),
-                    self._property2idx.get(edge.get('hopDown', utils.all_zeroes), 0),
+                    self._property2idx.get(edge['hopUp'][:-1] if 'hopUp' in edge else utils.all_zeroes, 0),
+                    self._property2idx.get(edge['hopDown'][:-1] if 'hopDown' in edge else utils.all_zeroes, 0),
                     self._property2idx.get("argmax" if "argmax" in edge
                                            else "argmin" if "argmin" in edge
                                             else "num" if "num" in edge
@@ -510,8 +510,8 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                         edge_kbid = "argmax" if "argmax" in edge else "argmin"
                     graph_matrix[s, i, j] = [
                         self._property2idx.get(edge_kbid, 0),
-                        self._property2idx.get(edge.get('hopUp', utils.all_zeroes), 0),
-                        self._property2idx.get(edge.get('hopDown', utils.all_zeroes), 0),
+                        self._property2idx.get(edge['hopUp'][:-1] if 'hopUp' in edge else utils.all_zeroes, 0),
+                        self._property2idx.get(edge['hopDown'][:-1] if 'hopDown' in edge else utils.all_zeroes, 0),
                         self._property2idx.get("argmax" if "argmax" in edge
                                                else "argmin" if "argmin" in edge
                                                 else "num" if "num" in edge

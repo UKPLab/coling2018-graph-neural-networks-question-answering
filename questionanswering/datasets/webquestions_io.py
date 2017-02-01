@@ -246,7 +246,6 @@ class WebQuestions(Loggable):
              for g in graph_set for e in g[0].get('edgeSet', []) if 'kbID' in e}
         return property_set
 
-
     def get_training_generator(self, batch_size):
         """
         Get a set of training samples as a cyclic generator. Negative samples are generated randomly at
