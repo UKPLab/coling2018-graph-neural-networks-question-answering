@@ -57,7 +57,7 @@ class QAModel(Loggable, metaclass=abc.ABCMeta):
 
     def apply_on_batch(self, data_batch, verbose=False):
         predicted_indices = deque()
-        for instance in tqdm.tqdm(data_batch, ascii=True, disable=(not verbose)):
+        for instance in tqdm.tqdm(data_batch, ascii=True, ncols=100, disable=(not verbose)):
             predicted_indices.append(self.apply_on_instance(instance) if instance else [])
         return predicted_indices
 
