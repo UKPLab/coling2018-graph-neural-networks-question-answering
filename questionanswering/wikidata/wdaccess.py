@@ -282,15 +282,19 @@ def filter_denotation_by_importance(denotations, keep=3):
     :return: list of entitiy ids
     >>> filter_denotation_by_importance(['Q161491', 'Q523651', 'Q1143278', 'Q179385', 'Q592123', 'Q62378', 'Q617407', 'Q858775'])
     ['Q62378', 'Q161491', 'Q179385']
+    >>> filter_denotation_by_importance(['Q161491', 'Q523651', 'Q1143278', 'Q179385', 'Q592123', 'Q62h378', 'Q617407', 'Q858775'])
+    ['Q161491', 'Q179385', 'Q523651']
     >>> filter_denotation_by_importance([{'e1': 'Q161491'}, {'e1': 'Q523651'}, {'e1': 'Q1143278'}, {'e1': 'Q179385'}, {'e1': 'Q592123'}, {'e1': 'Q62378'}])
     [{'e1': 'Q62378'}, {'e1': 'Q161491'}, {'e1': 'Q179385'}]
+    >>> filter_denotation_by_importance([{'e1': 'Q161-491'}, {'e1': 'Q52P3651'}, {'e1': 'Q1143278'}, {'e1': 'Q179385'}, {'e1': 'Q592123'}, {'e1': 'Q62378'}])
+    [{'e1': 'Q62378'}, {'e1': 'Q179385'}, {'e1': 'Q592123'}]
     """
-    if denotations and type(denotations[0]) == dict:
+    if len(denotations) > 0 and type(denotations[0]) == dict:
         denotations = [r for r in denotations if any('-' not in r[b] and r[b][0] in 'pqPQ' for b in r)]
-        denotations = sorted(denotations, key=lambda k: int(k.get('e1'," ")[1:]))[:keep]
+        denotations = sorted([k for k in denotations if k.get('e1', ' ')[1:].isnumeric()], key=lambda k: int(k.get('e1', ' ')[1:]))[:keep]
     else:
-        denotations = [r for r in denotations if any('-' not in r and r[0] in 'pqPQ')]
-        denotations = sorted(denotations, key=lambda k: int(k[1:]))[:keep]
+        denotations = [r for r in denotations if '-' not in r and r[0] in 'pqPQ']
+        denotations = sorted([k for k in denotations if k[1:].isnumeric()], key=lambda k: int(k[1:]))[:keep]
     return denotations
 
 
