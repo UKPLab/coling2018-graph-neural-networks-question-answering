@@ -12,6 +12,7 @@ import utils
 from construction import graph
 from models import keras_extensions
 from models.qamodel import TwinsModel, BrothersModel
+from wikidata import wdaccess
 
 
 class CharCNNModel(TwinsModel):
@@ -391,6 +392,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         BrothersModel.prepare_model(self, train_tokens, properties_set)
 
     def init_property_index(self, properties_set):
+        properties_set = properties_set | wdaccess.HOP_UP_RELATIONS | wdaccess.HOP_DOWN_RELATIONS
         self._property2idx.update({p:i for i, p in enumerate(properties_set, start=len(self._property2idx))})
         self.logger.debug("Property index is finished: {}".format(len(self._property2idx)))
         with open(self._save_model_to + "property2idx_{}.json".format(self._model_number), 'w') as out:
