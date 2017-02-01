@@ -75,6 +75,12 @@ class WebQuestions(Loggable):
                 self._silver_graphs = [[g for g in graph_set if all(e.get('type') in {'time', 'v-structure'} or e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g[0].get('edgeSet', []))]
                                        for graph_set in self._silver_graphs]
                 self.logger.debug("Average number of choices per question: {}".format(np.mean([len(graphs) for graphs in self._silver_graphs])))
+            if self._p.get("max.entity.options", 3) == 1:
+                self.logger.debug("Restricting to one entity choice")
+                target_entities = [{e.get('rightkbID') for e in instance[np.argmax([g[1][2] if len(g) > 1 else 0.0 for g in instance])][0].get('edgeSet', [])} for instance in self._silver_graphs]
+                self._silver_graphs = [[g for g in graph_set if all(e.get('rightkbID') in target_entities[i] for e in g[0].get('edgeSet', []))]
+                                       for i, graph_set in enumerate(self._silver_graphs)]
+                self.logger.debug("Average number of choices per question: {}".format(np.mean([len(graphs) for graphs in self._silver_graphs])))
 
         if self._p.get("replace.entities", False):
             self.logger.debug("Replacing entities in questions")

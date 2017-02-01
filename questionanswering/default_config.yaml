@@ -9,7 +9,7 @@ training:
   log.results: "../data/training.log"
 
 evaluation:
-  max.num.entities: 2 # Only affects choice graphs generation
+  max.num.entities: 2
   max.entity.options: 1
   questions: "../data/input/webquestions.examples.test.json"
   save.answers.to: "../data/generated/webquestions.examples.test.answers.json"
@@ -43,7 +43,7 @@ webquestions:
     train_validation: "../data/input/webquestions.examples.train.validation.json"
     train_tagged: "../data/generated/webquestions.examples.train.utterances.tagged.json"
     train_silvergraphs: "../data/generated/webquestions.examples.train.silvergraphs.full_12_05.json"
-    train_choicegraphs: "../data/generated/webquestions.examples.train.choice_graphs.extended.json"
+#    train_choicegraphs: "../data/generated/webquestions.examples.train.choice_graphs.extended.json"
 
 model:
   class: BagOfWordsModel
