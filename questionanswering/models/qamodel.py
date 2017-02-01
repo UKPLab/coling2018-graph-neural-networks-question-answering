@@ -53,7 +53,7 @@ class QAModel(Loggable, metaclass=abc.ABCMeta):
             targets = np.argmax(targets, axis=-1)
         predicted_targets = [indices[0] if len(indices) > 0 else 0 for indices in self.apply_on_batch(graphs, verbose)]
         accuracy = np.sum(np.asarray(predicted_targets) == targets) / len(targets)
-        return accuracy
+        return accuracy, predicted_targets
 
     def apply_on_batch(self, data_batch, verbose=False):
         predicted_indices = deque()
