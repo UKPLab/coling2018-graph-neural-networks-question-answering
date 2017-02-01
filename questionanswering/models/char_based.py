@@ -392,6 +392,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
 
     def init_property_index(self, properties_set):
         self._property2idx.update({p:i for i, p in enumerate(properties_set, start=len(self._property2idx))})
+        self.logger.debug("Property index is finished: {}".format(len(self._property2idx)))
         with open(self._save_model_to + "property2idx_{}.json".format(self._model_number), 'w') as out:
             json.dump(self._property2idx, out, indent=2)
 
@@ -469,18 +470,20 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         graph_matrix = np.zeros((len(instance), self._p.get('max.graph.size', 3), 6), dtype="int32")
         for i, g in enumerate(instance):
             for j, edge in enumerate(g.get("edgeSet", [])[:self._p.get('max.graph.size', 3)]):
-                edge_kbid = edge.get('kbID', utils.unknown_el) if edge.get('type') != 'time' \
-                                else "argmax" if "argmax" in edge else "argmin"
+                if edge.get('type') != 'time':
+                    edge_kbid = edge.get('kbID')[:-1] if 'kbID' in edge else utils.unknown_el
+                else:
+                    edge_kbid = "argmax" if "argmax" in edge else "argmin"
                 graph_matrix[i, j] = [
-                    self._type2idx.get(edge.get('type', utils.unknown_el), 0),
-                    self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
                     self._property2idx.get(edge_kbid, 0),
                     self._property2idx.get(edge.get('hopUp', utils.all_zeroes), 0),
                     self._property2idx.get(edge.get('hopDown', utils.all_zeroes), 0),
                     self._property2idx.get("argmax" if "argmax" in edge
-                                            else "argmin" if "argmin" in edge
+                                           else "argmin" if "argmin" in edge
                                             else "num" if "num" in edge else
-                                           utils.all_zeroes, 0)
+                                            utils.all_zeroes, 0),
+                    self._type2idx.get(edge.get('type', utils.unknown_el), 0),
+                    self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
                 ]
         return sentence_ids, graph_matrix
 
@@ -498,18 +501,20 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
 
             for i, g in enumerate(input_set[s]):
                 for j, edge in enumerate(g.get("edgeSet", [])[:self._p.get('max.graph.size', 3)]):
-                    edge_kbid = edge.get('kbID', utils.unknown_el) if edge.get('type') != 'time' \
-                        else "argmax" if "argmax" in edge else "argmin"
+                    if edge.get('type') != 'time':
+                        edge_kbid = edge.get('kbID')[:-1] if 'kbID' in edge else utils.unknown_el
+                    else:
+                        edge_kbid = "argmax" if "argmax" in edge else "argmin"
                     graph_matrix[s, i, j] = [
-                        self._type2idx.get(edge.get('type', utils.unknown_el), 0),
-                        self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
                         self._property2idx.get(edge_kbid, 0),
                         self._property2idx.get(edge.get('hopUp', utils.all_zeroes), 0),
                         self._property2idx.get(edge.get('hopDown', utils.all_zeroes), 0),
                         self._property2idx.get("argmax" if "argmax" in edge
                                                else "argmin" if "argmin" in edge
                                                 else "num" if "num" in edge else
-                                                utils.all_zeroes, 0)
+                                                utils.all_zeroes, 0),
+                        self._type2idx.get(edge.get('type', utils.unknown_el), 0),
+                        self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
                     ]
         return sentences_matrix, graph_matrix, targets
 
