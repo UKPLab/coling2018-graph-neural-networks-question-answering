@@ -520,6 +520,14 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                     ]
         return sentences_matrix, graph_matrix, targets
 
+    def load_from_file(self, path_to_model):
+        super(TrigramCNNGraphSymbolicModel, self).load_from_file(path_to_model=path_to_model)
+
+        self.logger.debug("Loading property index from: property2idx_{}.json".format(self._model_number))
+        with open(self._save_model_to + "property2idx_{}.json".format(self._model_number)) as f:
+            self._property2idx = json.load(f)
+        self.logger.debug("Vocabulary size: {}.".format(len(self._property2idx)))
+
 
 def string_to_unigrams(input_string, character2idx):
     return [character2idx.get(c, character2idx[utils.unknown_el]) for c in input_string]
