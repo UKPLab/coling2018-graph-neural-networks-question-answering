@@ -48,9 +48,9 @@ def test_model(path_to_model, config_file_path):
 
     print("Testing the model on silver data.")
     if 'train_validation' in config['webquestions']['path.to.dataset']:
-        accuracy_on_silver = trainablemodel.test_on_silver(webquestions.get_full_validation())
+        accuracy_on_silver = trainablemodel.test_on_silver(webquestions.get_full_validation(), verbose=True)
     else:
-        accuracy_on_silver = trainablemodel.test_on_silver(webquestions.get_full_training())
+        accuracy_on_silver = trainablemodel.test_on_silver(webquestions.get_full_training(), verbose=True)
     print("Accuracy on silver data: {}".format(accuracy_on_silver))
     if results_logger:
         results_logger.info("Accuracy on silver data: {}".format(accuracy_on_silver))
