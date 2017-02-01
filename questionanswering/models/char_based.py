@@ -380,7 +380,7 @@ class TrigramCNNGraphModel(TrigramCNNEdgeSumModel):
 class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
 
     def __init__(self, **kwargs):
-        self._property2idx = {utils.all_zeroes: 0, utils.unknown_el: 1}
+        self._property2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "argmax": 2, "argmin": 3, "num": 4, "filter": 5}
         self._propertytype2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "v": 2, "q": 3}
         self._type2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "direct": 2, "reverse": 3, "v-structure": 4, "time": 5}
         super(TrigramCNNGraphSymbolicModel, self).__init__(**kwargs)
@@ -480,8 +480,9 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                     self._property2idx.get(edge.get('hopDown', utils.all_zeroes), 0),
                     self._property2idx.get("argmax" if "argmax" in edge
                                            else "argmin" if "argmin" in edge
-                                            else "num" if "num" in edge else
-                                            utils.all_zeroes, 0),
+                                            else "num" if "num" in edge
+                                            else "filter" if "filter" in edge
+                                            else utils.all_zeroes, 0),
                     self._type2idx.get(edge.get('type', utils.unknown_el), 0),
                     self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
                 ]
@@ -511,8 +512,9 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                         self._property2idx.get(edge.get('hopDown', utils.all_zeroes), 0),
                         self._property2idx.get("argmax" if "argmax" in edge
                                                else "argmin" if "argmin" in edge
-                                                else "num" if "num" in edge else
-                                                utils.all_zeroes, 0),
+                                                else "num" if "num" in edge
+                                                else "filter" if "filter" in edge
+                                                else utils.all_zeroes, 0),
                         self._type2idx.get(edge.get('type', utils.unknown_el), 0),
                         self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
                     ]
