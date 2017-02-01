@@ -165,3 +165,54 @@ def load_config(config_file_path):
         print("Wikidata parameters not in the config file!")
         sys.exit()
     return config
+
+
+def load_blacklist(path_to_list):
+    try:
+        with open(path_to_list) as f:
+            return_list = {l.strip() for l in f.readlines()}
+        return return_list
+    except Exception as ex:
+        logger.error("No list found. {}".format(ex))
+    try:
+        with open("../" + path_to_list) as f:
+            return_list = {l.strip() for l in f.readlines()}
+        return return_list
+    except Exception as ex:
+        logger.error("No list found. {}".format(ex))
+        return set()
+
+
+def load_property_labels(path_to_property_labels):
+    try:
+        with open(path_to_property_labels) as infile:
+            return_map = {l.split("\t")[0]: l.split("\t")[1].strip().lower() for l in infile.readlines()}
+        return return_map
+    except Exception as ex:
+        logger.error("No list found. {}".format(ex))
+        return {}
+
+
+def load_entity_map(path_to_map):
+    """
+    Load the map of entity labels from a file.
+
+    :param path_to_map: location of the map file
+    :return: entity map as an nltk.Index
+    """
+    try:
+        with open(path_to_map) as f:
+            return_map = [l.strip().split("\t") for l in f.readlines()]
+        return nltk.Index([(t[1], t[0]) for t in return_map])
+    except Exception as ex:
+        logger.error("No entity map found. {}".format(ex))
+    try:
+        with open("../" + path_to_map) as f:
+            return_map = [l.strip().split("\t") for l in f.readlines()]
+        return nltk.Index([(t[1], t[0]) for t in return_map])
+    except Exception as ex:
+        logger.error("No entity map found. {}".format(ex))
+        return {"Q76": ["Barack Obama"]}
+
+
+RESOURCES_FOLDER = "../resources/"

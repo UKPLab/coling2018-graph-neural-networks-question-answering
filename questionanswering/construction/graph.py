@@ -243,6 +243,8 @@ np_grammar = r"""
     """
 np_parser = nltk.RegexpParser(np_grammar)
 
+manual_entities = set(utils.load_entity_map(utils.RESOURCES_FOLDER + "manual_entity_map.tsv").keys())
+
 
 def extract_entities_from_tagged(annotated_tokens, tags):
     """
@@ -300,8 +302,6 @@ def extract_entities(tokens_ne_pos):
     >>> extract_entities([['who', 'O', 'WP'], ['is', 'O', 'VBZ'], ['the', 'O', 'DT'], ['senator', 'O', 'NN'], ['of', 'O', 'IN'], ['connecticut', 'LOCATION', 'NNP'], ['2010', 'O', 'CD'], ['?', 'O', '.']])
     [(['Connecticut'], 'LOCATION'), (['senator'], 'NN'), (['2010'], 'CD')]
     """
-    # >>> extract_entities([['who', 'O', 'WP'], ['played', 'O', 'VBD'], ['eowyn', 'PERSON', 'NNP'], ['in', 'O', 'IN'], ['the', 'O', 'DT'], ['lord', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'], ['rings', 'O', 'NNS'], ['movies', 'O', 'NNS'], ['?', 'O', '.']])
-    # [(['Eowyn'], 'PERSON'), (['the', 'lord', 'of', 'the', 'rings', 'movies'], 'NN')]
     persons = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['PERSON'])
     locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])
     orgs = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['ORGANIZATION'])
@@ -314,6 +314,8 @@ def extract_entities(tokens_ne_pos):
     nns = [[w for w, _ in el.leaves()] for el in nps if not all(t in {'NNP', 'NNPS'} for _, t in el.leaves())]
     cds = [[w for w, _ in el.leaves()] for el in chunks if type(el) == nltk.tree.Tree and el.label() == "CD"]
 
+    # sentence = " ".join([w for w, _, _ in tokens_ne_pos])
+    # ne_vertices = [(k.split(), 'URL') for k in manual_entities if k in sentence]
     ne_vertices = [(ne, 'PERSON') for ne in persons] + [(ne, 'LOCATION') for ne in locations] + [(ne, 'ORGANIZATION') for ne in orgs]
     vertices = []
     for nn in nnps:

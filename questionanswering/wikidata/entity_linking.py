@@ -1,6 +1,7 @@
 import nltk
 import re
 
+import utils
 from wikidata import wdaccess
 
 entity_linking_p = {
@@ -9,7 +10,7 @@ entity_linking_p = {
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
 roman_nums_pattern = re.compile("^(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$")
-labels_blacklist = wdaccess.load_blacklist(wdaccess.RESOURCES_FOLDER + "labels_blacklist.txt")
+labels_blacklist = utils.load_blacklist(utils.RESOURCES_FOLDER + "labels_blacklist.txt")
 stop_words_en = set(nltk.corpus.stopwords.words('english'))
 
 
@@ -235,7 +236,9 @@ def link_entity(entity, try_subentities=True):
     >>> link_entity((['movies', 'does'], 'NN'))
     []
     >>> link_entity((['lord', 'of', 'the', 'rings'], 'NN'))
-    ['Q15228', 'Q127367', 'Q267982']
+    ['Q131074', 'Q190214']
+    >>> link_entity((['state'], 'NN'))
+    ['Q7275', 'Q230855', 'Q599031']
     >>> link_entity((["Chile"], 'NNP'))
     ['Q298', 'Q272795', 'Q1045129']
     >>> link_entity((["Bela", "Fleck"], 'NNP'))
@@ -244,27 +247,30 @@ def link_entity(entity, try_subentities=True):
     ['Q869', 'Q9217', 'Q42732']
     >>> link_entity((['romanian', 'people'], 'NN'))
     ['Q218', 'Q7913']
-    >>> sorted(link_entity((['college'], 'NN')))
-    ['Q189004', 'Q23002039']
+    >>> link_entity((['college'], 'NN'))
+    ['Q23002039', 'Q189004']
     >>> link_entity((['House', 'Of', 'Representatives'], 'ORGANIZATION'))
     ['Q11701', 'Q233262', 'Q320256']
-    >>> sorted(link_entity((['senator', 'of', 'the', 'state'], 'NN')))
+    >>> link_entity((['senator', 'of', 'the', 'state'], 'NN'))
     ['Q13217683', 'Q15686806']
     >>> link_entity((['Michael', 'J', 'Fox'], 'PERSON'))
     ['Q395274']
+    >>> link_entity((['Eowyn'], 'PERSON'))
+    ['Q716565']
     """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
         return []
-    if any(t in wdaccess.entity_map for t in entity_tokens):
-        return [e for t in entity_tokens for e in wdaccess.entity_map.get(t, [])][:entity_linking_p.get("max.entity.options", 3)]
+    entity_variants = possible_variants(entity_tokens, entity_type)
+    subentities = possible_subentities(entity_tokens, entity_type)
+    if any(" ".join(t).lower() in wdaccess.entity_map for t in [entity_tokens] + entity_variants + subentities):
+        keys = {" ".join(t).lower() for t in [entity_tokens] + entity_variants + subentities}
+        return [e for t in keys for e in wdaccess.entity_map.get(t, [])][:entity_linking_p.get("max.entity.options", 3)]
     linkings = wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(entity_tokens)]), starts_with=None)
     if entity_type not in {"NN"} or not linkings:
-        entity_variants = possible_variants(entity_tokens, entity_type)
         entity_variants = [" ".join(s) for s in entity_variants]
         linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants), starts_with=None)
     if try_subentities and not linkings: # or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
-        subentities = possible_subentities(entity_tokens, entity_type)
         subentities = [" ".join(s) for s in subentities]
         linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(subentities), starts_with=None)
     linkings = post_process_entity_linkings(linkings)

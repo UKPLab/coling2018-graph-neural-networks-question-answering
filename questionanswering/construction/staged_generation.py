@@ -2,6 +2,7 @@ import logging
 import itertools
 import tqdm
 
+import utils
 from wikidata import entity_linking
 from wikidata import wdaccess
 from construction import stages, graph
@@ -17,7 +18,7 @@ generation_p = {
 logger = generation_p['logger']
 logger.setLevel(logging.ERROR)
 
-v_structure_markers = wdaccess.load_blacklist(wdaccess.RESOURCES_FOLDER + "v_structure_markers.txt")
+v_structure_markers = utils.load_blacklist(utils.RESOURCES_FOLDER + "v_structure_markers.txt")
 
 
 def generate_with_gold(ungrounded_graph, gold_answers):
