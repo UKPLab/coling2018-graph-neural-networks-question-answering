@@ -70,7 +70,7 @@ def train(config_file_path):
     with open(config['training']['log.results'].replace(".log", "_silver_predictions.log"), "w") as out:
         if len(silver_test_targets) > 0 and not issubclass(type(silver_test_targets[0]), np.integer):
             silver_test_targets = np.argmax(silver_test_targets, axis=-1)
-        json.dump((silver_test_set, predicted_targets, list(silver_test_targets)), out)
+        json.dump((silver_test_set, predicted_targets, [int(t) for t in silver_test_targets]), out)
 
     if results_logger:
         results_logger.info("Accuracy on silver data: {}".format(accuracy_on_silver))
