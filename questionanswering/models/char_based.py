@@ -319,9 +319,9 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
 
     def encode_batch_by_trigrams(self, graphs, verbose=False):
         graphs = [el for el in graphs if el]
-        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int16")
+        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
         graph_matrix = np.zeros((len(graphs), len(graphs[0]), self._p.get('max.graph.size', 3),
-                                 self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int16")
+                                 self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
 
         for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
             sentence_encoded, graphs_encoded = self.encode_by_trigram(graph_set)
