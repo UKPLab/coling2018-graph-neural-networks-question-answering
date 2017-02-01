@@ -417,13 +417,16 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         return model
 
     def _get_embedding_model(self, input_shape, emb_dim, vocab_size):
+        e_input = keras.layers.Input(shape=input_shape, dtype='int32', name='e_input')
         embeddings_layer = keras.layers.Embedding(output_dim=emb_dim, input_dim=vocab_size,
                                                  input_length=input_shape[-1], init=self._p.get("emb.weight.init", 'uniform'),
                                                        trainable=True)
         if len(input_shape) > 1:
-            embeddings_layer = keras.layers.TimeDistributed(embeddings_layer)
-            embeddings_layer = keras.layers.TimeDistributed(keras.layers.Flatten())(embeddings_layer)
-        return embeddings_layer
+            embeddings = keras.layers.TimeDistributed(embeddings_layer)(e_input)
+            embeddings = keras.layers.TimeDistributed(keras.layers.Flatten())(embeddings)
+        else:
+            embeddings = embeddings_layer(e_input)
+        return keras.models.Model(input=[e_input], output=[embeddings])
 
     def _get_graph_model(self):
         edge_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 6), dtype='int32', name='edge_input')
