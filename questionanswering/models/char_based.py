@@ -415,45 +415,64 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         self.logger.debug("Model is compiled")
         return model
 
-    def _get_graph_model(self):
-        # kbid_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 4), dtype='int32', name='kbid_input')
-        # type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='type_input')
-        # rel_type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='rel_type_input')
+    def _get_embedding_model(self, input_shape, emb_dim, vocab_size):
+        e_input = keras.layers.Input(shape=input_shape, dtype='int32', name='e_input')
+        embeddings_layer = keras.layers.Embedding(output_dim=emb_dim, input_dim=vocab_size,
+                                                 input_length=input_shape[-1], init=self._p.get("emb.weight.init", 'uniform'),
+                                                       trainable=True)
+        if len(input_shape) > 1:
+            embeddings = keras.layers.TimeDistributed(embeddings_layer)(e_input)
+            embeddings = keras.layers.TimeDistributed(keras.layers.Flatten())(embeddings)
+        else:
+            embeddings = embeddings_layer(e_input)
+        return keras.models.Model(input=[e_input], output=[embeddings])        
 
+    def _get_meta_model(self, embedded_model):
         edge_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 6), dtype='int32', name='edge_input')
+        kbid_input = keras.layers.Lambda(lambda i: i[:, :4, :], output_shape=(self._p.get('max.graph.size', 3), 4))(edge_input)
+        type_input = keras.layers.Lambda(lambda i: i[:, 4, :], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
+        rel_type_input = keras.layers.Lambda(lambda i: i[:, 5, :], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
+        
+        graph_vector = embedded_model([kbid_input, type_input, rel_type_input])
+        return keras.models.Model(input=[edge_input], output=[graph_vector])
 
-        kbid_embeddings_layer = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._property2idx),
-                                                 input_length=4, init=self._p.get("emb.weight.init", 'uniform'),
-                                                       trainable=True)
-        kbid_embeddings_layer = keras.layers.TimeDistributed(kbid_embeddings_layer)
-        kbid_embeddings_layer.build(input_shape=edge_input._keras_shape[:-1] + (4,))
-        type_embeddings_layer = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._type2idx),
-                                                       input_length=3, init=self._p.get("emb.weight.init", 'uniform'),
-                                                       trainable=True)
-        rel_type_embeddings_layer = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._propertytype2idx),
-                                                       input_length=3, init=self._p.get("emb.weight.init", 'uniform'),
-                                                       trainable=True)
+    def _get_graph_model(self):
 
-        kbid_embeddings = kbid_embeddings_layer(edge_input[:, :4, :])
-        kbid_embeddings = keras.layers.TimeDistributed(keras.layers.Flatten())(kbid_embeddings)
-        type_embeddings = type_embeddings_layer(edge_input[:, 4, :])
-        rel_type_embeddings = rel_type_embeddings_layer(edge_input[:, 5, :])
+        kbid_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 4), dtype='int32', name='kbid_input')
+        type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='type_input')
+        rel_type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='rel_type_input')
 
-        edge_vectors = keras.layers.Merge(mode='concat')([kbid_embeddings, type_embeddings, rel_type_embeddings])
-        edge_vectors = keras.layers.TimeDistributed(
+        kbid_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3), 4), emb_dim=self._p['emb.dim'], vocab_size=len(self._property2idx))
+        
+        type_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3),), emb_dim=self._p['emb.dim'], vocab_size=len(self._type2idx))
+        rel_type_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3),), emb_dim=self._p['emb.dim'], vocab_size=len(self._propertytype2idx))
+        
+        kbid_embeddings = kbid_embeddings_layer(kbid_input)
+        type_embeddings = type_embeddings_layer(type_input)
+        rel_type_embeddings = rel_type_embeddings_layer(rel_type_input)
+
+        edge_vectors = keras.layers.Merge(mode='concat', output_shape=(3, 6*self._p['emb.dim']))([kbid_embeddings, type_embeddings, rel_type_embeddings])
+        mapping_layer = keras.layers.TimeDistributed(
             keras.layers.Dense(self._p['sem.layer.size'],
                                activation=self._p.get("sibling.activation", 'tanh'),
-                               init=self._p.get("sibling.weight.init", 'glorot_uniform')))(edge_vectors)
+                               init=self._p.get("sibling.weight.init", 'glorot_uniform')))
+        mapping_layer.build((None, self._p.get('max.graph.size', 3), 6*self._p['emb.dim'],))
+        mapping_layer.built = True
+        edge_vectors = mapping_layer(edge_vectors)
 
         if self._p.get("graph.sum", 'sum') == 'sum':
             graph_vector = keras.layers.Lambda(lambda x: K.sum(x, axis=1),
                                                output_shape=(self._p['sem.layer.size'],))(edge_vectors)
         else:
-            graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
+            graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)  
+
         graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
-                                          activation=self._p.get("sibling.activation", 'tanh'),
-                                          init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
-        graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
+                            activation=self._p.get("sibling.activation", 'tanh'),
+                            init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
+              
+        graph_model = keras.models.Model(input=[kbid_input,type_input,rel_type_input], output=[graph_vector])
+        graph_model = self._get_meta_model(graph_model)
+
         self.logger.debug("Graph model is finished: {}".format(graph_model))
         return graph_model
 
