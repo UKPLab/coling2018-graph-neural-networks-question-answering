@@ -425,23 +425,11 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
             embeddings = keras.layers.TimeDistributed(keras.layers.Flatten())(embeddings)
         else:
             embeddings = embeddings_layer(e_input)
-        return keras.models.Model(input=[e_input], output=[embeddings])        
-
-    def _get_meta_model(self, embedded_model):
-        edge_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 6), dtype='int32', name='edge_input')
-        kbid_input = keras.layers.Lambda(lambda i: i[:, :4, :], output_shape=(self._p.get('max.graph.size', 3), 4))(edge_input)
-        type_input = keras.layers.Lambda(lambda i: i[:, 4, :], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
-        rel_type_input = keras.layers.Lambda(lambda i: i[:, 5, :], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
-        
-        graph_vector = embedded_model([kbid_input, type_input, rel_type_input])
-        return keras.models.Model(input=[edge_input], output=[graph_vector])
+        return keras.models.Model(input=[e_input], output=[embeddings])
 
     def _get_graph_model(self):
-
-        # kbid_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 4), dtype='int32', name='kbid_input')
-        # type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='type_input')
-        # rel_type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='rel_type_input')
         edge_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 6), dtype='int32', name='edge_input')
+
         kbid_input = keras.layers.Lambda(lambda i: i[:, :, :4], output_shape=(self._p.get('max.graph.size', 3), 4))(edge_input)
         type_input = keras.layers.Lambda(lambda i: i[:, :, 4], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
         rel_type_input = keras.layers.Lambda(lambda i: i[:, :, 5], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
