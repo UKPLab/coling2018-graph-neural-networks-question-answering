@@ -72,7 +72,7 @@ class WebQuestions(Loggable):
             self.logger.debug("Average number of choices per question: {}".format(np.mean([len(graphs) for graphs in self._silver_graphs])))
             if self._p.get("use.whitelist", False):
                 self.logger.debug("Using only whitelisted relations for training")
-                self._silver_graphs = [[g for g in graph_set if all(e.get('type') in {'time', 'v-structure'} or e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g.get('edgeSet', []))]
+                self._silver_graphs = [[g for g in graph_set if all(e.get('type') in {'time', 'v-structure'} or e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g[0].get('edgeSet', []))]
                                        for graph_set in self._silver_graphs]
                 self.logger.debug("Average number of choices per question: {}".format(np.mean([len(graphs) for graphs in self._silver_graphs])))
 
