@@ -56,7 +56,9 @@ def test_model(path_to_model, config_file_path):
     accuracy_on_silver, predicted_targets = trainablemodel.test_on_silver((silver_test_set, silver_test_targets), verbose=True)
     print("Accuracy on silver data: {}".format(accuracy_on_silver))
     with open(config['training']['log.results'].replace(".log", "_silver_predictions.log"), "w") as out:
-        json.dump((silver_test_set, predicted_targets), out)
+        if len(silver_test_targets) > 0 and not issubclass(type(silver_test_targets[0]), np.integer):
+            silver_test_targets = np.argmax(silver_test_targets, axis=-1)
+        json.dump((silver_test_set, predicted_targets, list(silver_test_targets)), out)
     if results_logger:
         results_logger.info("Accuracy on silver data: {}".format(accuracy_on_silver))
 
