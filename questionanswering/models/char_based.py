@@ -417,16 +417,13 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         return model
 
     def _get_embedding_model(self, input_shape, emb_dim, vocab_size):
-        e_input = keras.layers.Input(shape=input_shape, dtype='int32', name='e_input')
         embeddings_layer = keras.layers.Embedding(output_dim=emb_dim, input_dim=vocab_size,
                                                  input_length=input_shape[-1], init=self._p.get("emb.weight.init", 'uniform'),
                                                        trainable=True)
         if len(input_shape) > 1:
-            embeddings = keras.layers.TimeDistributed(embeddings_layer)(e_input)
-            embeddings = keras.layers.TimeDistributed(keras.layers.Flatten())(embeddings)
-        else:
-            embeddings = embeddings_layer(e_input)
-        return keras.models.Model(input=[e_input], output=[embeddings])
+            embeddings_layer = keras.layers.TimeDistributed(embeddings_layer)
+            embeddings_layer = keras.layers.TimeDistributed(keras.layers.Flatten())(embeddings_layer)
+        return embeddings_layer
 
     def _get_graph_model(self):
         edge_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 6), dtype='int32', name='edge_input')
@@ -435,16 +432,16 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         type_input = keras.layers.Lambda(lambda i: i[:, :, 4], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
         rel_type_input = keras.layers.Lambda(lambda i: i[:, :, 5], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
 
-        kbid_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3), 4), emb_dim=self._p['emb.dim'], vocab_size=len(self._property2idx))
+        kbid_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3), 4), emb_dim=self._p['property.emb.dim'], vocab_size=len(self._property2idx))
         
-        type_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3),), emb_dim=self._p['emb.dim'], vocab_size=len(self._type2idx))
-        rel_type_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3),), emb_dim=self._p['emb.dim'], vocab_size=len(self._propertytype2idx))
+        type_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3),), emb_dim=self._p['type.emb.dim'], vocab_size=len(self._type2idx))
+        rel_type_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3),), emb_dim=self._p['ptype.emb.dim'], vocab_size=len(self._propertytype2idx))
         
         kbid_embeddings = kbid_embeddings_layer(kbid_input)
         type_embeddings = type_embeddings_layer(type_input)
         rel_type_embeddings = rel_type_embeddings_layer(rel_type_input)
 
-        edge_vectors = keras.layers.Merge(mode='concat', output_shape=(3, 6*self._p['emb.dim']))([kbid_embeddings, type_embeddings, rel_type_embeddings])
+        edge_vectors = keras.layers.Merge(mode='concat', output_shape=(3, 4*self._p['emb.dim'] + self._p['type.emb.dim'] + self._p['ptype.emb.dim']))([kbid_embeddings, type_embeddings, rel_type_embeddings])
         edge_vectors = keras.layers.TimeDistributed(
             keras.layers.Dense(self._p['sem.layer.size'],
                                activation=self._p.get("sibling.activation", 'tanh'),

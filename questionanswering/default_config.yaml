@@ -59,6 +59,9 @@ model:
   emb.dim: 50
   emb.sum: True # Max if false
   emb.train: False
+  property.emb.dim: 50
+  type.emb.dim: 50
+  ptype.emb.dim: 50
   emb.weight.init: uniform
   vocab.size: 0 #set automatically
   graph.choices: 10 #set automatically
