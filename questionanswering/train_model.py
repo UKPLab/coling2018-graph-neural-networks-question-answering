@@ -68,7 +68,7 @@ def train(config_file_path):
     accuracy_on_silver, predicted_targets = trainablemodel.test_on_silver((silver_test_set, silver_test_targets), verbose=True)
     print("Accuracy on silver data: {}".format(accuracy_on_silver))
     with open(config['training']['log.results'].replace(".log", "_silver_predictions.log"), "w") as out:
-        json.dump((silver_test_set, silver_test_targets, predicted_targets), out)
+        json.dump((silver_test_set, silver_test_targets), out)
 
     if results_logger:
         results_logger.info("Accuracy on silver data: {}".format(accuracy_on_silver))
