@@ -149,6 +149,11 @@ def last_relation_temporal(g):
     []
     >>> last_relation_temporal({'edgeSet': [{'right':[2]}, {'type':'time'}], 'entities': []})
     []
+    >>> add_temporal_relation({'edgeSet': [{'kbID': 'P161v','type': 'direct'}],'tokens': ['where','was','<e>','assassinated','?']})
+    []
+    >>> add_temporal_relation({'edgeSet': [{'kbID': 'P161v','type': 'direct'}],'tokens': ['where','was', 'first', '<e>','?']}) == \
+    [{'entities': [], 'edgeSet': [{'kbID': 'P161v', 'type': 'direct'}, {'argmin': 'time', 'type': 'time'}], 'tokens': ['where', 'was', 'first', '<e>', '?']}]
+    True
     """
     if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g):
         return []
@@ -177,6 +182,8 @@ def add_temporal_relation(g):
     >>> add_temporal_relation({'edgeSet': [{'right':[2]}, {'right':[8], 'argmin':'time'}], 'entities': []})
     []
     >>> add_temporal_relation({'edgeSet': [{'right':[2]}, {'type':'time'}], 'entities': []})
+    []
+    >>> add_temporal_relation({'edgeSet': [{'kbID': 'P161v','type': 'direct'}],'tokens': ['where','was','<e>','assassinated','?']})
     []
     """
     if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g):
