@@ -441,7 +441,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         type_embeddings = type_embeddings_layer(type_input)
         rel_type_embeddings = rel_type_embeddings_layer(rel_type_input)
 
-        edge_vectors = keras.layers.Merge(mode='concat', output_shape=(3, 4*self._p['emb.dim'] + self._p['type.emb.dim'] + self._p['ptype.emb.dim']))([kbid_embeddings, type_embeddings, rel_type_embeddings])
+        edge_vectors = keras.layers.Merge(mode='concat', output_shape=(3, 4*self._p['property.emb.dim'] + self._p['type.emb.dim'] + self._p['ptype.emb.dim']))([kbid_embeddings, type_embeddings, rel_type_embeddings])
         edge_vectors = keras.layers.TimeDistributed(
             keras.layers.Dense(self._p['sem.layer.size'],
                                activation=self._p.get("sibling.activation", 'tanh'),
