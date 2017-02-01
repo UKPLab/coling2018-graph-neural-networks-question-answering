@@ -459,7 +459,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
                             activation=self._p.get("sibling.activation", 'tanh'),
                             init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
-              
+        graph_vector = keras.layers.Dropout(self._p['dropout.sibling'])(graph_vector)
         graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
         self.logger.debug("Graph model is finished: {}".format(graph_model))
         return graph_model

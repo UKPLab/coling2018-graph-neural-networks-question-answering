@@ -49,6 +49,7 @@ model:
   threshold: 500
   models.save.path: "../trainedmodels/"
   word.embeddings: "../resources/glove/glove50B.tsv"
+  vocabulary.with.edgelabels: True
   max.sent.len: 70
   max.graph.size: 3
   loss: kld
