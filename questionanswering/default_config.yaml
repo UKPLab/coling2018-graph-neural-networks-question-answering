@@ -37,6 +37,7 @@ webquestions:
   replace.entities: False
   normalize.tokens: False
   extensions: ['hopUp', 'hopDown', 'temporal', 'multi_rel', 'qualifier_rel', 'v-structure']
+  use.whitelist: False
   path.to.dataset:
     train_train: "../data/input/webquestions.examples.train.train.json"
     train_validation: "../data/input/webquestions.examples.train.validation.json"
