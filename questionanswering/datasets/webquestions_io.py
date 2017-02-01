@@ -97,6 +97,18 @@ class WebQuestions(Loggable):
         return self._get_indexed_samples_separate(indices) \
             if self._p.get('each.separate', False) else self._get_indexed_samples(indices)
 
+    def _get_full(self, questions):
+        indices = self._get_sample_indices(questions)
+        max_silver_samples = self._p.get("max.silver.samples", 15)
+        max_negative_samples = self._p.get("max.negative.samples", 30)
+        self._p["max.silver.samples"] = 50
+        self._p["max.negative.samples"] = 500
+        full_sample = self._get_indexed_samples_separate(indices) \
+            if self._p.get('each.separate', False) else self._get_indexed_samples(indices)
+        self._p["max.silver.samples"] = max_silver_samples
+        self._p["max.negative.samples"] = max_negative_samples
+        return full_sample
+
     def _get_sample_indices(self, questions):
         indices = [q_obj['index'] for q_obj in questions
                    if any(len(g) > 1 and len(g[1]) == 3 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
@@ -171,6 +183,28 @@ class WebQuestions(Loggable):
         """
         return self._get_samples(self._questions_train)
 
+    def get_full_training(self):
+        """
+        :return: a set of training samples.
+        """
+
+        return self._get_full(self._questions_train)
+
+    def get_validation_samples(self):
+        """
+        See the documentation for get_training_samples
+
+        :return: a set of validation samples distinct from the training samples.
+        """
+        return self._get_samples(self._questions_val)
+
+    def get_full_validation(self):
+        """
+        :return: a set of training samples.
+        """
+
+        return self._get_full(self._questions_val)
+
     def get_question_tokens(self):
         """
         Generate a list of tokens that appear in question in the complete dataset.
@@ -206,13 +240,6 @@ class WebQuestions(Loggable):
              for g in graph_set for e in g[0].get('edgeSet', []) if 'kbID' in e}
         return property_set
 
-    def get_validation_samples(self):
-        """
-        See the documentation for get_training_samples
-
-        :return: a set of validation samples distinct from the training samples.
-        """
-        return self._get_samples(self._questions_val)
 
     def get_training_generator(self, batch_size):
         """
