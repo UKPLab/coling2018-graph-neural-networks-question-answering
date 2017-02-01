@@ -444,13 +444,10 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         rel_type_embeddings = rel_type_embeddings_layer(rel_type_input)
 
         edge_vectors = keras.layers.Merge(mode='concat', output_shape=(3, 6*self._p['emb.dim']))([kbid_embeddings, type_embeddings, rel_type_embeddings])
-        mapping_layer = keras.layers.TimeDistributed(
+        edge_vectors = keras.layers.TimeDistributed(
             keras.layers.Dense(self._p['sem.layer.size'],
                                activation=self._p.get("sibling.activation", 'tanh'),
-                               init=self._p.get("sibling.weight.init", 'glorot_uniform')))
-        mapping_layer.build((None, self._p.get('max.graph.size', 3), 6*self._p['emb.dim'],))
-        mapping_layer.built = True
-        edge_vectors = mapping_layer(edge_vectors)
+                               init=self._p.get("sibling.weight.init", 'glorot_uniform')))(edge_vectors)
 
         if self._p.get("graph.sum", 'sum') == 'sum':
             graph_vector = keras.layers.Lambda(lambda x: K.sum(x, axis=1),
