@@ -159,7 +159,7 @@ def load_config(config_file_path):
         print("Dataset location not in the config file!")
         sys.exit()
     if "model" not in config:
-        print("Dataset location not in the config file!")
+        print("Model params not in the config file!")
         sys.exit()
     if "wikidata" not in config:
         print("Wikidata parameters not in the config file!")

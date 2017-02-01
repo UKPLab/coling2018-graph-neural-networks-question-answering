@@ -5,6 +5,7 @@ import numpy as np
 from construction import staged_generation
 import tqdm
 import sys
+import datetime
 
 import utils
 from construction import stages
@@ -29,6 +30,7 @@ def generate(config_file_path):
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
     # logging.basicConfig(level=logging.ERROR)
+    logger.debug(str(datetime.datetime.now()))
 
     staged_generation.generation_p['label.query.results'] = config['generation'].get('label.query.results', False)
     staged_generation.generation_p["use.whitelist"] = config['generation'].get("use.whitelist", False)

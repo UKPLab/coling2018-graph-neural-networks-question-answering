@@ -1,3 +1,4 @@
+import datetime
 import logging
 import click
 import numpy as np
@@ -32,6 +33,7 @@ def train(config_file_path):
     ch = logging.StreamHandler()
     ch.setLevel(config['logger']['level'])
     logger.addHandler(ch)
+    logger.debug(str(datetime.datetime.now()))
 
     results_logger = None
     if 'log.results' in config['training']:
