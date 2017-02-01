@@ -401,26 +401,26 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         # Brothers model
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
 
-        kbid_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3), 4), dtype='int32', name='kbid_input')
-        type_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3),), dtype='int32', name='type_input')
-        rel_type_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3),), dtype='int32', name='rel_type_input')
+        edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3), 6), dtype='int32', name='edge_input')
 
         sentence_vector = self._get_sibling_model()(sentence_input)
-        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)([kbid_input, type_input, rel_type_input])
+        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(edge_input)
 
         main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
                                          dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
-        model = keras.models.Model(input=[sentence_input, kbid_input, type_input, rel_type_input], output=[main_output])
+        model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
         self.logger.debug("Model structured is finished")
         model.compile(optimizer='adam', loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
         self.logger.debug("Model is compiled")
         return model
 
     def _get_graph_model(self):
-        kbid_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 4), dtype='int32', name='kbid_input')
-        type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='type_input')
-        rel_type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='rel_type_input')
+        # kbid_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 4), dtype='int32', name='kbid_input')
+        # type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='type_input')
+        # rel_type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='rel_type_input')
+
+        edge_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 6), dtype='int32', name='edge_input')
 
         kbid_embeddings_layer = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._property2idx),
                                                  input_length=4, init=self._p.get("emb.weight.init", 'uniform'),
@@ -431,10 +431,10 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         rel_type_embeddings_layer = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._propertytype2idx),
                                                        input_length=3, init=self._p.get("emb.weight.init", 'uniform'),
                                                        trainable=True)
-        kbid_embeddings = keras.layers.TimeDistributed(kbid_embeddings_layer)(kbid_input)
+        kbid_embeddings = keras.layers.TimeDistributed(kbid_embeddings_layer)(edge_input[:, :4, :])
         kbid_embeddings = keras.layers.TimeDistributed(keras.layers.Flatten())(kbid_embeddings)
-        type_embeddings = type_embeddings_layer(type_input)
-        rel_type_embeddings = rel_type_embeddings_layer(rel_type_input)
+        type_embeddings = type_embeddings_layer(edge_input[:, 4, :])
+        rel_type_embeddings = rel_type_embeddings_layer(edge_input[:, 5, :])
 
         edge_vectors = keras.layers.Merge(mode='concat')([kbid_embeddings, type_embeddings, rel_type_embeddings])
         edge_vectors = keras.layers.TimeDistributed(
@@ -450,7 +450,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
                                           activation=self._p.get("sibling.activation", 'tanh'),
                                           init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
-        graph_model = keras.models.Model(input=[kbid_input, type_input, rel_type_input], output=[graph_vector])
+        graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
         self.logger.debug("Graph model is finished: {}".format(graph_model))
         return graph_model
 
@@ -473,8 +473,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                                             else "num" if "num" in edge else
                                            utils.all_zeroes, 0)
                 ]
-        graph_matrix = np.swapaxes(graph_matrix, 1, 2)
-        return sentence_ids, [graph_matrix[:,:4], graph_matrix[:,4], graph_matrix[:,5]]
+        return sentence_ids, graph_matrix
 
     def encode_data_for_training(self, data_with_targets):
         input_set, targets = data_with_targets
