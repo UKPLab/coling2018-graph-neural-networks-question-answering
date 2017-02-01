@@ -438,9 +438,13 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
 
     def _get_graph_model(self):
 
-        kbid_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 4), dtype='int32', name='kbid_input')
-        type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='type_input')
-        rel_type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='rel_type_input')
+        # kbid_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 4), dtype='int32', name='kbid_input')
+        # type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='type_input')
+        # rel_type_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3),), dtype='int32', name='rel_type_input')
+        edge_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 6), dtype='int32', name='edge_input')
+        kbid_input = keras.layers.Lambda(lambda i: i[:, :, :4], output_shape=(self._p.get('max.graph.size', 3), 4))(edge_input)
+        type_input = keras.layers.Lambda(lambda i: i[:, :, 4], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
+        rel_type_input = keras.layers.Lambda(lambda i: i[:, :, 5], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
 
         kbid_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3), 4), emb_dim=self._p['emb.dim'], vocab_size=len(self._property2idx))
         
@@ -470,9 +474,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                             activation=self._p.get("sibling.activation", 'tanh'),
                             init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
               
-        graph_model = keras.models.Model(input=[kbid_input,type_input,rel_type_input], output=[graph_vector])
-        graph_model = self._get_meta_model(graph_model)
-
+        graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
         self.logger.debug("Graph model is finished: {}".format(graph_model))
         return graph_model
 
@@ -524,8 +526,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                                                 else "num" if "num" in edge else
                                                 utils.all_zeroes, 0)
                     ]
-        graph_matrix = np.swapaxes(graph_matrix, 2, 3)
-        return sentences_matrix, graph_matrix[:,:,:4], graph_matrix[:,:,4], graph_matrix[:,:,5], targets
+        return sentences_matrix, graph_matrix, targets
 
 
 def string_to_unigrams(input_string, character2idx):
