@@ -51,7 +51,7 @@ class QAModel(Loggable, metaclass=abc.ABCMeta):
         graphs, targets = data_with_targets
         if len(targets) > 0 and not issubclass(type(targets[0]), np.integer):
             targets = np.argmax(targets, axis=-1)
-        predicted_targets = [indices[0] for indices in self.apply_on_batch(graphs, verbose)]
+        predicted_targets = [indices[0] if indices else 0 for indices in self.apply_on_batch(graphs, verbose)]
         accuracy = np.sum(np.asarray(predicted_targets) == targets) / len(targets)
         return accuracy
 
