@@ -489,7 +489,6 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                     self._type2idx.get(edge.get('type', utils.unknown_el), 0),
                     self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
                 ]
-        assert len(sentence_encoded) == len(graph_matrix)
         return sentence_encoded, graph_matrix
 
     def encode_data_for_training(self, data_with_targets):
