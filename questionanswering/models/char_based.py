@@ -469,7 +469,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
         return graph_model
 
     def encode_data_instance(self, instance):
-        sentence_encoded, edge_labels_encoded = TrigramCNNEdgeSumModel.encode_data_instance(self, instance)
+        sentence_encoded, _ = TrigramCNNEdgeSumModel.encode_data_instance(self, instance[:1])
         graph_matrix = np.zeros((len(instance), self._p.get('max.graph.size', 3), 6), dtype="int32")
         for i, g in enumerate(instance):
             for j, edge in enumerate(g.get("edgeSet", [])[:self._p.get('max.graph.size', 3)]):
@@ -489,16 +489,21 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                     self._type2idx.get(edge.get('type', utils.unknown_el), 0),
                     self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
                 ]
-        assert len(sentence_encoded) == len(graph_matrix) == len(edge_labels_encoded)
-        return sentence_encoded, graph_matrix, edge_labels_encoded
+        assert len(sentence_encoded) == len(graph_matrix)
+        return sentence_encoded, graph_matrix
 
     def encode_data_for_training(self, data_with_targets):
         input_set, targets = data_with_targets
         if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
-        sentences_matrix, edge_labels_matrix = TrigramCNNEdgeSumModel.encode_batch_by_trigrams(self, input_set, verbose=False)
+
+        sentences_matrix = np.zeros((len(input_set), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int32")
         graph_matrix = np.zeros((len(input_set), len(input_set[0]), self._p.get('max.graph.size', 3), 6), dtype="int32")
         for s in range(len(input_set)):
+            sentence_encoded, _ = self.encode_by_trigram(input_set[s][:1])
+            sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
+            sentences_matrix[s, :len(sentence_encoded)] = sentence_encoded
+
             for i, g in enumerate(input_set[s]):
                 for j, edge in enumerate(g.get("edgeSet", [])[:self._p.get('max.graph.size', 3)]):
                     if edge.get('type') != 'time':
@@ -518,7 +523,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
                         self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
                     ]
         assert len(sentences_matrix) == len(graph_matrix) == len(targets)
-        return sentences_matrix, graph_matrix, edge_labels_matrix, targets
+        return sentences_matrix, graph_matrix, targets
 
     def load_from_file(self, path_to_model):
         super(TrigramCNNGraphSymbolicModel, self).load_from_file(path_to_model=path_to_model)
