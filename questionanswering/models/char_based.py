@@ -571,11 +571,13 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
         rel_type_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3),), emb_dim=self._p['ptype.emb.dim'], vocab_size=len(self._propertytype2idx))
 
         self.logger.debug("Using a pre-trained embedding matrix.")
-        word_embeddings = keras.layers.TimeDistributed(keras.layers.Embedding(output_dim=self._embedding_matrix.shape[1],
-                                                 input_dim=self._embedding_matrix.shape[0],
-                                                 input_length=self._p.get('max.right.size', 5),
-                                                 weights=self._embedding_matrix,
-                                                 mask_zero=False, trainable=False))(right_label_input)
+        word_embeddings_layer = keras.layers.Embedding(output_dim=self._embedding_matrix.shape[1],
+                                                       input_dim=self._embedding_matrix.shape[0],
+                                                       input_length=self._p.get('max.right.size', 5),
+                                                       weights=self._embedding_matrix,
+                                                       mask_zero=False)
+        word_embeddings_layer.trainable = False
+        word_embeddings = keras.layers.TimeDistributed(word_embeddings_layer)(right_label_input)
         word_embeddings = keras.layers.TimeDistributed(keras.layers.GlobalAveragePooling1D())(word_embeddings)
 
         kbid_embeddings = kbid_embeddings_layer(kbid_input)
