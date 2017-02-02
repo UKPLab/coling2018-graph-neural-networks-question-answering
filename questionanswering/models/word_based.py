@@ -41,7 +41,6 @@ class WordCNNModel(TwinsModel):
                 self.logger.debug('Word index created, size: {}'.format(len(self._word2idx)))
                 with open(self._save_model_to + "word2idx_{}.json".format(self._model_number), 'w') as out:
                     json.dump(self._word2idx, out, indent=2)
-        self._p['vocab.size'] = len(self._word2idx)
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
@@ -55,7 +54,7 @@ class WordCNNModel(TwinsModel):
                                                      weights=[self._embedding_matrix],
                                                      mask_zero=False, trainable=self._p.get("emb.train", False))(tokens_input)
         else:
-            word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
+            word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._word2idx),
                                                      input_length=self._p['max.sent.len'],
                                                      init=self._p.get("emb.weight.init", 'uniform'),
                                                      mask_zero=False)(tokens_input)
@@ -134,7 +133,6 @@ class WordCNNModel(TwinsModel):
             self.logger.debug("Loading vocabulary from: word2idx_{}.json".format(self._model_number))
             with open(self._save_model_to + "word2idx_{}.json".format(self._model_number)) as f:
                 self._word2idx = json.load(f)
-        self._p['vocab.size'] = len(self._word2idx)
         self.logger.debug("Vocabulary size: {}.".format(len(self._word2idx)))
 
 
@@ -152,7 +150,7 @@ class WordSumModel(WordCNNModel):
                                                      weights=self._embedding_matrix,
                                                      mask_zero=False, trainable=self._p.get("emb.train", False))(tokens_input)
         else:
-            word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
+            word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._word2idx),
                                                      input_length=self._p['max.sent.len'],
                                                      init=self._p.get("emb.weight.init", 'uniform'),
                                                      mask_zero=False)(tokens_input)
@@ -198,7 +196,7 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
         self.logger.debug("Create keras model.")
         # Older model
         tokens_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32')
-        word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
+        word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._word2idx),
                                                  input_length=self._p['max.sent.len'],
                                                  init=self._p.get("emb.weight.init", 'uniform'),
                                                  mask_zero=False)(tokens_input)
@@ -218,7 +216,7 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
 
         # Younger model
         tokens_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int32')
-        word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=self._p['vocab.size'],
+        word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._word2idx),
                                                  input_length=self._p['max.sent.len'],
                                                  mask_zero=False)(tokens_input)
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same')(word_embeddings)
