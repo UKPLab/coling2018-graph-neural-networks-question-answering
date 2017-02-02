@@ -49,7 +49,7 @@ model:
   class: BagOfWordsModel
   threshold: 500
   models.save.path: "../trainedmodels/"
-  word.embeddings: "../resources/glove/glove50B.tsv"
+  word.embeddings: "../resources/glove.6B.50d.txt"
   vocabulary.with.edgelabels: True
   max.sent.len: 70
   max.graph.size: 3
