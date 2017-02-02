@@ -615,7 +615,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
                 else:
                     edge_kbid = "argmax" if "argmax" in edge else "argmin"
                 right_label_ids = [utils.get_idx(t, self._word2idx) for t in edge.get('canonical_right', "").split()][:self._p.get('max.right.size', 5)]
-                right_label_vector = np.zeroes(self._p.get('max.right.size', 5))
+                right_label_vector = np.zeros(self._p.get('max.right.size', 5))
                 right_label_vector[:len(right_label_ids)] = right_label_ids
                 graph_matrix[i, j] = [
                     self._property2idx.get(edge_kbid, 0),
@@ -651,7 +651,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
                     else:
                         edge_kbid = "argmax" if "argmax" in edge else "argmin"
                     right_label_ids = [utils.get_idx(t, self._word2idx) for t in edge.get('canonical_right', "").split()][:self._p.get('max.right.size', 5)]
-                    right_label_vector = np.zeroes(self._p.get('max.right.size', 5))
+                    right_label_vector = np.zeros(self._p.get('max.right.size', 5))
                     right_label_vector[:len(right_label_ids)] = right_label_ids
                     graph_matrix[s, i, j] = [
                         self._property2idx.get(edge_kbid, 0),
