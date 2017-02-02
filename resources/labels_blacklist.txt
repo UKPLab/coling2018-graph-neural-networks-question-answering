@@ -9,3 +9,6 @@ movies
 voice
 voices
 new
+type
+types
+president

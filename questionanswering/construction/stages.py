@@ -3,7 +3,7 @@ import copy
 from construction import graph
 from wikidata import entity_linking
 
-argmax_markers = {"last", "latest", "currency", "money"}
+argmax_markers = {"last", "latest", "currency", "money", "football", "team"}
 argmin_markers = {"first", "oldest"}
 argmax_time_markers = {"president", "2012"}
 argmin_time_markers = {"first", "oldest"}
