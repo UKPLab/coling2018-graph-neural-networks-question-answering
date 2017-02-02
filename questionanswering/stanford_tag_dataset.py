@@ -29,6 +29,6 @@ if __name__ == "__main__":
                                                   list(zip(*webquestions_utterances_nes[i]))[1],
                                                   list(zip(*webquestions_utterances_poss[i]))[1])) for i, tokens in enumerate(webquestions_utterances_tokens)]
 
-    with open(data_folder + "generated/webqsp.examples.test.utterances.tagged.json", "w") as out:
+    with open(data_folder + "generated/webquestions.examples.test.utterances.tagged.json", "w") as out:
         json.dump(webquestions_utterances_alltagged, out, indent=4)
     logger.debug("Saved")
