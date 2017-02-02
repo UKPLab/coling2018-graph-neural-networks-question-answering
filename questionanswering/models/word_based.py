@@ -27,7 +27,7 @@ class WordCNNModel(TwinsModel):
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
         return sentences_matrix, edges_matrix, targets
 
-    def prepare_model(self, train_tokens):
+    def prepare_model(self, train_tokens, properties_set):
         self.extract_vocabualry(train_tokens)
         super(WordCNNModel, self).prepare_model(train_tokens)
 
