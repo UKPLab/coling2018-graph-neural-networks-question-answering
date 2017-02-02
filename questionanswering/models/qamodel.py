@@ -168,6 +168,7 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
             encoded_validation = self.encode_data_for_training(validation_with_targets)
             self.logger.debug('Validation data encoded for training.')
             self.logger.debug('Validating on {} samples.'.format(len(encoded_validation[-1])))
+            self.logger.debug('Validation shapes:{}'.format([s.shape for s in encoded_validation]))
             callback_history = self._model.fit_generator(self.data_for_training_generator(data_with_targets_generator),
                                                          nb_epoch=self._p.get("epochs", 200),
                                                          samples_per_epoch=self._p.get("samples.per.epoch", 1000),

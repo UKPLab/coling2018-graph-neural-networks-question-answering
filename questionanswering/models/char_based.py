@@ -275,9 +275,9 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
             return self._sibling_model
         word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32',
                                         name='sentence_input')
+
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
-                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(
-            word_input)
+                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(word_input)
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
         for i in range(self._p.get("sem.layer.depth", 1)):
@@ -379,7 +379,7 @@ class TrigramCNNGraphModel(TrigramCNNEdgeSumModel):
         return graph_model
 
 
-class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel, WordCNNModel):
+class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
 
     def __init__(self, **kwargs):
         self._property2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "argmax": 2, "argmin": 3, "num": 4, "filter": 5}
@@ -407,8 +407,6 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel, WordCNNModel):
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
 
         edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3), 6), dtype='int32', name='edge_input')
-        edge_labels_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
-                                                self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='edge_labels_input')
 
         sentence_vector = self._get_sibling_model()(sentence_input)
         graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(edge_input)
@@ -423,7 +421,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel, WordCNNModel):
         return model
 
     def _get_embedding_model(self, input_shape, emb_dim, vocab_size):
-        e_input = keras.layers.Input(shape=input_shape, dtype='int32', name='e_input')
+        e_input = keras.layers.Input(shape=input_shape, dtype='float32', name='e_input')
         embeddings_layer = keras.layers.Embedding(output_dim=emb_dim, input_dim=vocab_size,
                                                  input_length=input_shape[-1], init=self._p.get("emb.weight.init", 'uniform'),
                                                        trainable=True)
@@ -435,7 +433,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel, WordCNNModel):
         return keras.models.Model(input=[e_input], output=[embeddings])
 
     def _get_graph_model(self):
-        edge_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 6), dtype='int32', name='edge_input')
+        edge_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 6 + self._p.get('max.label.len', 5) * self._p['vocab.size']), dtype='float32', name='edge_input')
 
         kbid_input = keras.layers.Lambda(lambda i: i[:, :, :4], output_shape=(self._p.get('max.graph.size', 3), 4))(edge_input)
         type_input = keras.layers.Lambda(lambda i: i[:, :, 4], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
@@ -450,12 +448,12 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel, WordCNNModel):
         type_embeddings = type_embeddings_layer(type_input)
         rel_type_embeddings = rel_type_embeddings_layer(rel_type_input)
 
-        edge_vectors = keras.layers.Merge(mode='concat', output_shape=(3, 4*self._p['property.emb.dim'] + self._p['type.emb.dim'] + self._p['ptype.emb.dim']))([kbid_embeddings, type_embeddings, rel_type_embeddings])
+        edge_vectors = keras.layers.Merge(mode='concat')([kbid_embeddings, type_embeddings, rel_type_embeddings])
         edge_vectors = keras.layers.TimeDistributed(
             keras.layers.Dense(self._p['sem.layer.size'],
                                activation=self._p.get("sibling.activation", 'tanh'),
                                init=self._p.get("sibling.weight.init", 'glorot_uniform')))(edge_vectors)
-
+        edge_vectors = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(edge_vectors)
         if self._p.get("graph.sum", 'sum') == 'sum':
             graph_vector = keras.layers.Lambda(lambda x: K.sum(x, axis=1),
                                                output_shape=(self._p['sem.layer.size'],))(edge_vectors)
@@ -529,6 +527,137 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel, WordCNNModel):
         with open(self._save_model_to + "property2idx_{}.json".format(self._model_number)) as f:
             self._property2idx = json.load(f)
         self.logger.debug("Vocabulary size: {}.".format(len(self._property2idx)))
+
+
+class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNModel):
+
+    def prepare_model(self, train_tokens, properties_set):
+        YihModel.extract_vocabulary(self, train_tokens)
+        TrigramCNNGraphSymbolicModel.init_property_index(self, properties_set)
+        WordCNNModel.extract_vocabualry(self, train_tokens)
+        BrothersModel.prepare_model(self, train_tokens, properties_set)
+
+    def _get_keras_model(self):
+        self.logger.debug("Create keras model.")
+
+        # Brothers model
+        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
+
+        edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3), 6 + self._p.get('max.right.size', 5)), dtype='int32', name='edge_input')
+
+        sentence_vector = self._get_sibling_model()(sentence_input)
+        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(edge_input)
+
+        main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
+                                         dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
+        main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
+        model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
+        self.logger.debug("Model structured is finished")
+        model.compile(optimizer='adam', loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
+        self.logger.debug("Model is compiled")
+        return model
+
+    def _get_graph_model(self):
+        edge_input = keras.layers.Input(shape=(self._p.get('max.graph.size', 3), 6 + self._p.get('max.right.size', 5)), dtype='float32', name='edge_input')
+
+        kbid_input = keras.layers.Lambda(lambda i: i[:, :, :4], output_shape=(self._p.get('max.graph.size', 3), 4))(edge_input)
+        type_input = keras.layers.Lambda(lambda i: i[:, :, 4], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
+        rel_type_input = keras.layers.Lambda(lambda i: i[:, :, 5], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
+        right_label_input = keras.layers.Lambda(lambda i: i[:, :, 6:], output_shape=(self._p.get('max.graph.size', 3), self._p.get('max.right.size', 5)))(edge_input)
+
+        kbid_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3), 4), emb_dim=self._p['property.emb.dim'], vocab_size=len(self._property2idx))
+
+        type_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3),), emb_dim=self._p['type.emb.dim'], vocab_size=len(self._type2idx))
+        rel_type_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3),), emb_dim=self._p['ptype.emb.dim'], vocab_size=len(self._propertytype2idx))
+
+        self.logger.debug("Using a pre-trained embedding matrix.")
+        word_embeddings = keras.layers.TimeDistributed(keras.layers.Embedding(output_dim=self._embedding_matrix.shape[1],
+                                                 input_dim=self._embedding_matrix.shape[0],
+                                                 input_length=self._p.get('max.right.size', 5),
+                                                 weights=self._embedding_matrix,
+                                                 mask_zero=False, trainable=False))(right_label_input)
+        word_embeddings = keras.layers.TimeDistributed(keras.layers.GlobalAveragePooling1D())(word_embeddings)
+
+        kbid_embeddings = kbid_embeddings_layer(kbid_input)
+        type_embeddings = type_embeddings_layer(type_input)
+        rel_type_embeddings = rel_type_embeddings_layer(rel_type_input)
+
+        edge_vectors = keras.layers.Merge(mode='concat')([kbid_embeddings, type_embeddings, rel_type_embeddings, word_embeddings])
+        edge_vectors = keras.layers.TimeDistributed(
+            keras.layers.Dense(self._p['sem.layer.size'],
+                               activation=self._p.get("sibling.activation", 'tanh'),
+                               init=self._p.get("sibling.weight.init", 'glorot_uniform')))(edge_vectors)
+        edge_vectors = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(edge_vectors)
+        if self._p.get("graph.sum", 'sum') == 'sum':
+            graph_vector = keras.layers.Lambda(lambda x: K.sum(x, axis=1),
+                                               output_shape=(self._p['sem.layer.size'],))(edge_vectors)
+        else:
+            graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
+
+        graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                          activation=self._p.get("sibling.activation", 'tanh'),
+                                          init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
+        graph_vector = keras.layers.Dropout(self._p['dropout.sibling'])(graph_vector)
+        graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
+        self.logger.debug("Graph model is finished: {}".format(graph_model))
+        return graph_model
+
+    def encode_data_instance(self, instance):
+        sentence_encoded, _ = self.encode_by_trigram(instance[:1])
+        sentence_ids = sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
+        graph_matrix = np.zeros((len(instance), self._p.get('max.graph.size', 3), 6 + self._p.get('max.right.size', 5)), dtype="int32")
+        for i, g in enumerate(instance):
+            for j, edge in enumerate(g.get("edgeSet", [])[:self._p.get('max.graph.size', 3)]):
+                if edge.get('type') != 'time':
+                    edge_kbid = edge.get('kbID')[:-1] if 'kbID' in edge else utils.unknown_el
+                else:
+                    edge_kbid = "argmax" if "argmax" in edge else "argmin"
+                graph_matrix[i, j] = [
+                    self._property2idx.get(edge_kbid, 0),
+                    self._property2idx.get(edge['hopUp'][:-1] if 'hopUp' in edge else utils.all_zeroes, 0),
+                    self._property2idx.get(edge['hopDown'][:-1] if 'hopDown' in edge else utils.all_zeroes, 0),
+                    self._property2idx.get("argmax" if "argmax" in edge
+                                           else "argmin" if "argmin" in edge
+                    else "num" if "num" in edge
+                    else "filter" if "filter" in edge
+                    else utils.all_zeroes, 0),
+                    self._type2idx.get(edge.get('type', utils.unknown_el), 0),
+                    self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
+                ] + [utils.get_idx(t, self._word2idx) for t in edge.get('canonical_right', "").split()][:self._p.get('max.right.size', 5)]
+
+        return sentence_ids, graph_matrix
+
+    def encode_data_for_training(self, data_with_targets):
+        input_set, targets = data_with_targets
+        if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
+            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
+
+        sentences_matrix = np.zeros((len(input_set), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int32")
+        graph_matrix = np.zeros((len(input_set), len(input_set[0]), self._p.get('max.graph.size', 3), 6 + self._p.get('max.right.size', 5)), dtype="int32")
+        for s in range(len(input_set)):
+            sentence_encoded, _ = self.encode_by_trigram(input_set[s][:1])
+            sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
+            sentences_matrix[s, :len(sentence_encoded)] = sentence_encoded
+
+            for i, g in enumerate(input_set[s]):
+                for j, edge in enumerate(g.get("edgeSet", [])[:self._p.get('max.graph.size', 3)]):
+                    if edge.get('type') != 'time':
+                        edge_kbid = edge.get('kbID')[:-1] if 'kbID' in edge else utils.unknown_el
+                    else:
+                        edge_kbid = "argmax" if "argmax" in edge else "argmin"
+                    graph_matrix[s, i, j] = [
+                        self._property2idx.get(edge_kbid, 0),
+                        self._property2idx.get(edge['hopUp'][:-1] if 'hopUp' in edge else utils.all_zeroes, 0),
+                        self._property2idx.get(edge['hopDown'][:-1] if 'hopDown' in edge else utils.all_zeroes, 0),
+                        self._property2idx.get("argmax" if "argmax" in edge
+                                               else "argmin" if "argmin" in edge
+                        else "num" if "num" in edge
+                        else "filter" if "filter" in edge
+                        else utils.all_zeroes, 0),
+                        self._type2idx.get(edge.get('type', utils.unknown_el), 0),
+                        self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
+                    ] + [utils.get_idx(t, self._word2idx) for t in edge.get('canonical_right', "").split()][:self._p.get('max.right.size', 5)]
+        return sentences_matrix, graph_matrix, targets
 
 
 def string_to_unigrams(input_string, character2idx):
