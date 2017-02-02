@@ -574,9 +574,9 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
         word_embeddings_layer = keras.layers.Embedding(output_dim=self._embedding_matrix.shape[1],
                                                        input_dim=self._embedding_matrix.shape[0],
                                                        input_length=self._p.get('max.right.size', 5),
-                                                       weights=self._embedding_matrix,
+                                                       weights=[self._embedding_matrix],
+                                                       trainable=False,
                                                        mask_zero=False)
-        word_embeddings_layer.trainable = False
         word_embeddings = keras.layers.TimeDistributed(word_embeddings_layer)(right_label_input)
         word_embeddings = keras.layers.TimeDistributed(keras.layers.GlobalAveragePooling1D())(word_embeddings)
 
