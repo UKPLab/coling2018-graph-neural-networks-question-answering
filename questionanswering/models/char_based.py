@@ -628,7 +628,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
                     else utils.all_zeroes, 0),
                     self._type2idx.get(edge.get('type', utils.unknown_el), 0),
                     self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
-                ] + right_label_vector
+                ] + list(right_label_vector)
 
         return sentence_ids, graph_matrix
 
@@ -664,7 +664,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
                         else utils.all_zeroes, 0),
                         self._type2idx.get(edge.get('type', utils.unknown_el), 0),
                         self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
-                    ] + right_label_vector
+                    ] + list(right_label_vector)
         return sentences_matrix, graph_matrix, targets
 
 
