@@ -257,6 +257,8 @@ def link_entity(entity, try_subentities=True):
     ['Q395274']
     >>> link_entity((['Eowyn'], 'PERSON'))
     ['Q716565']
+    >>> link_entity((['Jackie','Kennedy'], 'PERSON'))
+    ['Q9696', 'Q34821', 'Q165421']
     """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
@@ -267,9 +269,9 @@ def link_entity(entity, try_subentities=True):
         keys = {" ".join(t).lower() for t in [entity_tokens] + entity_variants + subentities}
         return [e for t in keys for e in wdaccess.entity_map.get(t, [])][:entity_linking_p.get("max.entity.options", 3)]
     linkings = wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(entity_tokens)]), starts_with=None)
-    if entity_type not in {"NN"} or not linkings:
-        entity_variants = [" ".join(s) for s in entity_variants]
-        linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants), starts_with=None)
+    # if entity_type not in {"NN"} or not linkings:
+    entity_variants = [" ".join(s) for s in entity_variants]
+    linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants), starts_with=None)
     if try_subentities and not linkings: # or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
         subentities = [" ".join(s) for s in subentities]
         linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(subentities), starts_with=None)
