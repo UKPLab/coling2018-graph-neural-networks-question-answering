@@ -614,6 +614,9 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
                     edge_kbid = edge.get('kbID')[:-1] if 'kbID' in edge else utils.unknown_el
                 else:
                     edge_kbid = "argmax" if "argmax" in edge else "argmin"
+                right_label_ids = [utils.get_idx(t, self._word2idx) for t in edge.get('canonical_right', "").split()][:self._p.get('max.right.size', 5)]
+                right_label_vector = np.zeroes(self._p.get('max.right.size', 5))
+                right_label_vector[:len(right_label_ids)] = right_label_ids
                 graph_matrix[i, j] = [
                     self._property2idx.get(edge_kbid, 0),
                     self._property2idx.get(edge['hopUp'][:-1] if 'hopUp' in edge else utils.all_zeroes, 0),
@@ -625,7 +628,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
                     else utils.all_zeroes, 0),
                     self._type2idx.get(edge.get('type', utils.unknown_el), 0),
                     self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
-                ] + [utils.get_idx(t, self._word2idx) for t in edge.get('canonical_right', "").split()][:self._p.get('max.right.size', 5)]
+                ] + right_label_vector
 
         return sentence_ids, graph_matrix
 
@@ -647,6 +650,9 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
                         edge_kbid = edge.get('kbID')[:-1] if 'kbID' in edge else utils.unknown_el
                     else:
                         edge_kbid = "argmax" if "argmax" in edge else "argmin"
+                    right_label_ids = [utils.get_idx(t, self._word2idx) for t in edge.get('canonical_right', "").split()][:self._p.get('max.right.size', 5)]
+                    right_label_vector = np.zeroes(self._p.get('max.right.size', 5))
+                    right_label_vector[:len(right_label_ids)] = right_label_ids
                     graph_matrix[s, i, j] = [
                         self._property2idx.get(edge_kbid, 0),
                         self._property2idx.get(edge['hopUp'][:-1] if 'hopUp' in edge else utils.all_zeroes, 0),
@@ -658,7 +664,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
                         else utils.all_zeroes, 0),
                         self._type2idx.get(edge.get('type', utils.unknown_el), 0),
                         self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
-                    ] + [utils.get_idx(t, self._word2idx) for t in edge.get('canonical_right', "").split()][:self._p.get('max.right.size', 5)]
+                    ] + right_label_vector
         return sentences_matrix, graph_matrix, targets
 
 
