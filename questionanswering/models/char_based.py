@@ -619,7 +619,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
             word_embeddings = keras.layers.TimeDistributed(word_embeddings_layer)(right_label_input)
             word_embeddings = keras.layers.TimeDistributed(keras.layers.GlobalAveragePooling1D())(word_embeddings)
             layers_to_concat.append(word_embeddings)
-
+        self.logger.debug("Layers to concat: {}".format(layers_to_concat))
         edge_vectors = keras.layers.Merge(mode='concat')(layers_to_concat)
         edge_vectors = keras.layers.TimeDistributed(
             keras.layers.Dense(self._p['sem.layer.size'],
