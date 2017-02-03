@@ -80,6 +80,7 @@ model:
   twin.similarity: cos
   sibling.activation: relu
   sibling.singleton: False
+  relu.on.top: False
 
 wikidata:
   backend: "http://knowledgebase:8890/sparql"

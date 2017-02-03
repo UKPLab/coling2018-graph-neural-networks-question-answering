@@ -285,6 +285,8 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
                                                  activation=self._p.get("sibling.activation", 'tanh'),
                                                  init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
+        if self._p("relu.on.top", False):
+            semantic_vector = keras.layers.Activation('relu')(semantic_vector)
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._older_model_name)
         self.logger.debug("Sibling model is finished.")
         self._sibling_model = sibiling_model
@@ -604,6 +606,8 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
                                           activation=self._p.get("sibling.activation", 'tanh'),
                                           init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
         graph_vector = keras.layers.Dropout(self._p['dropout.sibling'])(graph_vector)
+        if self._p("relu.on.top", False):
+            graph_vector = keras.layers.Activation('relu')(graph_vector)
         graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
         self.logger.debug("Graph model is finished: {}".format(graph_model))
         return graph_model
