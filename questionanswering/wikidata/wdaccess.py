@@ -297,7 +297,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
                 sparql_relation_inst = sparql_relation_inst.replace("VALUES ?rv { e:P161v e:P453q e:P175q}", "")
 
             # This is a very special case but there is no other place to put it
-            if edge['kbID'] == "P131v" and not ('hopUp' in edge or 'hopDown' in edge):
+            if edge['kbID'] == "P131v":
                 sparql_relation_inst = sparql_relation_inst.replace("?p ?m . ?m ?rr", "(e:P131s/e:P131v)+")
             else:
                 sparql_relation_inst = re.sub(r"\?r[drv]", "e:" + edge['kbID'], sparql_relation_inst)
