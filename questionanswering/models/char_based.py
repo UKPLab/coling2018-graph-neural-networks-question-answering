@@ -541,7 +541,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
     def __init__(self, **kwargs):
         super(TrigramCNNGraphSymbolicWithEmbModel, self).__init__(**kwargs)
         self._feature_vector_size = sum(int(v) if v else 1 for f, v in self._p.get('symbolic.features', {}).items())
-        self.logger.debug("Feature vector size: " + self._feature_vector_size)
+        self.logger.debug("Feature vector size: {}".format(self._feature_vector_size))
 
     def prepare_model(self, train_tokens, properties_set):
         YihModel.extract_vocabulary(self, train_tokens)
