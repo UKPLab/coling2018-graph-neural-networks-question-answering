@@ -388,14 +388,14 @@ class GraphSymbolicModel(EdgeLabelsModel, WordCNNModel):
             main_output = keras.layers.Merge(mode='concat')([sentence_vectors, graph_vectors])
             main_output = keras.layers.TimeDistributed(keras.layers.Dense(1, activation=None, bias=False,
                                               init=self._p.get("sibling.weight.init", 'glorot_uniform')))(main_output)
-            main_output = keras.layers.TimeDistributed(keras.layers.Flatten())(main_output)
+            main_output = keras.layers.Flatten()(main_output)
         else:
             main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
                                          dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
 
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
         model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
-        self.logger.debug("Model structured is finished")
+        self.logger.debug("Model structured is finished, output shape:{}".format(model.output_shape))
         model.compile(optimizer=keras.optimizers.Adam(), loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
         self.logger.debug("Model is compiled")
         return model
