@@ -366,7 +366,9 @@ def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
                        graph.get_graph_last_edge(g).get('kbID', "")[:-1] not in direct_relations]
     logger.debug("Filter out unnecessary qualifiers: {}".format(len(grounded_graphs)))
     first_order_relations = {"{}-{}".format(graph.get_graph_last_edge(g).get('kbID'), graph.get_graph_last_edge(g).get('type'))
-                        for g in grounded_graphs if graph.get_graph_last_edge(g).get('type') in {'direct', 'reverse', 'v-structure'}}
+                        for g in grounded_graphs if graph.get_graph_last_edge(g).get('type') in {'direct', 'reverse', 'v-structure'} and
+                             'hopUp' not in graph.get_graph_last_edge(g) and 'hopDown' not in graph.get_graph_last_edge(g)}
+    logger.debug("First order relations: {}".format(first_order_relations))
     grounded_graphs = [g for g in grounded_graphs if ('hopUp' not in graph.get_graph_last_edge(g) and 'hopDown' not in graph.get_graph_last_edge(g)) or
                        ("{}-{}".format(graph.get_graph_last_edge(g).get('kbID'), graph.get_graph_last_edge(g).get('type')) not in first_order_relations)]
     logger.debug("Filter out unnecessary hops: {}".format(len(grounded_graphs)))
@@ -399,9 +401,10 @@ def generate_with_model(ungrounded_graph, qa_model, beam_size=10):
         logger.debug("Restricting")
         restricted_graphs = stages.restrict(g[0])
         restricted_graphs = [add_canonical_labels_to_entities(r_g) for r_g in restricted_graphs]
-        logger.debug("Suggested graphs: {}".format(restricted_graphs))
+        logger.debug("Suggested graphs:{}, {}".format(len(restricted_graphs), restricted_graphs))
         suggested_graphs = restricted_graphs[:]
         suggested_graphs += [e_g for s_g in suggested_graphs for e_g in stages.expand(s_g)]
+        logger.debug("Suggested (expanded) graphs: {}, {}".format(len(suggested_graphs), suggested_graphs))
         chosen_graphs = ground_with_model(suggested_graphs, qa_model, min_score=master_score, beam_size=beam_size)
         logger.debug("Chosen graphs length: {}".format(len(chosen_graphs)))
         if len(chosen_graphs) > 0:
