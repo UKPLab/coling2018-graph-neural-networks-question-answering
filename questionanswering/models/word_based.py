@@ -172,16 +172,14 @@ class WordGraphModel(BrothersModel, WordCNNModel):
                                                      input_dim=self._embedding_matrix.shape[0],
                                                      input_length=self._p['max.sent.len'],
                                                      weights=[self._embedding_matrix],
-                                                     mask_zero=False, trainable=self._p.get("emb.train", False))(
-                tokens_input)
+                                                     mask_zero=False, trainable=self._p.get("emb.train", False))(tokens_input)
         else:
             word_embeddings = keras.layers.Embedding(output_dim=self._p['emb.dim'], input_dim=len(self._word2idx),
                                                      input_length=self._p['max.sent.len'],
                                                      init=self._p.get("emb.weight.init", 'uniform'),
                                                      mask_zero=False)(tokens_input)
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
-                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(
-            word_embeddings)
+                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(word_embeddings)
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
         for i in range(self._p.get("sem.layer.depth", 1)):

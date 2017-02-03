@@ -64,9 +64,12 @@ def generate(path_to_model, config_file_path):
     avg_metrics = np.zeros(3)
     len_webquestion = webquestions.get_dataset_size()
     for i in tqdm.trange(len_webquestion, ncols=100, ascii=True):
+        question_entities = webquestions_entities[i]
+        if config['evaluation'].get('only.named.entities', False):
+            question_entities = [e for e in question_entities if e[1] != "NN"]
         ungrounded_graph = {'tokens': webquestions_tokens[i],
                             'edgeSet': [],
-                            'entities': webquestions_entities[i][:config['evaluation'].get("max.num.entities", 1)]}
+                            'entities': question_entities[:config['evaluation'].get("max.num.entities", 1)]}
         gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
         chosen_graphs = staged_generation.generate_with_model(ungrounded_graph, qa_model, beam_size=config['evaluation'].get("beam.size", 10))
         model_answers = []

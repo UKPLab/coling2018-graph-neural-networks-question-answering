@@ -11,6 +11,7 @@ training:
 evaluation:
   max.num.entities: 2
   max.entity.options: 1
+  only.named.entities: False
   questions: "../data/input/webquestions.examples.test.json"
   save.answers.to: "../data/generated/webquestions.examples.test.answers.json"
   beam.size: 10
