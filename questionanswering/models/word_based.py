@@ -146,7 +146,7 @@ class WordGraphModel(BrothersModel, WordCNNModel):
         self.logger.debug("Create keras model.")
 
         # Brothers model
-        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
+        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='float32', name='sentence_input')
         graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
                                                 self._p['max.sent.len']), dtype='float32', name='graph_input')
         sentence_vector = self._get_sibling_model()(sentence_input)
