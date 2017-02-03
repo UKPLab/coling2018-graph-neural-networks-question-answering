@@ -68,8 +68,9 @@ class WebQuestions(Loggable):
 
         if len(self._silver_graphs) > 0:
             assert len(self._dataset_tagged) == len(self._silver_graphs)
-            self._silver_graphs = [[g for g in graph_set if graph.if_graph_adheres(g[0], allowed_extensions=self._p.get("extensions", set()))] for graph_set in self._silver_graphs]
             self.logger.debug("Average number of choices per question: {}".format(np.mean([len(graphs) for graphs in self._silver_graphs])))
+            self._silver_graphs = [[g for g in graph_set if graph.if_graph_adheres(g[0], allowed_extensions=self._p.get("extensions", set()))] for graph_set in self._silver_graphs]
+            self.logger.debug("Average number of choices per question (no extensions): {}".format(np.mean([len(graphs) for graphs in self._silver_graphs])))
             if self._p.get("use.whitelist", False):
                 self.logger.debug("Using only whitelisted relations for training")
                 self._silver_graphs = [[g for g in graph_set if all(e.get('type') in {'time', 'v-structure'} or e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g[0].get('edgeSet', []))]
