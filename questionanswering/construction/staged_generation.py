@@ -368,7 +368,6 @@ def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
     first_order_relations = {"{}-{}".format(graph.get_graph_last_edge(g).get('kbID'), graph.get_graph_last_edge(g).get('type'))
                         for g in grounded_graphs if graph.get_graph_last_edge(g).get('type') in {'direct', 'reverse', 'v-structure'} and
                              'hopUp' not in graph.get_graph_last_edge(g) and 'hopDown' not in graph.get_graph_last_edge(g)}
-    logger.debug("First order relations: {}".format(first_order_relations))
     grounded_graphs = [g for g in grounded_graphs if ('hopUp' not in graph.get_graph_last_edge(g) and 'hopDown' not in graph.get_graph_last_edge(g)) or
                        ("{}-{}".format(graph.get_graph_last_edge(g).get('kbID'), graph.get_graph_last_edge(g).get('type')) not in first_order_relations)]
     logger.debug("Filter out unnecessary hops: {}".format(len(grounded_graphs)))

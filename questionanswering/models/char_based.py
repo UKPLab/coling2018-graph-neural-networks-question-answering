@@ -545,6 +545,118 @@ class GraphSymbolicModel(EdgeLabelsModel, WordCNNModel):
         self.logger.debug("Vocabulary size: {}.".format(len(self._property2idx)))
 
 
+class GraphSymbolicCharModel(GraphSymbolicModel, WordCNNModel):
+
+    def __init__(self, **kwargs):
+        self._character2idx = defaultdict(int)
+        super(GraphSymbolicCharModel, self).__init__(**kwargs)
+
+    def prepare_model(self, train_tokens, properties_set):
+        # YihModel.extract_vocabulary(self, train_tokens)
+        if not self._character2idx:
+            self._character2idx = utils.get_character_index([" ".join(tokens) for tokens in train_tokens])
+            self.logger.debug('Character index created, size: {}'.format(len(self._character2idx)))
+            with open(self._save_model_to + "character2idx_{}.json".format(self._model_number), 'w') as out:
+                json.dump(self._character2idx, out, indent=2)
+        self._p['vocab.size'] = len(self._character2idx)
+        self.init_property_index(properties_set)
+        WordCNNModel.extract_vocabualry(self, train_tokens)
+        BrothersModel.prepare_model(self, train_tokens, properties_set)
+
+    def _get_keras_model(self):
+        self.logger.debug("Create keras model.")
+
+        # Brothers model
+        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'], ), dtype='float32', name='sentence_input')
+
+        edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3), self._feature_vector_size), dtype='int32', name='edge_input')
+
+        sentence_vector = self._get_sibling_model()(sentence_input)
+        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(edge_input)
+
+        if self._p.get("twin.similarity", 'cos') == 'dense':
+            sentence_vectors = keras.layers.RepeatVector(self._p['graph.choices'])(sentence_vector)
+            main_output = keras.layers.Merge(mode='concat')([sentence_vectors, graph_vectors])
+            main_output = keras.layers.TimeDistributed(keras.layers.Dense(1, activation=None, bias=False,
+                                                                          init=self._p.get("sibling.weight.init", 'glorot_uniform')))(main_output)
+            main_output = keras.layers.Flatten()(main_output)
+        else:
+            main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
+                                             dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
+
+        main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
+        model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
+        self.logger.debug("Model structured is finished, output shape:{}".format(model.output_shape))
+        model.compile(optimizer=keras.optimizers.Adam(), loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
+        self.logger.debug("Model is compiled")
+        return model
+
+    def _get_sibling_model(self):
+        # Sibling model
+        if self._sibling_model and self._p.get('sibling.singleton', False):
+            return self._sibling_model
+        char_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='float32', name='sentence_input')
+        char_embeddings_layer = self._get_embedding_model(input_shape=(self._p['max.sent.len'],), emb_dim=self._p['emb.dim'], vocab_size=len(self._character2idx))
+        sentence_vector = char_embeddings_layer(char_input)
+
+        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
+                                                     init=self._p.get("sibling.weight.init", 'glorot_uniform'))(sentence_vector)
+        semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
+        for i in range(self._p.get("sem.layer.depth", 1)):
+            semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                                 activation=self._p.get("sibling.activation", 'tanh'),
+                                                 init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
+        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
+        if self._p.get("relu.on.top", False):
+            semantic_vector = keras.layers.Activation('relu')(semantic_vector)
+        sibiling_model = keras.models.Model(input=[char_input], output=[semantic_vector], name=self._older_model_name)
+        self.logger.debug("Sibling model is finished.")
+        self._sibling_model = sibiling_model
+        return sibiling_model
+
+    def encode_data_instance(self, instance):
+        sentence_str = " ".join(instance[0].get("tokens", []))
+        sentence_encoded = string_to_unigrams(sentence_str, self._character2idx)
+        sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
+
+        sentence_ids = sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
+        graph_matrix = np.zeros((len(instance), self._p.get('max.graph.size', 3), self._feature_vector_size), dtype="int32")
+        for i, g in enumerate(instance):
+            for j, edge in enumerate(g.get("edgeSet", [])[:self._p.get('max.graph.size', 3)]):
+                edge_feature_vector = self.get_edge_feature_vector(edge)
+                graph_matrix[i, j, :len(edge_feature_vector)] = edge_feature_vector
+        return sentence_ids, graph_matrix
+
+    def encode_data_for_training(self, data_with_targets):
+        input_set, targets = data_with_targets
+        if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
+            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
+
+        sentences_matrix = np.zeros((len(input_set), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int32")
+        graph_matrix = np.zeros((len(input_set), len(input_set[0]), self._p.get('max.graph.size', 3), self._feature_vector_size), dtype="int32")
+        for s in range(len(input_set)):
+            sentence_str = " ".join(input_set[s][0].get("tokens", []))
+            sentence_encoded = string_to_unigrams(sentence_str, self._character2idx)
+            sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
+            sentences_matrix[s, :len(sentence_encoded)] = sentence_encoded
+
+            for i, g in enumerate(input_set[s]):
+                for j, edge in enumerate(g.get("edgeSet", [])[:self._p.get('max.graph.size', 3)]):
+                    edge_feature_vector = self.get_edge_feature_vector(edge)
+                    graph_matrix[s, i, j, :len(edge_feature_vector)] = edge_feature_vector
+        return sentences_matrix, graph_matrix, targets
+
+    def load_from_file(self, path_to_model):
+        super(GraphSymbolicCharModel, self).load_from_file(path_to_model=path_to_model)
+
+        self.logger.debug("Loading vocabulary from: character2idx_{}.json".format(self._model_number))
+        with open(self._save_model_to + "character2idx_{}.json".format(self._model_number)) as f:
+            self._character2idx = json.load(f)
+        self._p['vocab.size'] = len(self._character2idx)
+        self.logger.debug("Vocabulary size: {}.".format(len(self._character2idx)))
+
+
 def string_to_unigrams(input_string, character2idx):
     return [character2idx.get(c, character2idx[utils.unknown_el]) for c in input_string]
 
