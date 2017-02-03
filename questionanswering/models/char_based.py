@@ -383,8 +383,17 @@ class GraphSymbolicModel(EdgeLabelsModel, WordCNNModel):
         sentence_vector = self._get_sibling_model()(sentence_input)
         graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(edge_input)
 
-        main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
+        if self._p.get("twin.similarity", 'cos') == 'dense':
+            sentence_vectors = keras.layers.RepeatVector(self._p['graph.choices'])(sentence_vector)
+            main_output = keras.layers.Merge(mode='concat')([sentence_vectors, graph_vectors])
+            main_output = keras.layers.TimeDistributed(keras.layers.Dense(1,
+                                              activation=self._p.get("sibling.activation", 'tanh'),
+                                              init=self._p.get("sibling.weight.init", 'glorot_uniform')))(main_output)
+            main_output = keras.layers.Flatten()(main_output)
+        else:
+            main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
                                          dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
+
         main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
         model = keras.models.Model(input=[sentence_input, edge_input], output=[main_output])
         self.logger.debug("Model structured is finished")
