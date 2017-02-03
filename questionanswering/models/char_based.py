@@ -384,9 +384,10 @@ class TrigramCNNGraphModel(TrigramCNNEdgeSumModel):
 class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
 
     def __init__(self, **kwargs):
-        self._property2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "argmax": 2, "argmin": 3, "num": 4, "filter": 5}
+        self._property2idx = {utils.all_zeroes: 0, utils.unknown_el: 1}
         self._propertytype2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "v": 2, "q": 3}
         self._type2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "direct": 2, "reverse": 3, "v-structure": 4, "time": 5}
+        self._modifier2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "argmax": 2, "argmin": 3, "num": 4, "filter": 5}
         super(TrigramCNNGraphSymbolicModel, self).__init__(**kwargs)
 
     def prepare_model(self, train_tokens, properties_set):
@@ -538,7 +539,7 @@ class TrigramCNNGraphSymbolicModel(TrigramCNNEdgeSumModel):
 class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNModel):
 
     def __init__(self, **kwargs):
-        super(TrigramCNNGraphSymbolicModel, self).__init__(**kwargs)
+        super(TrigramCNNGraphSymbolicWithEmbModel, self).__init__(**kwargs)
         self._feature_vector_size = sum(int(v) if v else 1 for f, v in self._p.get('symbolic.features', {}).items())
 
     def prepare_model(self, train_tokens, properties_set):
@@ -588,7 +589,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
 
         if self._p.get('symbolic.features', {}).get("modifier", False):
             modifier_input = keras.layers.Lambda(lambda i: i[:, :, 3], output_shape=(self._p.get('max.graph.size', 3),))(edge_input)
-            modifier_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3),), emb_dim=self._p['type.emb.dim'], vocab_size=len(self._type2idx))
+            modifier_embeddings_layer = self._get_embedding_model(input_shape=(self._p.get('max.graph.size', 3),), emb_dim=self._p['type.emb.dim'], vocab_size=len(self._modifier2idx))
             modifier_embeddings = modifier_embeddings_layer(modifier_input)
             layers_to_concat.append(modifier_embeddings)
 
@@ -658,7 +659,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
         feature_vector = [self._property2idx.get(edge_kbid, 0),
                           self._property2idx.get(edge['hopUp'][:-1] if 'hopUp' in edge else utils.all_zeroes, 0),
                           self._property2idx.get(edge['hopDown'][:-1] if 'hopDown' in edge else utils.all_zeroes, 0),
-                          self._property2idx.get("argmax" if "argmax" in edge
+                          self._modifier2idx.get("argmax" if "argmax" in edge
                                                  else "argmin" if "argmin" in edge
                           else "num" if "num" in edge
                           else "filter" if "filter" in edge
