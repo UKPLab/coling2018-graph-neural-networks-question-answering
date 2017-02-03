@@ -706,6 +706,8 @@ def normalize_answer_strings(answers):
         for a in answer_set:
             if ":" in a:
                 answer_set.extend([w.strip() for w in a.split(":")])
+            if "," in a:
+                answer_set.extend([w.strip() for w in a.split(",")])
             if " - " in a:
                 answer_set.extend([w.strip() for w in a.split(" - ")])
             if "standard time" in a:
