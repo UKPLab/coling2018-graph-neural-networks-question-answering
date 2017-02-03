@@ -233,7 +233,7 @@ class YihModel(TwinsModel):
         self.logger.debug("Vocabulary size: {}.".format(len(self._trigram_vocabulary)))
 
 
-class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
+class EdgeLabelsModel(BrothersModel, YihModel):
 
     def prepare_model(self, train_tokens, properties_set):
         YihModel.extract_vocabulary(self, train_tokens)
@@ -242,23 +242,12 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
 
-        #Graph Model
-        edge_input = keras.layers.Input(shape=(self._p['max.graph.size'], self._p['max.sent.len'],
-                                               self._p['vocab.size'],), dtype='float32', name='edge_input')
-        edge_vectors = keras.layers.TimeDistributed(self._get_sibling_model())(edge_input)
-        graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
-        graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
-                                          activation=self._p.get("sibling.activation", 'tanh'),
-                                          init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
-        graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
-        self.logger.debug("Graph model is finished: {}".format(graph_model))
-
         # Brothers model
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
         graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
-                                               self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='graph_input')
+                                                self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='graph_input')
         sentence_vector = self._get_sibling_model()(sentence_input)
-        graph_vectors = keras.layers.TimeDistributed(graph_model, name=self._younger_model_name)(graph_input)
+        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(graph_input)
 
         main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
                                          dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
@@ -268,6 +257,25 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
         model.compile(optimizer='adam', loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
         self.logger.debug("Model is compiled")
         return model
+
+    def _get_graph_model(self):
+        edge_input = keras.layers.Input(shape=(self._p['max.graph.size'], self._p['max.sent.len'],
+                                               self._p['vocab.size'],), dtype='float32', name='edge_input')
+        edge_vectors = keras.layers.TimeDistributed(self._get_sibling_model())(edge_input)
+        if self._p.get("graph.sum", 'sum') == 'sum':
+            graph_vector = keras.layers.Lambda(lambda x: K.sum(x, axis=1),
+                                               output_shape=(self._p['sem.layer.size'],))(edge_vectors)
+        else:
+            graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
+
+        if self._p.get('graph.dense.layer', False):
+            graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                              activation=self._p.get("sibling.activation", 'tanh'),
+                                              init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
+
+        graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
+        self.logger.debug("Graph model is finished: {}".format(graph_model))
+        return graph_model
 
     def _get_sibling_model(self):
         # Sibling model
@@ -340,55 +348,14 @@ class TrigramCNNEdgeSumModel(BrothersModel, YihModel):
         return sentences_matrix, graph_matrix
 
 
-class TrigramCNNGraphModel(TrigramCNNEdgeSumModel):
-
-    def _get_keras_model(self):
-        self.logger.debug("Create keras model.")
-
-        # Brothers model
-        sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
-        graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
-                                                self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='graph_input')
-        sentence_vector = self._get_sibling_model()(sentence_input)
-        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(graph_input)
-
-        main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
-                                         dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
-        main_output = keras.layers.Activation('softmax', name='main_output')(main_output)
-        model = keras.models.Model(input=[sentence_input, graph_input], output=[main_output])
-        self.logger.debug("Model structured is finished")
-        model.compile(optimizer='adam', loss=self._p.get("loss", 'categorical_crossentropy'), metrics=['accuracy'])
-        self.logger.debug("Model is compiled")
-        return model
-
-    def _get_graph_model(self):
-        #Graph Model
-        # Encode edges with property emebddings
-        # Encode filter,
-        edge_input = keras.layers.Input(shape=(self._p['max.graph.size'], self._p['max.sent.len'],
-                                               self._p['vocab.size'],), dtype='float32', name='edge_input')
-        edge_vectors = keras.layers.TimeDistributed(self._get_sibling_model())(edge_input)
-        if self._p.get("graph.sum", 'sum') == 'sum':
-            graph_vector = keras.layers.Lambda(lambda x: K.sum(x, axis=1),
-                                              output_shape=(self._p['sem.layer.size'],))(edge_vectors)
-        else:
-            graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
-        graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
-                                          activation=self._p.get("sibling.activation", 'tanh'),
-                                          init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
-        graph_model = keras.models.Model(input=[edge_input], output=[graph_vector])
-        self.logger.debug("Graph model is finished: {}".format(graph_model))
-        return graph_model
-
-
-class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNEdgeSumModel, WordCNNModel):
+class GraphSymbolicModel(EdgeLabelsModel, WordCNNModel):
 
     def __init__(self, **kwargs):
         self._property2idx = {utils.all_zeroes: 0, utils.unknown_el: 1}
         self._propertytype2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "v": 2, "q": 3}
         self._type2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "direct": 2, "reverse": 3, "v-structure": 4, "time": 5}
         self._modifier2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "argmax": 2, "argmin": 3, "num": 4, "filter": 5}
-        super(TrigramCNNGraphSymbolicWithEmbModel, self).__init__(**kwargs)
+        super(GraphSymbolicModel, self).__init__(**kwargs)
         self._feature_vector_size = sum(v if type(v) == int else 1 for f, v in self._p.get('symbolic.features', {}).items())
         self.logger.debug("Feature vector size: {}".format(self._feature_vector_size))
 
@@ -500,9 +467,10 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNEdgeSumModel, WordCNNModel):
         else:
             graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
 
-        graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
-                                          activation=self._p.get("sibling.activation", 'tanh'),
-                                          init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
+        if self._p.get('graph.dense.layer', False):
+            graph_vector = keras.layers.Dense(self._p['sem.layer.size'],
+                                              activation=self._p.get("sibling.activation", 'tanh'),
+                                              init=self._p.get("sibling.weight.init", 'glorot_uniform'))(graph_vector)
         graph_vector = keras.layers.Dropout(self._p['dropout.sibling'])(graph_vector)
         if self._p.get("relu.on.top", False):
             graph_vector = keras.layers.Activation('relu')(graph_vector)
@@ -556,7 +524,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNEdgeSumModel, WordCNNModel):
         return sentences_matrix, graph_matrix, targets
 
     def load_from_file(self, path_to_model):
-        super(TrigramCNNGraphSymbolicWithEmbModel, self).load_from_file(path_to_model=path_to_model)
+        super(GraphSymbolicModel, self).load_from_file(path_to_model=path_to_model)
 
         self.logger.debug("Loading property index from: property2idx_{}.json".format(self._model_number))
         with open(self._save_model_to + "property2idx_{}.json".format(self._model_number)) as f:

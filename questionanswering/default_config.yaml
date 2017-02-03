@@ -69,6 +69,7 @@ model:
   sem.layer.depth: 1
   sem.layer.size: 300
   graph.sum: max
+  graph.dense.layer: False
   sibling.weight.init: glorot_uniform
   conv.size: 100
   conv.width: 3
