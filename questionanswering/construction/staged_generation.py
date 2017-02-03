@@ -492,11 +492,16 @@ def post_process_answers_given_graph(model_answers_labels, g):
         for answer_set in model_answers_labels:
             if all('language' not in a.lower() for a in answer_set):
                 answer_set.extend([a + " language" for a in answer_set])
-            if 'english' in answer_set and relevant_edge[0].get('rightkbID'):
+            if 'arabic' in answer_set:
+                answer_set.append("modern standard arabic")
+            if ('english' in answer_set or 'arabic' in answer_set) and relevant_edge[0].get('rightkbID'):
                 demonym = wdaccess.query_wikidata(wdaccess.demonym_query(relevant_edge[0].get('rightkbID')), starts_with="")
                 if demonym:
                     demonym = demonym[0]['labelright'].lower()
-                    model_answers_labels.append([demonym + " english", demonym + " english language"])
+                    if 'english' in answer_set:
+                        model_answers_labels.append([demonym + " english", demonym + " english language"])
+                    elif 'arabic' in answer_set:
+                        model_answers_labels.append([demonym + " arabic", demonym + " arabic language"])
     # Chracter role
     relevant_edge = [e for e in g.get('edgeSet', []) if e.get("kbID", "")[:-1] in {"P175", "P453", "P161"}]
     if len(relevant_edge) > 0:
