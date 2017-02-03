@@ -665,7 +665,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
                           else "filter" if "filter" in edge
                           else utils.all_zeroes, 0), self._type2idx.get(edge.get('type', utils.unknown_el), 0),
                           self._propertytype2idx.get(edge['kbID'][-1] if 'kbID' in edge else utils.unknown_el, 0),
-                          right_label_ids]
+                          ] + right_label_ids
         assert len(feature_vector) <= self._feature_vector_size
         return feature_vector
 
