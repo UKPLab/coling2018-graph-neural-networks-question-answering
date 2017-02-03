@@ -541,6 +541,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
     def __init__(self, **kwargs):
         super(TrigramCNNGraphSymbolicWithEmbModel, self).__init__(**kwargs)
         self._feature_vector_size = sum(int(v) if v else 1 for f, v in self._p.get('symbolic.features', {}).items())
+        self.logger.debug("Feature vector size: " + self._feature_vector_size)
 
     def prepare_model(self, train_tokens, properties_set):
         YihModel.extract_vocabulary(self, train_tokens)
@@ -654,7 +655,7 @@ class TrigramCNNGraphSymbolicWithEmbModel(TrigramCNNGraphSymbolicModel, WordCNNM
     def get_edge_feature_vector(self, edge):
         edge_kbid = edge.get('kbID')[:-1] if 'kbID' in edge else utils.unknown_el
         right_label_ids = [utils.get_idx(t, self._word2idx) for t in edge.get('canonical_right', "").split()][
-                          :self._p.get('max.right.size', 5)]
+                          :self._p.get('symbolic.features', {}).get("right.label", 0)]
         feature_vector = [self._property2idx.get(edge_kbid, 0),
                           self._property2idx.get(edge['hopUp'][:-1] if 'hopUp' in edge else utils.all_zeroes, 0),
                           self._property2idx.get(edge['hopDown'][:-1] if 'hopDown' in edge else utils.all_zeroes, 0),
