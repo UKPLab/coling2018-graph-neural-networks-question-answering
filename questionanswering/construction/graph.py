@@ -150,21 +150,26 @@ def replace_entities(g):
     >>> replace_entities({'edgeSet': [{'canonical_right': 'Vasco Núñez de Balboa', 'right': ['Vasco', 'Nunez', 'De', 'Balboa'], 'kbID': 'P106v', 'type': 'reverse'},\
    {'canonical_right': 'Reise', 'hopUp': 'P279v', 'kbID': 'P425v', 'type': 'direct', 'right': ['journey']}], \
    'tokens': ['what', 'was', 'vasco', 'nunez', 'de', 'balboa', 'original', 'purpose', 'of', 'his', 'journey', '?']})['tokens']
-   ['what', 'was', '<e>', 'original', 'purpose', 'of', 'his', 'journey', '?']
+    ['what', 'was', '<e>', 'original', 'purpose', 'of', 'his', 'journey', '?']
+    >>> replace_entities({'edgeSet': [{'right': ['House', 'Of', "Representatives"]}], 'tokens': "what is the upper house of the house of representatives ?".split()})['tokens']
+    ['what', 'is', 'the', 'upper', 'house', 'of', 'the', '<e>', '?']
     """
     tokens = g.get('tokens', [])
     edge = get_graph_first_edge(g)
-    entity = {t.lower() for t in edge.get('right', [])}
+    entity = [t.lower() for t in edge.get('right', [])]
     new_tokens = []
-    previous_is_entity = False
+    entity_pos = 0
     for i, t in enumerate(tokens):
-        if t not in entity:
-            if previous_is_entity:
-                new_tokens.append("<e>")
-                previous_is_entity = False
+        if entity_pos == len(entity) or t != entity[entity_pos]:
+            if entity_pos > 0:
+                if entity_pos == len(entity):
+                    new_tokens.append("<e>")
+                else:
+                    new_tokens.extend(entity[:entity_pos])
+                entity_pos = 0
             new_tokens.append(t)
         else:
-            previous_is_entity = True
+            entity_pos += 1
     g['tokens'] = new_tokens
     return g
 
