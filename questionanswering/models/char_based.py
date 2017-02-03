@@ -472,6 +472,10 @@ class GraphSymbolicModel(EdgeLabelsModel, WordCNNModel):
         if self._p.get("graph.sum", 'sum') == 'sum':
             graph_vector = keras.layers.Lambda(lambda x: K.sum(x, axis=1),
                                                output_shape=(self._p['sem.layer.size'],))(edge_vectors)
+        elif self._p.get("graph.sum", 'sum') == 'rnn':
+            edge_vectors = keras.layers.RepeatVector(5)(edge_vectors)
+            edge_vectors = keras.layers.Reshape(5*self._p.get('max.graph.size', 3), self._p['sem.layer.size'])(edge_vectors)
+            graph_vector = keras.layers.SimpleRNN(self._p['sem.layer.size'], return_sequences=False)(edge_vectors)
         else:
             graph_vector = keras.layers.GlobalMaxPooling1D()(edge_vectors)
 
