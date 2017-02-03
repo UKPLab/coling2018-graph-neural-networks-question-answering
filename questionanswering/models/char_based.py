@@ -599,8 +599,12 @@ class GraphSymbolicCharModel(GraphSymbolicModel, WordCNNModel):
         char_embeddings_layer = self._get_embedding_model(input_shape=(self._p['max.sent.len'],), emb_dim=self._p['emb.dim'], vocab_size=len(self._character2idx))
         sentence_vector = char_embeddings_layer(char_input)
 
-        sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
+        semantic_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
                                                      init=self._p.get("sibling.weight.init", 'glorot_uniform'))(sentence_vector)
+        if self._p.get('conv.layers', False):
+            semantic_vector = keras.layers.MaxPooling1D(pool_length=self._p['conv.width'], stride=2)(semantic_vector)
+            sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
+                                                         init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
         for i in range(self._p.get("sem.layer.depth", 1)):
