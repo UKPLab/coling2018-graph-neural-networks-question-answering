@@ -62,7 +62,6 @@ model:
   emb.train: False
   property.emb.dim: 50
   type.emb.dim: 50
-  ptype.emb.dim: 50
   emb.weight.init: uniform
   vocab.size: 0 #set automatically
   graph.choices: 10 #set automatically
@@ -81,6 +80,14 @@ model:
   sibling.activation: relu
   sibling.singleton: False
   relu.on.top: False
+  symbolic.features:
+    hopUp: True
+    hopDown: True
+    modifier: True
+    rel.type: True
+    property.type: True
+    right.label: 5
+
 
 wikidata:
   backend: "http://knowledgebase:8890/sparql"
