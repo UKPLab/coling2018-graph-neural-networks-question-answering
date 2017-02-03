@@ -47,6 +47,8 @@ def if_graph_adheres(g, allowed_extensions=set()):
         return False
     if 'multi_rel' not in allowed_extensions and len(g.get('edgeSet', [])) > 1:
         return False
+    if 'filter' not in allowed_extensions and any('filter' in e for e in g.get('edgeSet', [])):
+        return False
     return True
 
 

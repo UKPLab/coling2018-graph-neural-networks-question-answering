@@ -36,7 +36,7 @@ webquestions:
   target.dist: True
   replace.entities: False
   normalize.tokens: False
-  extensions: ['hopUp', 'hopDown', 'temporal', 'multi_rel', 'qualifier_rel', 'v-structure']
+  extensions: ['hopUp', 'hopDown', 'temporal', 'multi_rel', 'qualifier_rel', 'v-structure', 'filter']
   use.whitelist: False
   path.to.dataset:
     train_train: "../data/input/webquestions.examples.train.train.json"
@@ -81,6 +81,7 @@ model:
   sibling.singleton: False
   relu.on.top: False
   symbolic.features:
+    kbID: True # dummy
     hopUp: True
     hopDown: True
     modifier: True
