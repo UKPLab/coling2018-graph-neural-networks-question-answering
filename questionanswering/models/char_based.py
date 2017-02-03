@@ -633,7 +633,7 @@ class GraphSymbolicCharModel(GraphSymbolicModel, WordCNNModel):
         if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
 
-        sentences_matrix = np.zeros((len(input_set), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int32")
+        sentences_matrix = np.zeros((len(input_set), self._p.get('max.sent.len', 10)), dtype="int32")
         graph_matrix = np.zeros((len(input_set), len(input_set[0]), self._p.get('max.graph.size', 3), self._feature_vector_size), dtype="int32")
         for s in range(len(input_set)):
             sentence_str = " ".join(input_set[s][0].get("tokens", []))
