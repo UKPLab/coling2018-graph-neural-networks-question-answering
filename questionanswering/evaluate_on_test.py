@@ -65,8 +65,9 @@ def generate(path_to_model, config_file_path):
     len_webquestion = webquestions.get_dataset_size()
     for i in tqdm.trange(len_webquestion, ncols=100, ascii=True):
         question_entities = webquestions_entities[i]
-        if config['evaluation'].get('only.named.entities', False):
-            question_entities = [e for e in question_entities if e[1] != "NN"]
+        nes = [e for e in question_entities if e[1] != "NN"]
+        if config['evaluation'].get('only.named.entities', False) and len(nes) > 0:
+            question_entities = nes
         ungrounded_graph = {'tokens': webquestions_tokens[i],
                             'edgeSet': [],
                             'entities': question_entities[:config['evaluation'].get("max.num.entities", 1)]}
