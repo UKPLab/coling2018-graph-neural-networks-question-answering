@@ -699,6 +699,8 @@ def normalize_answer_strings(answers):
     [['2010 world series', 'world series 2010'], ['2012 world series', 'world series 2012']]
     >>> normalize_answer_strings([['liste gegenwärtig amtierender staatsoberhäupter nach amtszeiten', 'list of heads of state by diplomatic precedence']])
     []
+    >>> normalize_answer_strings([["eberhard-karls-gymnasium"]])
+    [['eberhard-karls-gymnasium', 'eberhard karls gymnasium']]
     """
     answers = [[a.replace("–", "-").lower() for a in answer_set] for answer_set in answers]
     new_answers = []
@@ -710,6 +712,8 @@ def normalize_answer_strings(answers):
                 answer_set.extend([w.strip() for w in a.split(",")])
             if " - " in a:
                 answer_set.extend([w.strip() for w in a.split(" - ")])
+            if "-" in a:
+                answer_set.append(a.replace("-", " "))
             if "standard time" in a:
                 answer_set.append(a.replace("standard time", "time zone"))
         if not any(re.search("\\b(2014|2015|2016|2017|list of)\\b", a) for a in answer_set):
