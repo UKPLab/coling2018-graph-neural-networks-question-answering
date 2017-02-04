@@ -174,9 +174,16 @@ class WebQuestions(Loggable):
         graph_lists = []
         targets = []
         for index in indices:
-            graph_list = self._silver_graphs[index]
-            negative_pool = [n_g for n_g in self._choice_graphs[index]
-                             if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
+            graph_list = [p_g for p_g in self._silver_graphs[index]
+                          if len(p_g) > 1 and len(p_g[1]) == 3 and p_g[1][2] > self._p.get("f1.samples.threshold", 0.1)]
+            if len(self._choice_graphs) > 0:
+                negative_pool = [n_g for n_g in self._choice_graphs[index]
+                                 if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
+            else:
+                negative_pool = [n_g[0] for n_g in self._silver_graphs[index]
+                                 if (len(n_g) < 2 or len(n_g[1]) < 3 or n_g[1][2] <= self._p.get("f1.samples.threshold", 0.1))
+                                 and all(n_g[0].get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
+
             for g in graph_list:
                 if len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5):
                     instance, target = self._instance_with_negative([g], negative_pool)
