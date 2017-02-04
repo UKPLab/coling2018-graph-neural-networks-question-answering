@@ -386,7 +386,7 @@ class GraphSymbolicModel(EdgeLabelsModel, WordCNNModel):
         if self._p.get("twin.similarity", 'cos') == 'dense':
             sentence_vectors = keras.layers.RepeatVector(self._p['graph.choices'])(sentence_vector)
             main_output = keras.layers.Merge(mode='concat')([sentence_vectors, graph_vectors])
-            main_output = keras.layers.TimeDistributed(keras.layers.Dense(1, activation=None, bias=False,
+            main_output = keras.layers.TimeDistributed(keras.layers.Dense(1, activation=self._p.get("sibling.activation", 'tanh'), bias=False,
                                               init=self._p.get("sibling.weight.init", 'glorot_uniform')))(main_output)
             main_output = keras.layers.Flatten()(main_output)
         else:
