@@ -81,12 +81,17 @@ def generate(path_to_model, config_file_path):
                 g = chosen_graphs[j]
                 model_answers = wdaccess.query_graph_denotations(g[0])
                 j += 1
-        model_answers_labels = wdaccess.label_query_results(model_answers)
-        model_answers_labels = staged_generation.post_process_answers_given_graph(model_answers_labels, g[0])
-        metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, model_answers_labels)
+        if config['evaluation'].get('label.answers', False):
+            model_answers_labels = wdaccess.label_query_results(model_answers)
+            model_answers_labels = staged_generation.post_process_answers_given_graph(model_answers_labels, g[0])
+            metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, model_answers_labels)
+            global_answers.append((i, list(metrics), model_answers, model_answers_labels,
+                                   [(c_g[0], float(c_g[1])) for c_g in chosen_graphs[:10]]))
+        else:
+            metrics = evaluation.retrieval_prec_rec_f1(gold_answers, model_answers)
+            global_answers.append((i, list(metrics), model_answers,
+                                   [(c_g[0], float(c_g[1])) for c_g in chosen_graphs[:10]]))
         avg_metrics += metrics
-        global_answers.append((i, list(metrics), model_answers, model_answers_labels,
-                               [(c_g[0], float(c_g[1])) for c_g in chosen_graphs[:10]]))
         if i % 100 == 0:
             logger.debug("Average f1 so far: {}".format((avg_metrics/(i+1))))
             with open(config['evaluation']["save.answers.to"], 'w') as answers_out:

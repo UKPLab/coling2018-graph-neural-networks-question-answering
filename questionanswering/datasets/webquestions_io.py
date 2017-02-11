@@ -328,9 +328,17 @@ def get_answers_from_question(question_object):
     ['Padmé Amidala']
     >>> get_answers_from_question({"targetValue": "(list (description Abduction) (description Eclipse) (description \\"Valentine's Day\\") (description \\"New Moon\\"))"})
     ['Abduction', 'Eclipse', "Valentine's Day", 'New Moon']
+    >>> get_answers_from_question({'answers': ['http://www.wikidata.org/entity/Q16759', \
+    'http://www.wikidata.org/entity/Q190972','http://www.wikidata.org/entity/Q231093',],'utterance': 'Which actors play in Big Bang Theory?'})
+    ['Q16759', 'Q190972', 'Q231093']
     """
     if 'answers' in question_object:
-        return question_object['answers']
+        answers = []
+        for a in question_object['answers']:
+            if a.startswith(wdaccess.WIKIDATA_ENTITY_PREFIX):
+                a = a.replace(wdaccess.WIKIDATA_ENTITY_PREFIX, "")
+                answers.append(a)
+        return answers
     return re.findall("\(description \"?(.*?)\"?\)", question_object.get('targetValue'))
 
 
