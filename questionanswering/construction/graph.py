@@ -242,7 +242,7 @@ def copy_graph(g):
 np_grammar = r"""
     NP:
     {(<NN|NNS>+|<NNP|NNPS>+)<IN|CC>(<PRP\$|DT><NN|NNS>+|<NNP|NNPS>+)}
-    {<JJ|RB|CD>*(<NNS|NN>+|<NNP|NNPS>+)<NNP|NN|NNS|NNPS>*}
+    {<JJ|RB|CD|VBG|VBN>*(<NNS|NN>+|<NNP|NNPS>+)<NNP|NN|NNS|NNPS>*}
     {<NNP|NN|NNS|NNPS>+}
     """
 np_parser = nltk.RegexpParser(np_grammar)
