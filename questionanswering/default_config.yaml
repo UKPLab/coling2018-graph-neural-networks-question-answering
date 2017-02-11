@@ -40,6 +40,7 @@ webquestions:
   normalize.tokens: False
   extensions: ['hopUp', 'hopDown', 'temporal', 'multi_rel', 'qualifier_rel', 'v-structure', 'filter']
   use.whitelist: False
+  no.ne.tags: False
   path.to.dataset:
     train_train: "../data/input/webquestions.examples.train.train.json"
     train_validation: "../data/input/webquestions.examples.train.validation.json"

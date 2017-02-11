@@ -24,6 +24,8 @@ class WebQuestions(Loggable):
         with open(path_to_dataset["train_tagged"]) as f:
             self._dataset_tagged = json.load(f)
         self.logger.debug("Tagged: {}".format(len(self._dataset_tagged)))
+        if self._p.get("no.ne.tags", False):
+            self._dataset_tagged = [[(w,'O',t) for w, _, t in s] for s in self._dataset_tagged]
 
         self._questions_train = []
         self._questions_val = []
