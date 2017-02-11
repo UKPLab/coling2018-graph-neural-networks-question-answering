@@ -241,12 +241,9 @@ def copy_graph(g):
 
 np_grammar = r"""
     NP:
-    {(<NN|NNS>|<NNP|NNPS>)<NNP|NN|NNS|NNPS>+}
     {(<NN|NNS>+|<NNP|NNPS>+)<IN|CC>(<PRP\$|DT><NN|NNS>+|<NNP|NNPS>+)}
-    {<JJ|RB|CD>*<NNP|NN|NNS|NNPS>+}
+    {<JJ|RB|CD>*(<NNS|NN>+|<NNP|NNPS>+)<NNP|NN|NNS|NNPS>*}
     {<NNP|NN|NNS|NNPS>+}
-    CD:
-    {<CD>+}
     """
 np_parser = nltk.RegexpParser(np_grammar)
 
@@ -301,13 +298,15 @@ def extract_entities(tokens_ne_pos):
     >>> extract_entities([['who', 'O', 'WP'], ['plays', 'O', 'VBZ'], ['lois', 'PERSON', 'NNP'], ['lane', 'PERSON', 'NNP'], ['in', 'O', 'IN'], ['superman', 'O', 'NNP'], ['returns', 'O', 'NNS'], ['?', 'O', '.']])
     [(['Lois', 'Lane'], 'PERSON'), (['superman', 'returns'], 'NN')]
     >>> extract_entities([('the', 'O', 'DT'), ('empire', 'O', 'NN'), ('strikes', 'O', 'VBZ'), ('back', 'O', 'RB'), ('is', 'O', 'VBZ'), ('the', 'O', 'DT'), ('second', 'O', 'JJ'), ('movie', 'O', 'NN'), ('in', 'O', 'IN'), ('the', 'O', 'DT'), ('star', 'O', 'NN'), ('wars', 'O', 'NNS'), ('franchise', 'O', 'VBP')])
-    [(['empire'], 'NN'), (['second', 'movie'], 'NN'), (['star', 'wars'], 'NN')]
+    [(['empire'], 'NN'), (['movie', 'in', 'the', 'star', 'wars'], 'NN')]
     >>> extract_entities([['who', 'O', 'WP'], ['played', 'O', 'VBD'], ['cruella', 'LOCATION', 'NNP'], ['deville', 'LOCATION', 'NNP'], ['in', 'O', 'IN'], ['102', 'O', 'CD'], ['dalmatians', 'O', 'NNS'], ['?', 'O', '.']])
     [(['Cruella', 'Deville'], 'LOCATION'), (['102', 'dalmatians'], 'NN')]
     >>> extract_entities([['who', 'O', 'WP'], ['was', 'O', 'VBD'], ['the', 'O', 'DT'], ['winner', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'], ['2009', 'O', 'CD'], ['nobel', 'O', 'NNP'], ['peace', 'O', 'NNP'], ['prize', 'O', 'NNP'], ['?', 'O', '.']])
-    [(['Nobel', 'Peace', 'Prize'], 'NNP'), (['winner'], 'NN'), (['2009'], 'CD')]
+    [(['2009', 'Nobel', 'Peace', 'Prize'], 'NNP'), (['winner'], 'NN'), (['2009'], 'CD')]
     >>> extract_entities([['who', 'O', 'WP'], ['is', 'O', 'VBZ'], ['the', 'O', 'DT'], ['senator', 'O', 'NN'], ['of', 'O', 'IN'], ['connecticut', 'LOCATION', 'NNP'], ['2010', 'O', 'CD'], ['?', 'O', '.']])
     [(['Connecticut'], 'LOCATION'), (['senator'], 'NN'), (['2010'], 'CD')]
+    >>> extract_entities([['Which', 'O', 'WDT'],['actors', 'O', 'NNS'],['play', 'O', 'VBP'],['in', 'O', 'IN'],['Big', 'O', 'JJ'],['Bang', 'O', 'NNP'],['Theory', 'O', 'NNP'],['?', 'O', '.']])
+    [(['Big', 'Bang', 'Theory'], 'NNP'), (['actors'], 'NN')]
     """
     persons = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['PERSON'])
     locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])
@@ -317,9 +316,10 @@ def extract_entities(tokens_ne_pos):
     nps = [el for el in chunks if type(el) == nltk.tree.Tree and el.label() == "NP"]
     # nns = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NN', 'NNS'])
     # nnps = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NNP', 'NNPS'])
-    nnps = [[w for w, _ in el.leaves()] for el in nps if all(t in {'NNP', 'NNPS'} for _, t in el.leaves())]
-    nns = [[w for w, _ in el.leaves()] for el in nps if not all(t in {'NNP', 'NNPS'} for _, t in el.leaves())]
-    cds = [[w for w, _ in el.leaves()] for el in chunks if type(el) == nltk.tree.Tree and el.label() == "CD"]
+    nnps = [[w for w, _ in el.leaves()] for el in nps if all(t not in {'NN', 'NNS'} for _, t in el.leaves())]
+    nns = [[w for w, _ in el.leaves()] for el in nps if any(t in {'NN', 'NNS'} for _, t in el.leaves())]
+    cds = [cd for cd in extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['CD']) if len(cd[0]) == 4]
+    # cds = [[w for w, _ in el.leaves()] for el in chunks if type(el) == nltk.tree.Tree and el.label() == "CD"]
 
     # sentence = " ".join([w for w, _, _ in tokens_ne_pos])
     # ne_vertices = [(k.split(), 'URL') for k in manual_entities if k in sentence]
