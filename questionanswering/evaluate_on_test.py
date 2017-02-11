@@ -88,6 +88,7 @@ def generate(path_to_model, config_file_path):
             global_answers.append((i, list(metrics), model_answers, model_answers_labels,
                                    [(c_g[0], float(c_g[1])) for c_g in chosen_graphs[:10]]))
         else:
+            model_answers = [r["e1"] for r in model_answers]
             metrics = evaluation.retrieval_prec_rec_f1(gold_answers, model_answers)
             global_answers.append((i, list(metrics), model_answers,
                                    [(c_g[0], float(c_g[1])) for c_g in chosen_graphs[:10]]))
