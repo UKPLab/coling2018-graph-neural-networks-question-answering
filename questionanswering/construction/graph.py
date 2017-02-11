@@ -332,7 +332,7 @@ def extract_entities(tokens_ne_pos):
         if not ne_vertices or not all(n in v for n in nn for v, _ in ne_vertices):
             vertices.append((nn, 'NN'))
     vertices.extend([(cd, 'CD') for cd in cds])
-    ne_vertices = [([w.title() for w in ne], pos) for ne, pos in ne_vertices]
+    ne_vertices = [([w.title() if w.islower() else w for w in ne], pos) for ne, pos in ne_vertices]
     return ne_vertices + vertices
 
 
