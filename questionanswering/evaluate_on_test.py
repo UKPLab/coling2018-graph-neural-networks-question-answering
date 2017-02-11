@@ -71,7 +71,6 @@ def generate(path_to_model, config_file_path):
         ungrounded_graph = {'tokens': webquestions_tokens[i],
                             'edgeSet': [],
                             'entities': question_entities[:config['evaluation'].get("max.num.entities", 1)]}
-        gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
         chosen_graphs = staged_generation.generate_with_model(ungrounded_graph, qa_model, beam_size=config['evaluation'].get("beam.size", 10))
         model_answers = []
         g = ({},)
@@ -82,12 +81,14 @@ def generate(path_to_model, config_file_path):
                 model_answers = wdaccess.query_graph_denotations(g[0])
                 j += 1
         if config['evaluation'].get('label.answers', False):
+            gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
             model_answers_labels = wdaccess.label_query_results(model_answers)
             model_answers_labels = staged_generation.post_process_answers_given_graph(model_answers_labels, g[0])
             metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers, model_answers_labels)
             global_answers.append((i, list(metrics), model_answers, model_answers_labels,
                                    [(c_g[0], float(c_g[1])) for c_g in chosen_graphs[:10]]))
         else:
+            gold_answers = webquestions_io.get_answers_from_question(webquestions_questions[i])
             model_answers = [r["e1"] for r in model_answers]
             metrics = evaluation.retrieval_prec_rec_f1(gold_answers, model_answers)
             global_answers.append((i, list(metrics), model_answers,
