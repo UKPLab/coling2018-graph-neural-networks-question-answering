@@ -25,12 +25,11 @@ class WebQuestions(Loggable):
             self._dataset_tagged = json.load(f)
         self.logger.debug("Tagged: {}".format(len(self._dataset_tagged)))
         if self._p.get("no.ne.tags", False):
-            self._dataset_tagged = [[(w,'O',t) for w, _, t in s] for s in self._dataset_tagged]
+            self._dataset_tagged = [[(w, 'O', t) for w, _, t in s] for s in self._dataset_tagged]
 
         self._questions_train = []
         self._questions_val = []
         self._silver_graphs = []
-        self._choice_graphs = []
 
         # Load the train questions
         if "train_train" in path_to_dataset:
@@ -47,26 +46,6 @@ class WebQuestions(Loggable):
             with open(path_to_dataset["train_silvergraphs"]) as f:
                 self._silver_graphs = json.load(f)
             self.logger.debug("Silver: {}".format(len(self._silver_graphs)))
-        # Load the choice graphs. Choice graphs are all graph derivable from each sentence.
-        if "train_choicegraphs" in path_to_dataset:
-            with open(path_to_dataset["train_choicegraphs"]) as f:
-                self._choice_graphs = json.load(f)
-            self.logger.debug("Choice: {}".format(len(self._choice_graphs)))
-
-        if len(self._choice_graphs) > 0:
-            assert len(self._dataset_tagged) == len(self._choice_graphs)
-            self._choice_graphs = [[g[0] for g in graph_set] for graph_set in self._choice_graphs]
-            self.logger.debug("Average number of choices per question: {}".format(
-                np.mean([len(graphs) for graphs in self._choice_graphs])))
-            self.logger.debug("Removing graphs that use disallowed extensions")
-            self._choice_graphs = [[g for g in graph_set if graph.if_graph_adheres(g, allowed_extensions=self._p.get("extensions", set()))] for graph_set in self._choice_graphs]
-            self.logger.debug("Average number of choices per question: {}".format(
-                np.mean([len(graphs) for graphs in self._choice_graphs])))
-            self.logger.debug("Adding tokens to graphs")
-            for i, graph_set in enumerate(self._choice_graphs):
-                tokens = [w for w,_,_ in self._dataset_tagged[i]]
-                for g in graph_set:
-                    g['tokens'] = tokens
 
         if len(self._silver_graphs) > 0:
             assert len(self._dataset_tagged) == len(self._silver_graphs)
@@ -87,22 +66,16 @@ class WebQuestions(Loggable):
 
         if self._p.get("replace.entities", False):
             self.logger.debug("Replacing entities in questions")
-            self._choice_graphs = [[graph.replace_entities(g) for g in graph_set] for graph_set in
-                                   self._choice_graphs]
             for graph_set in self._silver_graphs:
                 for g in graph_set:
                     g[0] = graph.replace_entities(g[0])
         if self._p.get("normalize.tokens", False):
             self.logger.debug("Normalizing tokens in questions")
-            self._choice_graphs = [[graph.normalize_tokens(g) for g in graph_set] for graph_set in
-                                   self._choice_graphs]
             for graph_set in self._silver_graphs:
                 for g in graph_set:
                     g[0] = graph.normalize_tokens(g[0])
 
         self.logger.debug("Constructing string representations for entities")
-        self._choice_graphs = [[graph.add_string_representations_to_edges(g, wdaccess.property2label, self._p.get("replace.entities", False)) for g in graph_set]
-                               for graph_set in self._choice_graphs]
         for graph_set in self._silver_graphs:
             for g in graph_set:
                 g[0] = graph.add_string_representations_to_edges(g[0], wdaccess.property2label, self._p.get("replace.entities", False))
@@ -127,7 +100,7 @@ class WebQuestions(Loggable):
     def _get_sample_indices(self, questions):
         indices = [q_obj['index'] for q_obj in questions
                    if any(len(g) > 1 and len(g[1]) == 3 and g[1][2] > self._p.get("f1.samples.threshold", 0.5)
-                          for g in self._silver_graphs[q_obj['index']]) and (len(self._choice_graphs) == 0 or self._choice_graphs[q_obj['index']])
+                          for g in self._silver_graphs[q_obj['index']])
                    ]
         return indices
 
@@ -138,14 +111,9 @@ class WebQuestions(Loggable):
         for index in indices:
             graph_list = [p_g for p_g in self._silver_graphs[index]
                           if len(p_g) > 1 and len(p_g[1]) == 3 and p_g[1][2] > self._p.get("f1.samples.threshold", 0.1)]
-            if len(self._choice_graphs) > 0:
-                negative_pool = [n_g for n_g in self._choice_graphs[index]
-                                 if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
-            else:
-                negative_pool = [n_g[0] for n_g in self._silver_graphs[index]
-                                 if (len(n_g) < 2 or len(n_g[1]) < 3 or n_g[1][2] <= self._p.get("f1.samples.threshold", 0.1))
-                                 and all(n_g[0].get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
-
+            negative_pool = [n_g[0] for n_g in self._silver_graphs[index]
+                             if (len(n_g) < 2 or len(n_g[1]) < 3 or n_g[1][2] <= self._p.get("f1.samples.threshold", 0.1))
+                             and all(n_g[0].get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
             if len(graph_list) > self._p.get("max.silver.samples", 15):
                 graph_list = [graph_list[i] for i in np.random.choice(range(len(graph_list)),
                                                                       self._p.get("max.silver.samples", 15),
@@ -178,13 +146,9 @@ class WebQuestions(Loggable):
         for index in indices:
             graph_list = [p_g for p_g in self._silver_graphs[index]
                           if len(p_g) > 1 and len(p_g[1]) == 3 and p_g[1][2] > self._p.get("f1.samples.threshold", 0.1)]
-            if len(self._choice_graphs) > 0:
-                negative_pool = [n_g for n_g in self._choice_graphs[index]
-                                 if all(n_g.get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
-            else:
-                negative_pool = [n_g[0] for n_g in self._silver_graphs[index]
-                                 if (len(n_g) < 2 or len(n_g[1]) < 3 or n_g[1][2] <= self._p.get("f1.samples.threshold", 0.1))
-                                 and all(n_g[0].get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
+            negative_pool = [n_g[0] for n_g in self._silver_graphs[index]
+                             if (len(n_g) < 2 or len(n_g[1]) < 3 or n_g[1][2] <= self._p.get("f1.samples.threshold", 0.1))
+                             and all(n_g[0].get('edgeSet', []) != g[0].get('edgeSet', []) for g in graph_list)]
 
             for g in graph_list:
                 if len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5):
@@ -241,10 +205,6 @@ class WebQuestions(Loggable):
 
         :return: list of lists of tokens
         """
-        if len(self._choice_graphs) > 0:
-            return [[w for w, _, _ in self._dataset_tagged[i]] +
-                [w for g in self._choice_graphs[i] for e in g.get('edgeSet', []) for w in e.get('label', '').split()]
-                for i in self._get_sample_indices(self._questions_train)]
         return [[w for w, _, _ in self._dataset_tagged[i]] +
                 [w for g in self._silver_graphs[i] for e in g[0].get('edgeSet', []) for w in e.get('label', '').split()]
                 for i in self._get_sample_indices(self._questions_train)]
@@ -257,9 +217,6 @@ class WebQuestions(Loggable):
         """
         property_set = {e.get("kbID", "")[:-1] for graph_set in self._silver_graphs
                 for g in graph_set for e in g[0].get('edgeSet', []) if 'kbID' in e}
-        if len(self._choice_graphs) > 0:
-            property_set = property_set | {e.get("kbID", "")[:-1] for graph_set in self._choice_graphs
-             for g in graph_set for e in g[0].get('edgeSet', []) if 'kbID' in e}
         return property_set
 
     def get_training_generator(self, batch_size):
@@ -275,25 +232,6 @@ class WebQuestions(Loggable):
         for i in itertools.cycle(range(0, len(indices), batch_size)):
             batch_indices = indices[i:i + batch_size]
             yield self._get_indexed_samples(batch_indices)
-
-    def get_validation_with_gold(self):
-        """
-        Return the validation set with gold answers.
-        Returned is a tuple where the first element is a list of graph sets and the second is a list of gold answers.
-        Graph sets are of various length and include all possible valid parses of a question, gold answers is a list
-        of lists of answers for each qustion. Each answer is a string that might contain multiple tokens.
-
-        :return: a tuple of graphs to choose from and gokd answers
-        """
-        graph_lists = []
-        gold_answers = []
-        for q_obj in self._questions_val:
-            index = q_obj['index']
-            graph_list = self._choice_graphs[index]
-            gold_answer = [e.lower() for e in get_answers_from_question(q_obj)]
-            graph_lists.append(graph_list)
-            gold_answers.append(gold_answer)
-        return graph_lists, gold_answers
 
     def get_train_sample_size(self):
         """

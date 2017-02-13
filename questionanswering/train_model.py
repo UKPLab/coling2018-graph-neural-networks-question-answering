@@ -78,22 +78,6 @@ def train(config_file_path):
     if results_logger:
         results_logger.info("Accuracy on silver data: {}".format(accuracy_on_silver))
 
-    if config['wikidata'].get('evaluate', False) and 'train_validation' in config['webquestions']['path.to.dataset']:
-        wdaccess.wdaccess_p['wikidata_url'] = config['wikidata'].get("backend", "http://knowledgebase:8890/sparql")
-        wdaccess.wdaccess_p["restrict.hop"] = config['wikidata'].get("restrict.hop", False)
-        wdaccess.wdaccess_p["timeout"] = config['wikidata'].get("timeout", 20)
-        wdaccess.sparql_init()
-        wdaccess.update_sparql_clauses()
-
-        validation_graph_lists, validation_gold_answers = webquestions.get_validation_with_gold()
-        print("Evaluate on {} validation questions.".format(len(validation_gold_answers)))
-        successes, avg_metrics = trainablemodel.test((validation_graph_lists, validation_gold_answers), verbose=True)
-        print("Successful predictions: {} ({})".format(len(successes), len(successes) / len(validation_gold_answers)))
-        print("Average f1: {:.4},{:.4},{:.4}".format(*avg_metrics))
-        if results_logger:
-            results_logger.info("Successful predictions: {} ({})".format(len(successes), len(successes) / len(validation_gold_answers)))
-            results_logger.info("Average prec, rec, f1: {:.4}, {:.4}, {:.4}".format(*avg_metrics))
-
 
 if __name__ == "__main__":
     train()

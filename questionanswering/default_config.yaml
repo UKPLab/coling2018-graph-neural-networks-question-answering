@@ -22,7 +22,6 @@ generation:
   max.num.entities: 2 # Only affects choice graphs generation
   max.entity.options: 3
   questions: "../data/input/webquestions.examples.train.json"
-  save.choice.to: "../data/generated/webquestions.examples.train.choice_graphs.extended.json"
   previous: "../data/generated/webquestions.examples.train.silvergraphs.01_29.full.json"
   save.silver.to: "../data/generated/webquestions.examples.train.silvergraphs.200.2.json"
   take_first: 200
@@ -46,7 +45,6 @@ webquestions:
     train_validation: "../data/input/webquestions.examples.train.validation.json"
     train_tagged: "../data/generated/webquestions.examples.train.utterances.tagged.json"
     train_silvergraphs: "../data/generated/webquestions.examples.train.silvergraphs.full_12_05.json"
-#    train_choicegraphs: "../data/generated/webquestions.examples.train.choice_graphs.extended.json"
 
 model:
   class: BagOfWordsModel
@@ -97,7 +95,6 @@ model:
 
 wikidata:
   backend: "http://knowledgebase:8890/sparql"
-  evaluate: True
   restrict.hop: True
   hop.types: ['hopUp', 'hopDown']
   arg.types: ['argmax', 'argmin']

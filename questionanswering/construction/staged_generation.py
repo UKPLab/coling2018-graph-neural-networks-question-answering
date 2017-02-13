@@ -1,6 +1,5 @@
 import logging
 import itertools
-import tqdm
 
 import utils
 from wikidata import entity_linking
@@ -179,45 +178,20 @@ def ground_one_with_gold(s_g, gold_answers, min_fscore):
     return chosen_graphs, not_chosen_graphs
 
 
-def approximate_groundings(g):
-    """
-    Retrieve possible groundings for a given graph.
-    The groundings are approximated by taking a product of groundings of the individual edges.
-
-    :param g: the graph to ground
-    :return: a list of graph groundings.
-    """
-    separate_groundings = []
-    logger.debug("Approximating graph groundings: {}".format(g))
-    for i, edge in enumerate(g.get('edgeSet', [])):
-        if not('type' in edge and 'kbID' in edge):
-            t = {'edgeSet': [edge]}
-            edge_groundings = [apply_grounding(t, p) for p in wdaccess.query_graph_groundings(t, use_cache=True)]
-            edge_groundings = [e for e in edge_groundings if "kbID" in e['edgeSet'][0] and e['edgeSet'][0]["kbID"][:-1] in wdaccess.property_whitelist]
-            logger.debug("Edge groundings: {}".format(len(edge_groundings)))
-            separate_groundings.append([p['edgeSet'][0] for p in edge_groundings])
-        else:
-            separate_groundings.append([edge])
-    graph_groundings = []
-    for edge_set in list(itertools.product(*separate_groundings)):
-        new_g = graph.copy_graph(g)
-        new_g['edgeSet'] = list(edge_set)
-        graph_groundings.append(new_g)
-    logger.debug("Graph groundings: {}".format(len(graph_groundings)))
-    return graph_groundings
-
-
 def find_groundings(g):
     """
     Retrieve possible groundings for a given graph.
-    Doesn't work for complex graphs yet.
 
     :param g: the graph to ground
     :return: a list of graph groundings.
+    >>> len(find_groundings({'edgeSet': [{'right': ['Percy', 'Jackson'], 'rightkbID': 'Q3899725', 'kbID': 'P674v', 'type': 'direct'}, {'rightkbID': 'Q571', 'right': ['book']}]}))
+    1
+    >>> len(find_groundings({'edgeSet': [{'right': ['Percy', 'Jackson'], 'rightkbID': 'Q3899725'}, {'rightkbID': 'Q571', 'right': ['book']}]}))
+    1
     """
     query_results = []
     num_edges_to_ground = sum(1 for e in g.get('edgeSet', []) if not('type' in e and 'kbID' in e))
-    if not any('hopUp' in e or 'hopDown' in e for e in g.get('edgeSet', []) if not('type' in e and 'kbID' in e)):
+    if num_edges_to_ground == 1 and not any('hopUp' in e or 'hopDown' in e for e in g.get('edgeSet', []) if not('type' in e and 'kbID' in e)):
         query_results += wdaccess.query_graph_groundings(g)
     else:
         edge_type_combinations = list(itertools.product(*[['direct', 'reverse']]*num_edges_to_ground))
@@ -234,117 +208,14 @@ def find_groundings(g):
     return query_results
 
 
-def find_groundings_with_gold(g):
-    """
-    Retrieve possible groundings for a given graph.
-    Doesn't work for complex graphs yet.
-
-    :param g: the graph to ground
-    :return: a list of graph groundings.
-    >>> len(find_groundings_with_gold({'edgeSet': [{'right': ['Percy', 'Jackson'], 'rightkbID': 'Q3899725'}, {'rightkbID': 'Q571', 'right': ['book']}]}))
-    1
-    """
-    graph_groundings = []
-    num_edges_to_ground = sum(1 for e in g.get('edgeSet', []) if not('type' in e and 'kbID' in e))
-    edge_type_combinations = list(itertools.product(*[['direct', 'reverse']]*num_edges_to_ground))
-    for type_combindation in edge_type_combinations:
-        t = graph.copy_graph(g)
-        for i, edge in enumerate([e for e in t.get('edgeSet', []) if not('type' in e and 'kbID' in e)]):
-            edge['type'] = type_combindation[i]
-        query_results = wdaccess.query_graph_groundings(t, use_cache=False, pass_exception=True)
-        if query_results is None:
-            appoximated_groundings = approximate_groundings(t)
-            appoximated_groundings = [a for a in tqdm.tqdm(appoximated_groundings, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) if verify_grounding(a)]
-            graph_groundings.extend(appoximated_groundings)
-        else:
-            graph_groundings.extend([apply_grounding(t, p) for p in query_results])
-    return graph_groundings
-
-
 def verify_grounding(g):
     """
-    Verify the given graph with (partial) grounding exists in wikidata.
+    Verify the given graph with (partial) grounding exists in Wikidata.
 
     :param g: graph as a dictionary
     :return: true if the graph exists, false otherwise
     """
     return wdaccess.query_wikidata(wdaccess.graph_to_ask(g))
-
-
-def generate_without_gold(ungrounded_graph,
-                          wikidata_actions=stages.WIKIDATA_ACTIONS, non_linking_actions=stages.NON_LINKING_ACTIONS):
-    """
-    Generate all possible groundings of the given ungrounded graph
-    using expand and restrict operations on its denotation.
-
-    :param ungrounded_graph: the starting graph that should contain a list of tokens and a list of entities
-    :param wikidata_actions: optional, list of actions to apply with grounding in WikiData
-    :param non_linking_actions: optional, list of actions to apply without checking in WikiData
-    :return: a list of generated grounded graphs
-    """
-    pool = [ungrounded_graph]  # pool of possible parses
-    wikidata_actions_restrict = wikidata_actions & set(stages.RESTRICT_ACTIONS)
-    wikidata_actions_expand = wikidata_actions & set(stages.EXPAND_ACTIONS)
-    generated_graphs = []
-    iterations = 0
-    while pool:
-        if iterations % 10 == 0:
-            logger.debug("Generated: {}".format(len(generated_graphs)))
-            logger.debug("Pool: {}".format(len(pool)))
-        g = pool.pop(0)
-        # logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
-
-        # logger.debug("Constructing with WikiData")
-        suggested_graphs = [el for f in wikidata_actions_restrict for el in f(g)]
-        suggested_graphs += [el for s_g in suggested_graphs for f in wikidata_actions_expand for el in f(s_g)]
-        # pool.extend(suggested_graphs)
-        # logger.debug("Suggested graphs: {}".format(suggested_graphs))
-        # chosen_graphs = ground_without_gold(suggested_graphs)
-        chosen_graphs = suggested_graphs
-        # logger.debug("Extending the pool with {} graphs.".format(len(chosen_graphs)))
-        pool.extend(chosen_graphs)
-        # logger.debug("Label entities")
-        chosen_graphs = [add_canonical_labels_to_entities(g) for g in chosen_graphs]
-
-        # logger.debug("Constructing without WikiData")
-        extended_graphs = [el for s_g in chosen_graphs for f in non_linking_actions for el in f(s_g)]
-        chosen_graphs.extend(extended_graphs)
-
-        # logger.debug("Extending the generated with {} graphs.".format(len(chosen_graphs)))
-        generated_graphs.extend(chosen_graphs)
-        iterations += 1
-    logger.debug("Iterations {}".format(iterations))
-    logger.debug("Generated: {}".format(len(generated_graphs)))
-    generated_graphs = [g for g in tqdm.tqdm(generated_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) if verify_grounding(g)]
-    logger.debug("Generated checked: {}".format(len(generated_graphs)))
-    logger.debug("Clean up graphs.")
-    for g in generated_graphs:
-        if 'entities' in g:
-            del g['entities']
-    logger.debug("Grounding the resulting graphs.")
-    generated_graphs = ground_without_gold(generated_graphs)
-    # logger.debug("Approximated grounded graphs: {}".format(len(generated_graphs)))
-    # generated_graphs = [g for g in tqdm.tqdm(generated_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) if verify_grounding(g)]
-    logger.debug("Saved grounded graphs: {}".format(len(generated_graphs)))
-    return generated_graphs
-
-
-def ground_without_gold(input_graphs):
-    """
-    Construct possible groundings of the given graphs subject to a white list.
-
-    :param input_graphs: a list of ungrounded graphs
-    :return: a list of graph groundings
-    """
-    grounded_graphs = [p for s_g in tqdm.tqdm(input_graphs, ascii=True, disable=(logger.getEffectiveLevel() != logging.DEBUG)) for p in find_groundings_with_gold(s_g)]
-    logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
-    logger.debug("First one: {}".format(grounded_graphs[:1]))
-
-    grounded_graphs = [g for g in grounded_graphs if all(e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g.get('edgeSet', []))]
-    # chosen_graphs = [grounded_graphs[i] for i in range(len(grounded_graphs))]
-    logger.debug("Number of chosen groundings: {}".format(len(grounded_graphs)))
-    wdaccess.clear_cache()
-    return grounded_graphs
 
 
 def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
@@ -502,7 +373,7 @@ def post_process_answers_given_graph(model_answers_labels, g):
                         model_answers_labels.append([demonym + " english", demonym + " english language"])
                     elif 'arabic' in answer_set:
                         model_answers_labels.append([demonym + " arabic", demonym + " arabic language"])
-    # Chracter role
+    # Character role
     relevant_edge = [e for e in g.get('edgeSet', []) if e.get("kbID", "")[:-1] in {"P175", "P453", "P161"}]
     if len(relevant_edge) > 0:
         for answer_set in model_answers_labels:
