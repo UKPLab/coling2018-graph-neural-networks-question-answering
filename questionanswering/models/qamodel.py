@@ -61,9 +61,9 @@ class QAModel(Loggable, metaclass=abc.ABCMeta):
             predicted_indices.append(self.apply_on_instance(instance) if instance else [])
         return predicted_indices
 
-    @abc.abstractmethod
     def apply_on_instance(self, instance):
-        raise NotImplementedError
+        predictions = self.scores_for_instance(instance)
+        return np.argsort(predictions)[::-1]
 
     @abc.abstractmethod
     def scores_for_instance(self, instance):
@@ -77,7 +77,8 @@ class TrainableQAModel(QAModel, metaclass=abc.ABCMeta):
     def __init__(self, parameters, **kwargs):
         self._p = parameters
         self._save_model_to = self._p['models.save.path']
-        self._model = None
+        if not hasattr(self, "_model"):
+            self._model = None
         self._model_number = 0
         if not hasattr(self, "_file_extension"):
             self._file_extension = "model"

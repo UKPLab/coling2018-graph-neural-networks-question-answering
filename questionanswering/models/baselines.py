@@ -55,13 +55,13 @@ class LabelOverlapModel(QAModel):
 class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
 
     def __init__(self, parameters, **kwargs):
+        super(BagOfWordsModel, self).__init__(parameters=parameters, **kwargs)
         self.question_vocabulary = []
         self.edge_vocabulary = []
         self.threshold = parameters['threshold'] if parameters else 1000
+        self.logger.debug("Parameters: threshold={}".format(self.threshold))
         self._model = linear_model.LogisticRegression()
         self._type2idx = {k: i for i, k in enumerate(wdaccess.sparql_relation.keys())}
-        super(BagOfWordsModel, self).__init__(**kwargs)
-        self.logger.debug("Parameters: threshold={}".format(self.threshold))
 
     def encode_data_instance(self, instance):
         tokens, edge_vectors, edge_entities = LabelOverlapModel.encode_data_instance(self, instance)
@@ -100,11 +100,11 @@ class BagOfWordsModel(LabelOverlapModel, TrainableQAModel):
         self._model.fit(input_set, targets)
         self.logger.debug("Model training is finished.")
 
-    def apply_on_instance(self, instance):
+    def scores_for_instance(self, instance):
         tokens_encoded, edges_encoded, edge_entities = self.encode_data_instance(instance)
         input_encoded = []
         for e_index, edge_encoding in enumerate(edges_encoded):
             input_encoded.append(tokens_encoded + edge_encoding + [edge_entities[e_index]])
         predictions = self._model.predict_proba(input_encoded) if input_encoded else []
         predictions = [p[1] for p in predictions]
-        return np.argsort(predictions)[::-1]
+        return predictions

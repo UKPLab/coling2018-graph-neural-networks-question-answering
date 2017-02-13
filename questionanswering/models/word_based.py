@@ -365,6 +365,6 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
         self.logger.debug("Model is compiled")
         return model
 
-    def prepare_model(self, train_tokens):
+    def prepare_model(self, train_tokens, **kwargs):
         WordCNNModel.extract_vocabualry(self, train_tokens)
         BrothersModel.prepare_model(self, train_tokens)

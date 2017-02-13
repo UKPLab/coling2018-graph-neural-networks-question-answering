@@ -146,10 +146,6 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
             predictions /= denominator
         return predictions
 
-    def apply_on_instance(self, instance):
-        predictions = self.scores_for_instance(instance)
-        return np.argsort(predictions)[::-1]
-
     def load_from_file(self, path_to_model):
         super(TwinsModel, self).load_from_file(path_to_model=path_to_model)
 
@@ -188,10 +184,6 @@ class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
             denominator = np.maximum(denominator, keras.backend.common._EPSILON)
             predictions /= denominator
         return predictions
-
-    def apply_on_instance(self, instance):
-        predictions = self.scores_for_instance(instance)
-        return np.argsort(predictions)[::-1]
 
     def load_from_file(self, path_to_model):
         super(BrothersModel, self).load_from_file(path_to_model=path_to_model)

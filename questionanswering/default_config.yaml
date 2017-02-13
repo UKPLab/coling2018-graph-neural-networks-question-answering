@@ -44,7 +44,7 @@ webquestions:
     train_train: "../data/input/webquestions.examples.train.train.json"
     train_validation: "../data/input/webquestions.examples.train.validation.json"
     train_tagged: "../data/generated/webquestions.examples.train.utterances.tagged.json"
-    train_silvergraphs: "../data/generated/webquestions.examples.train.silvergraphs.full_12_05.json"
+    train_silvergraphs: "../data/generated/webquestions.examples.train.silvergraphs.02_04.full.json"
 
 model:
   class: BagOfWordsModel
