@@ -14,6 +14,8 @@ ch = logging.StreamHandler()
 ch.setLevel(config['logger']['level'])
 logger.addHandler(ch)
 
+config['webquestions']['extensions'] = []
+config['webquestions']['max.entity.options'] = 1
 webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
 
 
@@ -29,7 +31,8 @@ def test_access_sample():
         assert len(targets[0]) == config['webquestions'].get('max.negative.samples')
     else:
         assert type(targets[0]) == np.int32
-    assert all(['edgeSet' in g for g in input_set[0]])
+    assert all('edgeSet' in g for g in input_set[0])
+    assert all(len(g['edgeSet']) > 0 for s in input_set for g in s)
 
 
 if __name__ == '__main__':
