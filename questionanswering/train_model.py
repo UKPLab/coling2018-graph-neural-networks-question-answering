@@ -10,7 +10,7 @@ import os
 from datasets import webquestions_io
 import models
 from wikidata import wdaccess
-from models.qamodel import KerasModel
+from models.kerasmodel import KerasModel
 
 
 @click.command()

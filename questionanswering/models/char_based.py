@@ -12,7 +12,7 @@ import utils
 from construction import graph
 from models import keras_extensions
 from models.word_based import WordCNNModel
-from models.qamodel import TwinsModel, BrothersModel
+from models.kerasmodel import TwinsModel, BrothersModel
 from wikidata import wdaccess
 
 

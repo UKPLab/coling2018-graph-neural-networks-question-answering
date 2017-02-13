@@ -8,9 +8,8 @@ import json
 import utils
 from construction import graph
 
-from .qamodel import TwinsModel, BrothersModel
-from wikidata import wdaccess
-from . import keras_extensions
+from models.kerasmodel import TwinsModel, BrothersModel
+from models import keras_extensions
 
 
 class WordCNNModel(TwinsModel):
