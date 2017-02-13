@@ -13,6 +13,10 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         self._file_extension = "kerasmodel"
         super(KerasModel, self).__init__(**kwargs)
 
+        self.logger.debug(self._p)
+        assert "graph.choices" in self._p
+        self._model = self._get_keras_model()
+
     @abc.abstractmethod
     def _get_keras_model(self):
         """
@@ -42,7 +46,7 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         :param train_tokens:
         :param properties_set:
         """
-        self.logger.debug(self._p)
+
         assert "graph.choices" in self._p
 
         self._model = self._get_keras_model()
@@ -128,11 +132,14 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
 
         super(TwinsModel, self).__init__(**kwargs)
 
+        assert self._model is not None
+        self._sibling_model = self._model.get_layer(name="sibiling_model")
+        self.logger.debug("Sibling model: {}".format(self._sibling_model))
+
     @abc.abstractmethod
     def prepare_model(self, train_tokens, properties_set):
         super(TwinsModel, self).prepare_model(train_tokens, properties_set)
-        self._sibling_model = self._model.get_layer(name="sibiling_model")
-        self.logger.debug("Sibling model: {}".format(self._sibling_model))
+
 
     def scores_for_instance(self, instance):
         tokens_encoded, edges_encoded = self.encode_data_instance(instance)
@@ -164,6 +171,12 @@ class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
         self._younger_model_name = "younger_model"
 
         super(BrothersModel, self).__init__(**kwargs)
+
+        assert self._model is not None
+        self._older_model = self._model.get_layer(name=self._older_model_name)
+        self._younger_model = self._model.get_layer(name=self._younger_model_name).layer
+        self.logger.debug("Older model: {}".format(self._older_model))
+        self.logger.debug("Younger model: {}".format(self._younger_model))
 
     @abc.abstractmethod
     def prepare_model(self, train_tokens, properties_set):

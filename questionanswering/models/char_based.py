@@ -17,9 +17,18 @@ from wikidata import wdaccess
 
 
 class CharCNNModel(TwinsModel):
-    def __init__(self, **kwargs):
-        self._character2idx = defaultdict(int)
+    def __init__(self, train_tokens=None, **kwargs):
+        if train_tokens is None:
+            train_tokens = []
+        self._character2idx = utils.get_character_index([" ".join(tokens) for tokens in train_tokens])
+
         super(CharCNNModel, self).__init__(**kwargs)
+
+        self.logger.debug('Character index created, size: {}'.format(len(self._character2idx)))
+        self._p['vocab.size'] = len(self._character2idx)
+        assert hasattr(self, "_model_number")
+        with open(self._save_model_to + "character2idx_{}.json".format(self._model_number), 'w') as out:
+            json.dump(self._character2idx, out, indent=2)
 
     def apply_on_instance(self, instance):
         tokens_encoded, edges_encoded = self.encode_data_instance(instance)
@@ -46,6 +55,9 @@ class CharCNNModel(TwinsModel):
         super(CharCNNModel, self).prepare_model(train_tokens, properties_set)
 
     def _get_keras_model(self):
+        # Make sure important parameters are set
+        self._p['vocab.size'] = len(self._character2idx)
+
         self.logger.debug("Create keras model.")
         # Sibling model
         characters_input = keras.layers.Input(shape=(self._p['max.sent.len'],), dtype='int16', name='sentence_input')
