@@ -17,14 +17,14 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
     def __init__(self, train_tokens=None, **kwargs):
         if train_tokens is None:
             train_tokens = []
-        super(TrigramBasedModel, self).__init__(**kwargs)
         self._trigram_vocabulary = list({t for tokens in train_tokens
                                          for token in tokens
                                          for t in string_to_trigrams(token)})
+        super(TrigramBasedModel, self).__init__(**kwargs)
+        self._p['vocab.size'] = len(self._trigram_vocabulary)
         self.logger.debug('Trigram vocabulary created, size: {}'.format(len(self._trigram_vocabulary)))
         with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number), 'w') as out:
             json.dump(self._trigram_vocabulary, out, indent=2)
-        self._p['vocab.size'] = len(self._trigram_vocabulary)
 
     def encode_question(self, graph_set):
         sentence_tokens = graph_set[0].get("tokens", [])
@@ -108,7 +108,7 @@ class WordBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
             train_tokens = []
         self._word2idx = defaultdict(int)
         self._embedding_matrix = None
-        self.extract_vocabulary(self, train_tokens)
+        self.extract_vocabulary(train_tokens)
 
     def extract_vocabulary(self, train_tokens):
         if not self._word2idx:

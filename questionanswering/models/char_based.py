@@ -9,7 +9,7 @@ from construction import graph
 from keras import backend as K
 from keras.preprocessing import sequence
 from models import keras_extensions
-from models.inputbasemodel import string_to_unigrams, string_to_trigrams
+from models.inputbasemodel import *
 from models.kerasmodel import TwinsModel, BrothersModel
 from models.word_based import WordCNNModel
 from wikidata import wdaccess
@@ -244,21 +244,19 @@ class YihModel(TwinsModel):
         self.logger.debug("Vocabulary size: {}.".format(len(self._trigram_vocabulary)))
 
 
-class EdgeLabelsModel(BrothersModel, YihModel):
-
-    def prepare_model(self, train_tokens, properties_set):
-        YihModel.extract_vocabulary(self, train_tokens)
-        BrothersModel.prepare_model(self, train_tokens, properties_set)
+class EdgeLabelsModel(TrigramBasedModel, BrothersModel):
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
+        #Make sure teh important parameters are set
+        self._p['vocab.size'] = len(self._trigram_vocabulary)
 
         # Brothers model
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
         graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
                                                 self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='graph_input')
         sentence_vector = self._get_sibling_model()(sentence_input)
-        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(graph_input)
+        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._graph_model_name)(graph_input)
 
         main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
                                          dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
@@ -290,8 +288,8 @@ class EdgeLabelsModel(BrothersModel, YihModel):
 
     def _get_sibling_model(self):
         # Sibling model
-        if self._sibling_model and self._p.get('sibling.singleton', False):
-            return self._sibling_model
+        if self._sentence_model and self._p.get('sibling.singleton', False):
+            return self._sentence_model
         word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32',
                                         name='sentence_input')
 
@@ -306,57 +304,16 @@ class EdgeLabelsModel(BrothersModel, YihModel):
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         if self._p.get("relu.on.top", False):
             semantic_vector = keras.layers.Activation('relu')(semantic_vector)
-        sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._older_model_name)
+        sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._sentence_model_name)
         self.logger.debug("Sibling model is finished.")
-        self._sibling_model = sibiling_model
+        self._sentence_model = sibiling_model
         return sibiling_model
 
-    def encode_data_instance(self, instance):
-        sentence_encoded, graphs_encoded = self.encode_by_trigram(instance)
-        sentence_ids = sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
-        graph_matrix = np.zeros((len(graphs_encoded), self._p.get('max.graph.size', 3),
-                                 self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
-        for i, graph_encoded in enumerate(graphs_encoded):
-            graph_encoded = graph_encoded[:self._p.get('max.graph.size', 3)]
-            for j, edge_encoded in enumerate(graph_encoded):
-                edge_encoded = edge_encoded[:self._p.get('max.sent.len', 10)]
-                graph_matrix[i, j, :len(edge_encoded)] = edge_encoded
-        return sentence_ids, graph_matrix
+    def encode_data_for_training(self, *args, **kwargs):
+        return super(EdgeLabelsModel, self).encode_data_for_training(*args, **kwargs)
 
-    def encode_by_trigram(self, graph_set):
-        sentence_tokens = graph_set[0].get("tokens", [])
-        sentence_trigrams = [set(string_to_trigrams(token)) for token in sentence_tokens]
-        sentence_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
-                            for trigrams in sentence_trigrams]
-        graphs_encoded = []
-        for g in graph_set:
-            edges_encoded = []
-            for edge in g.get('edgeSet', []):
-                property_label = edge.get('label', '')
-                edge_trigrams = [set(string_to_trigrams(token)) for token in property_label.split()]
-                edge_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
-                                for trigrams in edge_trigrams]
-                edges_encoded.append(edge_encoded)
-            graphs_encoded.append(edges_encoded)
-        return sentence_encoded, graphs_encoded
-
-    def encode_batch_by_trigrams(self, graphs, verbose=False):
-        graphs = [el for el in graphs if el]
-        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
-        graph_matrix = np.zeros((len(graphs), len(graphs[0]), self._p.get('max.graph.size', 3),
-                                 self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
-
-        for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
-            sentence_encoded, graphs_encoded = self.encode_by_trigram(graph_set)
-            assert len(graphs_encoded) == graph_matrix.shape[1]
-            sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
-            sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded
-            for i, graph_encoded in enumerate(graphs_encoded):
-                graph_encoded = graph_encoded[:self._p.get('max.graph.size', 3)]
-                for j, edge_encoded in enumerate(graph_encoded):
-                    edge_encoded = edge_encoded[:self._p.get('max.sent.len', 10)]
-                    graph_matrix[index, i, j, :len(edge_encoded)] = edge_encoded
-        return sentences_matrix, graph_matrix
+    def encode_data_instance(self, *args, **kwargs):
+        return super(EdgeLabelsModel, self).encode_data_instance(*args, **kwargs)
 
 
 class GraphSymbolicModel(EdgeLabelsModel, WordCNNModel):
@@ -392,7 +349,7 @@ class GraphSymbolicModel(EdgeLabelsModel, WordCNNModel):
         edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3), self._feature_vector_size), dtype='int32', name='edge_input')
 
         sentence_vector = self._get_sibling_model()(sentence_input)
-        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(edge_input)
+        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._graph_model_name)(edge_input)
 
         if self._p.get("twin.similarity", 'cos') == 'dense':
             sentence_vectors = keras.layers.RepeatVector(self._p['graph.choices'])(sentence_vector)
@@ -583,7 +540,7 @@ class GraphSymbolicCharModel(GraphSymbolicModel, WordCNNModel):
         edge_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p.get('max.graph.size', 3), self._feature_vector_size), dtype='int32', name='edge_input')
 
         sentence_vector = self._get_sibling_model()(sentence_input)
-        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(edge_input)
+        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._graph_model_name)(edge_input)
 
         if self._p.get("twin.similarity", 'cos') == 'dense':
             sentence_vectors = keras.layers.RepeatVector(self._p['graph.choices'])(sentence_vector)
@@ -625,7 +582,7 @@ class GraphSymbolicCharModel(GraphSymbolicModel, WordCNNModel):
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         if self._p.get("relu.on.top", False):
             semantic_vector = keras.layers.Activation('relu')(semantic_vector)
-        sibiling_model = keras.models.Model(input=[char_input], output=[semantic_vector], name=self._older_model_name)
+        sibiling_model = keras.models.Model(input=[char_input], output=[semantic_vector], name=self._sentence_model_name)
         self.logger.debug("Sibling model is finished.")
         self._sibling_model = sibiling_model
         return sibiling_model

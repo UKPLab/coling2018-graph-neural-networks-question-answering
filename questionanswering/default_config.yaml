@@ -41,10 +41,10 @@ webquestions:
   use.whitelist: False
   no.ne.tags: False
   path.to.dataset:
-    train_train: "../data/input/webquestions.examples.train.train.json"
+    train_train: "../data/input/webquestions.examples.train.train_validation.unittests.json"
     train_validation: "../data/input/webquestions.examples.train.validation.json"
-    train_tagged: "../data/generated/webquestions.examples.train.utterances.tagged.json"
-    train_silvergraphs: "../data/generated/webquestions.examples.train.silvergraphs.02_04.full.json"
+    train_tagged: "../data/generated/webquestions.examples.train.utterances.tagged.unittests.json"
+    train_silvergraphs: "../data/generated/webquestions.examples.train.silvergraphs.02_04.unittests.json"
 
 model:
   class: BagOfWordsModel

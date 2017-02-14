@@ -149,7 +149,7 @@ class WordGraphModel(BrothersModel, WordCNNModel):
         graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
                                                 self._p['max.sent.len']), dtype='float32', name='graph_input')
         sentence_vector = self._get_sibling_model()(sentence_input)
-        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._younger_model_name)(graph_input)
+        graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._graph_model_name)(graph_input)
 
         main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
                                          dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, graph_vectors])
@@ -187,7 +187,7 @@ class WordGraphModel(BrothersModel, WordCNNModel):
                                                  init=self._p.get("sibling.weight.init", 'glorot_uniform'))(
                 semantic_vector)
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
-        sibiling_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._older_model_name)
+        sibiling_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._sentence_model_name)
         self.logger.debug("Sibling model is finished.")
         return sibiling_model
 
@@ -327,7 +327,7 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
                                                  init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
 
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
-        older_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._older_model_name)
+        older_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._sentence_model_name)
         self.logger.debug("Older model is finished: {}.".format(older_model))
 
         # Younger model
@@ -344,7 +344,7 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
                                                  activation=self._p.get("sibling.activation", 'tanh'))(semantic_vector)
 
         semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
-        younger_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._younger_model_name)
+        younger_model = keras.models.Model(input=[tokens_input], output=[semantic_vector], name=self._graph_model_name)
         self.logger.debug("Younger model is finished: {}.".format(younger_model))
 
         # Brothers model
@@ -353,7 +353,7 @@ class WordCNNBrotherModel(BrothersModel, WordCNNModel):
                                         name='edge_input')
 
         sentence_vector = older_model(sentence_input)
-        edge_vectors = keras.layers.TimeDistributed(younger_model, name=self._younger_model_name)(edge_input)
+        edge_vectors = keras.layers.TimeDistributed(younger_model, name=self._graph_model_name)(edge_input)
 
         main_output = keras.layers.Merge(mode=keras_extensions.keras_cosine if self._p.get("twin.similarity") == 'cos' else self._p.get("twin.similarity", 'dot'),
                                          dot_axes=(1, 2), name="edge_scores", output_shape=(self._p['graph.choices'],))([sentence_vector, edge_vectors])

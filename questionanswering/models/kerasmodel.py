@@ -39,20 +39,6 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         self._model_number = int(fname_match.group(1)) if fname_match else 0
         self.logger.debug("Loaded successfully.")
 
-    @abc.abstractmethod
-    def prepare_model(self, train_tokens, properties_set):
-        """
-        Method that should override to init objects and parameters that are needed for the model training.
-        E.g. vocabulary index.
-
-        :param train_tokens:
-        :param properties_set:
-        """
-
-        assert "graph.choices" in self._p
-
-        self._model = self._get_keras_model()
-
     def train(self, data_with_targets, validation_with_targets=None):
         self.logger.debug('Training process started.')
 
@@ -138,11 +124,6 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
         self._sibling_model = self._model.get_layer(name="sibiling_model")
         self.logger.debug("Sibling model: {}".format(self._sibling_model))
 
-    @abc.abstractmethod
-    def prepare_model(self, train_tokens, properties_set):
-        super(TwinsModel, self).prepare_model(train_tokens, properties_set)
-
-
     def scores_for_instance(self, instance):
         tokens_encoded, edges_encoded = self.encode_data_instance(instance)
         sentence_embedding = self._sibling_model.predict_on_batch(tokens_encoded)[0]
@@ -167,31 +148,23 @@ class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
     BrothersModel is a KerasModel that uses two distinct models to encode the sentence and the graphs.
     """
     def __init__(self, **kwargs):
-        self._older_model = None
-        self._younger_model = None
-        self._older_model_name = "older_model"
-        self._younger_model_name = "younger_model"
+        self._sentence_model = None
+        self._graph_model = None
+        self._sentence_model_name = "sentence_model"
+        self._graph_model_name = "graph_model"
 
         super(BrothersModel, self).__init__(**kwargs)
 
         assert self._model is not None
-        self._older_model = self._model.get_layer(name=self._older_model_name)
-        self._younger_model = self._model.get_layer(name=self._younger_model_name).layer
-        self.logger.debug("Older model: {}".format(self._older_model))
-        self.logger.debug("Younger model: {}".format(self._younger_model))
-
-    @abc.abstractmethod
-    def prepare_model(self, train_tokens, properties_set):
-        KerasModel.prepare_model(self, train_tokens, properties_set)
-        self._older_model = self._model.get_layer(name=self._older_model_name)
-        self._younger_model = self._model.get_layer(name=self._younger_model_name).layer
-        self.logger.debug("Older model: {}".format(self._older_model))
-        self.logger.debug("Younger model: {}".format(self._younger_model))
+        self._sentence_model = self._model.get_layer(name=self._sentence_model_name)
+        self._graph_model = self._model.get_layer(name=self._graph_model_name).layer
+        self.logger.debug("Sentence model: {}".format(self._sentence_model))
+        self.logger.debug("Graph model: {}".format(self._graph_model))
 
     def scores_for_instance(self, instance):
         tokens_encoded, edges_encoded = self.encode_data_instance(instance)
-        sentence_embedding = self._older_model.predict_on_batch(tokens_encoded)[0]
-        edge_embeddings = self._younger_model.predict_on_batch(edges_encoded)
+        sentence_embedding = self._sentence_model.predict_on_batch(tokens_encoded)[0]
+        edge_embeddings = self._graph_model.predict_on_batch(edges_encoded)
         predictions = np.dot(sentence_embedding, np.swapaxes(edge_embeddings, 0, 1))
         if self._p.get("twin.similarity", "dot") == "cos":
             denominator = np.sqrt(
@@ -203,7 +176,7 @@ class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
     def load_from_file(self, path_to_model):
         super(BrothersModel, self).load_from_file(path_to_model=path_to_model)
 
-        self._older_model = self._model.get_layer(name=self._older_model_name)
-        self._younger_model = self._model.get_layer(name=self._younger_model_name).layer
-        self.logger.debug("Older model: {}".format(self._older_model))
-        self.logger.debug("Younger model: {}".format(self._younger_model))
+        self._sentence_model = self._model.get_layer(name=self._sentence_model_name)
+        self._graph_model = self._model.get_layer(name=self._graph_model_name).layer
+        self.logger.debug("Sentence model: {}".format(self._sentence_model))
+        self.logger.debug("Graph model: {}".format(self._graph_model))
