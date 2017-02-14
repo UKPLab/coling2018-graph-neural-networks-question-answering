@@ -37,7 +37,7 @@ def test_model_train():
 
 
 def test_based_model_train():
-    trainablemodel = models.EdgeLabelsModel(parameters=config['model'], logger=logger,  train_tokens=webquestions.get_question_tokens())
+    trainablemodel = models.MainEdgeModel(parameters=config['model'], logger=logger,  train_tokens=webquestions.get_question_tokens())
     assert type(trainablemodel._model) == keras.engine.training.Model
     input_set, targets = webquestions.get_training_samples()
     encoded_for_training = trainablemodel.encode_data_for_training((input_set, targets))
@@ -48,4 +48,5 @@ def test_based_model_train():
 
 
 if __name__ == '__main__':
-    pytest.main([__file__])
+    test_based_model_train()
+    # pytest.main([__file__])

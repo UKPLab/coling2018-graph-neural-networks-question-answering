@@ -136,35 +136,22 @@ class CharCNNModel(TwinsModel):
         self.logger.debug("Vocabulary size: {}.".format(len(self._character2idx)))
 
 
-class YihModel(TwinsModel):
+class MainEdgeModel(TrigramBasedModel, TwinsModel):
 
     def __init__(self, **kwargs):
-        self._trigram_vocabulary = []
-        super(YihModel, self).__init__(**kwargs)
+        super(MainEdgeModel, self).__init__(**kwargs)
 
-    def encode_data_for_training(self, data_with_targets):
-        input_set, targets = data_with_targets
-        sentences_matrix, edges_matrix = self.encode_batch_by_trigrams(input_set, verbose=False)
-        if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
-            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
-        return sentences_matrix, edges_matrix, targets
+    def encode_data_for_training(self, *args, **kwargs):
+        sentences_matrix, graph_matrix, targets = super(MainEdgeModel, self).encode_data_for_training(*args, **kwargs)
+        return sentences_matrix, graph_matrix[..., 0, :, :], targets
 
-    def prepare_model(self, train_tokens, properties_set):
-        self.extract_vocabulary(train_tokens)
-        super(YihModel, self).prepare_model(train_tokens, properties_set)
-
-    def extract_vocabulary(self, train_tokens):
-        if not self._trigram_vocabulary:
-            self._trigram_vocabulary = list({t for tokens in train_tokens
-                                             for token in tokens
-                                             for t in string_to_trigrams(token)})
-            self.logger.debug('Trigram vocabulary created, size: {}'.format(len(self._trigram_vocabulary)))
-            with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number), 'w') as out:
-                json.dump(self._trigram_vocabulary, out, indent=2)
-        self._p['vocab.size'] = len(self._trigram_vocabulary)
+    def encode_data_instance(self, *args, **kwargs):
+        sentence_ids, graph_matrix = super(MainEdgeModel, self).encode_data_instance(*args, **kwargs)
+        return sentence_ids, graph_matrix[:, 0, :, :]
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
+        self._p['vocab.size'] = len(self._trigram_vocabulary)
         # Sibling model
         word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32', name='sentence_input')
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
@@ -196,59 +183,12 @@ class YihModel(TwinsModel):
         self.logger.debug("Model is compiled")
         return model
 
-    def encode_data_instance(self, instance):
-        sentence_encoded, edges_encoded = self.encode_by_trigram(instance)
-        sentence_ids = sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
-        edges_ids = sequence.pad_sequences(edges_encoded, maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
-        return sentence_ids, edges_ids
-
-    def encode_by_trigram(self, graph_set):
-        sentence_tokens = graph_set[0].get("tokens", [])
-        sentence_trigrams = [set(string_to_trigrams(token)) for token in sentence_tokens]
-        sentence_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
-                            for trigrams in sentence_trigrams]
-        edges_encoded = []
-        for g in graph_set:
-            first_edge = graph.get_graph_first_edge(g)
-            property_label = first_edge.get('label', '')
-            edge_trigrams = [set(string_to_trigrams(token)) for token in property_label.split()]
-            edge_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
-                            for trigrams in edge_trigrams]
-            edges_encoded.append(edge_encoded)
-        return sentence_encoded, edges_encoded
-
-    def encode_batch_by_trigrams(self, graphs, verbose=False):
-        graphs = [el for el in graphs if el]
-        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
-        edges_matrix = np.zeros((len(graphs), len(graphs[0]),  self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
-
-        for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
-            sentence_encoded, edges_encoded = self.encode_by_trigram(graph_set)
-            assert len(edges_encoded) == edges_matrix.shape[1]
-            sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
-            sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded
-            for i, edge_encoded in enumerate(edges_encoded):
-                edge_encoded = edge_encoded[:self._p.get('max.sent.len', 10)]
-                edges_matrix[index, i, :len(edge_encoded)] = edge_encoded
-
-        return sentences_matrix, edges_matrix
-
-    def load_from_file(self, path_to_model):
-        super(YihModel, self).load_from_file(path_to_model=path_to_model)
-
-        self.logger.debug("Loading vocabulary from: trigram_vocabulary_{}.json".format(self._model_number))
-        with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number)) as f:
-            self._trigram_vocabulary = json.load(f)
-        self._trigram_vocabulary = [tuple(t) for t in self._trigram_vocabulary]
-        self._p['vocab.size'] = len(self._trigram_vocabulary)
-        self.logger.debug("Vocabulary size: {}.".format(len(self._trigram_vocabulary)))
-
 
 class EdgeLabelsModel(TrigramBasedModel, BrothersModel):
 
     def _get_keras_model(self):
         self.logger.debug("Create keras model.")
-        #Make sure teh important parameters are set
+        #Make sure the important parameters are set
         self._p['vocab.size'] = len(self._trigram_vocabulary)
 
         # Brothers model

@@ -65,8 +65,8 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
         if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
             targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
 
-        sentences_matrix, edges_matrix = self.encode_batch_by_trigrams(input_set, verbose=False)
-        return sentences_matrix, edges_matrix, targets
+        sentences_matrix, graph_matrix = self.encode_batch_by_trigrams(input_set, verbose=False)
+        return sentences_matrix, graph_matrix, targets
 
     def encode_by_trigram(self, graph_set):
         return self.encode_question(graph_set), self.encode_graphs(graph_set)
