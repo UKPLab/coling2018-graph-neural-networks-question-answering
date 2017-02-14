@@ -1,18 +1,17 @@
 import json
-from collections import defaultdict
 
 import keras
-import nltk
 import numpy as np
 import tqdm
-from keras.preprocessing import sequence
-from keras import backend as K
-
 import utils
+from collections import defaultdict
 from construction import graph
+from keras import backend as K
+from keras.preprocessing import sequence
 from models import keras_extensions
-from models.word_based import WordCNNModel
+from models.inputbasemodel import string_to_unigrams, string_to_trigrams
 from models.kerasmodel import TwinsModel, BrothersModel
+from models.word_based import WordCNNModel
 from wikidata import wdaccess
 
 
@@ -671,22 +670,6 @@ class GraphSymbolicCharModel(GraphSymbolicModel, WordCNNModel):
             self._character2idx = json.load(f)
         self._p['vocab.size'] = len(self._character2idx)
         self.logger.debug("Vocabulary size: {}.".format(len(self._character2idx)))
-
-
-def string_to_unigrams(input_string, character2idx):
-    return [character2idx.get(c, character2idx[utils.unknown_el]) for c in input_string]
-
-
-def string_to_trigrams(t):
-    """
-    Convert a token to a list of trigrams following the hashing technique.
-
-    :param t: a single token as a string
-    :return: list of triples of characters
-    >>> list(string_to_trigrams('who'))
-    [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#')]
-    """
-    return nltk.ngrams("#{}#".format(t), 3)
 
 
 if __name__ == "__main__":

@@ -21,10 +21,10 @@ config['webquestions']['target.dist'] = True
 del config['webquestions']['path.to.dataset']['train_validation']
 config['model']['graph.choices'] = config['webquestions'].get("max.negative.samples", 30)
 config['model']['epochs'] = 2
+webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
 
 
 def test_model_train():
-    webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)
     trainablemodel = models.CharCNNModel(parameters=config['model'], logger=logger,  train_tokens=webquestions.get_question_tokens())
     assert type(trainablemodel._model) == keras.engine.training.Model
     input_set, targets = webquestions.get_training_samples()

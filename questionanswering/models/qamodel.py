@@ -13,8 +13,9 @@ class QAModel(Loggable, metaclass=abc.ABCMeta):
     A QAModel measures a similarity between a sentence and a set of candidate semantic graphs.
     """
 
-    def __init__(self, **kwargs):
-        super(QAModel, self).__init__(**kwargs)
+    def __init__(self, parameters, **kwargs):
+        self._p = parameters
+        super(QAModel, self).__init__(parameters=parameters, **kwargs)
 
     @abc.abstractmethod
     def encode_data_instance(self, instance):
@@ -74,8 +75,8 @@ class TrainableQAModel(QAModel, metaclass=abc.ABCMeta):
     """
     This is a version of a QAModel that can be trained on input data.
     """
-    def __init__(self, parameters, **kwargs):
-        self._p = parameters
+    def __init__(self, **kwargs):
+        super(TrainableQAModel, self).__init__(**kwargs)
         self._save_model_to = self._p['models.save.path']
         if not hasattr(self, "_model"):
             self._model = None
@@ -86,7 +87,6 @@ class TrainableQAModel(QAModel, metaclass=abc.ABCMeta):
         while os.path.exists(self._save_model_to + self._model_file_name):
             self._model_number += 1
             self._model_file_name = "{}_{}.{}".format(self.__class__.__name__, self._model_number, self._file_extension)
-        super(TrainableQAModel, self).__init__(**kwargs)
 
     @abc.abstractmethod
     def train(self, data_with_targets, validation_with_targets=None):
@@ -95,5 +95,22 @@ class TrainableQAModel(QAModel, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def encode_data_for_training(self, data_with_targets):
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def encode_question(self, graph_set):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def encode_graphs(self, graph_set):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def load_from_file(self, path_to_model):
+        """
+        Load a model from file.
+
+        :param path_to_model: path to the model file.
+        """
+
 
 

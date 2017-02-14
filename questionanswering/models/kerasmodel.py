@@ -25,12 +25,14 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         :return: a Keras model to be trained
         """
 
+    @abc.abstractmethod
     def load_from_file(self, path_to_model):
         """
         Load a Keras model from file.
 
         :param path_to_model: path to the model file.
         """
+        super(KerasModel, self).load_from_file(path_to_model=path_to_model)
         self.logger.debug("Loading model from file.")
         self._model = keras.models.load_model(path_to_model)
         fname_match = re.search(r"_(\d+)\.", path_to_model)
