@@ -17,7 +17,7 @@ def tag_dataset(config_file_path):
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
 
-    with open(config['evaluation']['questions']) as f:
+    with open(config['generation']['questions']) as f:
         webquestions = json.load(f)
     logging.debug('Loaded WebQuestions, size: {}'.format(len(webquestions)))
 
