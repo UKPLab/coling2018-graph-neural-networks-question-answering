@@ -126,7 +126,7 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     return property_label
 
 
-def add_string_representations_to_edges(g, property2label, use_placeholder=False):
+def add_string_representations_to_edges(g, property2label, use_placeholder=False, add_boundaries=False):
     """
     To each edge in the graph add its string representation as a label.
 
@@ -140,6 +140,8 @@ def add_string_representations_to_edges(g, property2label, use_placeholder=False
     for edge in g.get('edgeSet', []):
         edge_label = get_property_str_representation(edge, property2label, use_placeholder)
         edge['label'] = edge_label
+        if add_boundaries:
+            edge['label'] = "<S> " + edge['label'] + " <E>"
     return g
 
 

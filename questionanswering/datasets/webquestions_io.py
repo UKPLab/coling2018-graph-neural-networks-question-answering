@@ -78,7 +78,9 @@ class WebQuestions(Loggable):
         self.logger.debug("Constructing string representations for entities")
         for graph_set in self._silver_graphs:
             for g in graph_set:
-                g[0] = graph.add_string_representations_to_edges(g[0], wdaccess.property2label, self._p.get("replace.entities", False))
+                g[0] = graph.add_string_representations_to_edges(g[0], wdaccess.property2label, self._p.get("replace.entities", False), self._p.get("mark.sent.boundaries", False))
+                if self._p.get("mark.sent.boundaries", False):
+                    g[0]['tokens'] = ["<S>"] + g[0]['tokens'] + ["<E>"]
 
     def _get_samples(self, questions):
         indices = self._get_sample_indices(questions)
@@ -207,7 +209,7 @@ class WebQuestions(Loggable):
         """
         return [[w for w, _, _ in self._dataset_tagged[i]] +
                 [w for g in self._silver_graphs[i] for e in g[0].get('edgeSet', []) for w in e.get('label', '').split()]
-                for i in self._get_sample_indices(self._questions_train)]
+                for i in self._get_sample_indices(self._questions_train)] + [["<S>", "<E>"]] if self._p.get("mark.sent.boundaries", False) else []
 
     def get_property_set(self):
         """
