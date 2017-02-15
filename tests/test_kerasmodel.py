@@ -52,6 +52,7 @@ def test_main_edge_model_train():
 def test_edges_model_train():
     trainablemodel = models.EdgeLabelsModel(parameters=config['model'], logger=logger,  train_tokens=webquestions.get_question_tokens())
     assert type(trainablemodel._model) == keras.engine.training.Model
+    print(trainablemodel._model.layers)
     input_set, targets = webquestions.get_training_samples()
     encoded_for_training = trainablemodel.encode_data_for_training((input_set, targets))
     input_set, targets = encoded_for_training[:-1], encoded_for_training[-1]
