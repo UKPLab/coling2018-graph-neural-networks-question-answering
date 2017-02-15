@@ -50,5 +50,4 @@ def test_based_model_train():
 
 
 if __name__ == '__main__':
-    test_based_model_train()
-    # pytest.main([__file__])
+    pytest.main([__file__])
