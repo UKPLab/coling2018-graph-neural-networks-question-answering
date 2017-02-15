@@ -17,6 +17,7 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
     def __init__(self, train_tokens=None, **kwargs):
         if train_tokens is None:
             train_tokens = []
+        assert len(train_tokens) > 0
         self._trigram_vocabulary = list({t for tokens in train_tokens
                                          for token in tokens
                                          for t in string_to_trigrams(token)})
@@ -106,6 +107,7 @@ class WordBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
         super(WordBasedModel, self).__init__(**kwargs)
         if train_tokens is None:
             train_tokens = []
+        assert len(train_tokens) > 0
         self._word2idx = defaultdict(int)
         self._embedding_matrix = None
         self.extract_vocabulary(train_tokens)
@@ -197,6 +199,7 @@ class GraphFeaturesModel(WordBasedModel, TrainableQAModel, metaclass=abc.ABCMeta
         super(GraphFeaturesModel, self).__init__(**kwargs)
         if properties_set is None:
             properties_set = []
+        assert len(properties_set) > 0
         self._property2idx = {utils.all_zeroes: 0, utils.unknown_el: 1}
         self._propertytype2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "v": 2, "q": 3}
         self._type2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "direct": 2, "reverse": 3, "v-structure": 4, "time": 5}

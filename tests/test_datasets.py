@@ -2,8 +2,10 @@ import pytest
 import yaml
 import numpy as np
 import logging
+import sys
+sys.path.append("../questionanswering")
 
-from questionanswering.datasets import webquestions_io
+from datasets import webquestions_io
 
 with open("../questionanswering/default_config.yaml", 'r') as config_file:
     config = yaml.load(config_file.read())

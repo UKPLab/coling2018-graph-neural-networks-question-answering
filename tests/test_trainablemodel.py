@@ -3,8 +3,10 @@ from sklearn import linear_model
 import pytest
 import yaml
 import logging
+import sys
+sys.path.append("../questionanswering")
 
-from questionanswering.datasets import webquestions_io
+from datasets import webquestions_io
 import models
 
 with open("../questionanswering/default_config.yaml", 'r') as config_file:
