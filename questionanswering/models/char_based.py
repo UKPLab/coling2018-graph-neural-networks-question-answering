@@ -218,6 +218,7 @@ class EdgeLabelsModel(TrigramBasedModel, BrothersModel):
     def _get_graph_model(self):
         edge_input = keras.layers.Input(shape=(self._p['max.graph.size'], self._p['max.sent.len'],
                                                self._p['vocab.size'],), dtype='float32', name='edge_input')
+        self.logger.debug(K.int_shape(edge_input))
         edge_vectors = keras.layers.TimeDistributed(self._get_sibling_model())(edge_input)
         # edge_vectors = keras.layers.TimeDistributed(keras.layers.GlobalMaxPooling1D())(edge_input)
         # edge_vectors = keras.layers.TimeDistributed(keras.layers.Dense(self._p['sem.layer.size']))(edge_vectors)
@@ -241,7 +242,7 @@ class EdgeLabelsModel(TrigramBasedModel, BrothersModel):
         if self._sentence_model and self._p.get('sibling.singleton', False):
             return self._sentence_model
         word_input = keras.layers.Input(shape=(self._p['max.sent.len'], self._p['vocab.size'],), dtype='float32',
-                                        name='sentence_input')
+                                        name='word_input')
 
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
                                                      init=self._p.get("sibling.weight.init", 'glorot_uniform'))(word_input)
@@ -251,7 +252,7 @@ class EdgeLabelsModel(TrigramBasedModel, BrothersModel):
             semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
                                                  activation=self._p.get("sibling.activation", 'tanh'),
                                                  init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
-        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
+        # semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         if self._p.get("relu.on.top", False):
             semantic_vector = keras.layers.Activation('relu')(semantic_vector)
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._sentence_model_name)

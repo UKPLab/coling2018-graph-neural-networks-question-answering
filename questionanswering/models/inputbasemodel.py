@@ -15,17 +15,16 @@ from wikidata import wdaccess
 class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
     def __init__(self, train_tokens=None, **kwargs):
-        if train_tokens is None:
-            train_tokens = []
-        assert len(train_tokens) > 0
-        self._trigram_vocabulary = list({t for tokens in train_tokens
-                                         for token in tokens
-                                         for t in string_to_trigrams(token)})
+        if train_tokens is not None:
+            self._trigram_vocabulary = list({t for tokens in train_tokens
+                                             for token in tokens
+                                             for t in string_to_trigrams(token)})
         super(TrigramBasedModel, self).__init__(**kwargs)
-        self._p['vocab.size'] = len(self._trigram_vocabulary)
-        self.logger.debug('Trigram vocabulary created, size: {}'.format(len(self._trigram_vocabulary)))
-        with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number), 'w') as out:
-            json.dump(self._trigram_vocabulary, out, indent=2)
+        if len(self._trigram_vocabulary) > 0:
+            self._p['vocab.size'] = len(self._trigram_vocabulary)
+            self.logger.debug('Trigram vocabulary created, size: {}'.format(len(self._trigram_vocabulary)))
+            with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number), 'w') as out:
+                json.dump(self._trigram_vocabulary, out, indent=2)
 
     def encode_question(self, graph_set):
         sentence_tokens = graph_set[0].get("tokens", [])
@@ -104,24 +103,20 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 class WordBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
     def __init__(self, train_tokens=None, **kwargs):
-        super(WordBasedModel, self).__init__(**kwargs)
-        if train_tokens is None:
-            train_tokens = []
-        assert len(train_tokens) > 0
-        self._word2idx = defaultdict(int)
-        self._embedding_matrix = None
-        self.extract_vocabulary(train_tokens)
-
-    def extract_vocabulary(self, train_tokens):
-        if not self._word2idx:
+        if train_tokens is not None:
+            self._word2idx = defaultdict(int)
+            self._embedding_matrix = None
             if "word.embeddings" in self._p:
                 self._embedding_matrix, self._word2idx = utils.load(self._p['word.embeddings'])
-                self.logger.debug('Word index loaded, size: {}'.format(len(self._word2idx)))
             else:
                 self._word2idx = utils.get_word_index([t for tokens in train_tokens for t in tokens])
-                self.logger.debug('Word index created, size: {}'.format(len(self._word2idx)))
-                with open(self._save_model_to + "word2idx_{}.json".format(self._model_number), 'w') as out:
-                    json.dump(self._word2idx, out, indent=2)
+        super(WordBasedModel, self).__init__(**kwargs)
+        if self._embedding_matrix is not None:
+            self.logger.debug('Word index loaded, size: {}'.format(len(self._word2idx)))
+        elif len(self._word2idx) > 0:
+            self.logger.debug('Word index created, size: {}'.format(len(self._word2idx)))
+            with open(self._save_model_to + "word2idx_{}.json".format(self._model_number), 'w') as out:
+                json.dump(self._word2idx, out, indent=2)
 
     def encode_question(self, graph_set):
         sentence_tokens = graph_set[0].get("tokens", [])
