@@ -163,7 +163,7 @@ def ground_one_with_gold(s_g, gold_answers, min_fscore):
             retrieved_answers.append(wdaccess.filter_denotation_by_importance(retrieved_answers[i]))
 
     post_process_results = wdaccess.label_query_results if generation_p[
-        'label.query.results'] else lambda x: x
+        'label.query.results'] else lambda x: [r["e1"] for r in x]
     retrieved_answers = [post_process_results(answer_set) for answer_set in retrieved_answers]
     retrieved_answers = [post_process_answers_given_graph(answer_set, grounded_graphs[i]) for i, answer_set in enumerate(retrieved_answers)]
     logger.debug(
