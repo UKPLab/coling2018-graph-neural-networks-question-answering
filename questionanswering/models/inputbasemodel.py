@@ -14,17 +14,21 @@ from wikidata import wdaccess
 
 class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
-    def __init__(self, train_tokens=None, **kwargs):
+    def __init__(self, **kwargs):
+        self._trigram_vocabulary = None
+        super(TrigramBasedModel, self).__init__(**kwargs)
+
+    def prepare_model(self, train_tokens, properties_set):
         if train_tokens is not None:
             self._trigram_vocabulary = list({t for tokens in train_tokens
                                              for token in tokens
                                              for t in string_to_trigrams(token)})
-        super(TrigramBasedModel, self).__init__(**kwargs)
         if len(self._trigram_vocabulary) > 0:
             self._p['vocab.size'] = len(self._trigram_vocabulary)
             self.logger.debug('Trigram vocabulary created, size: {}'.format(len(self._trigram_vocabulary)))
             with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number), 'w') as out:
                 json.dump(self._trigram_vocabulary, out, indent=2)
+        super(TrigramBasedModel, self).prepare_model(train_tokens, properties_set)
 
     def encode_question(self, graph_set):
         sentence_tokens = graph_set[0].get("tokens", [])
@@ -102,21 +106,24 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
 class WordBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
-    def __init__(self, train_tokens=None, **kwargs):
+    def __init__(self, **kwargs):
+        self._embedding_matrix = None
+        self._word2idx = defaultdict(int)
+        super(WordBasedModel, self).__init__(**kwargs)
+
+    def prepare_model(self, train_tokens, properties_set):
         if train_tokens is not None:
-            self._word2idx = defaultdict(int)
-            self._embedding_matrix = None
             if "word.embeddings" in self._p:
                 self._embedding_matrix, self._word2idx = utils.load(self._p['word.embeddings'])
             else:
                 self._word2idx = utils.get_word_index([t for tokens in train_tokens for t in tokens])
-        super(WordBasedModel, self).__init__(**kwargs)
         if self._embedding_matrix is not None:
             self.logger.debug('Word index loaded, size: {}'.format(len(self._word2idx)))
         elif len(self._word2idx) > 0:
             self.logger.debug('Word index created, size: {}'.format(len(self._word2idx)))
             with open(self._save_model_to + "word2idx_{}.json".format(self._model_number), 'w') as out:
                 json.dump(self._word2idx, out, indent=2)
+        super(WordBasedModel, self).prepare_model(train_tokens, properties_set)
 
     def encode_question(self, graph_set):
         sentence_tokens = graph_set[0].get("tokens", [])
@@ -190,18 +197,19 @@ class WordBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
 class GraphFeaturesModel(WordBasedModel, TrainableQAModel, metaclass=abc.ABCMeta):
 
-    def __init__(self, properties_set=None, **kwargs):
-        super(GraphFeaturesModel, self).__init__(**kwargs)
-        if properties_set is None:
-            properties_set = []
-        assert len(properties_set) > 0
+    def __init__(self, **kwargs):
         self._property2idx = {utils.all_zeroes: 0, utils.unknown_el: 1}
         self._propertytype2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "v": 2, "q": 3}
         self._type2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "direct": 2, "reverse": 3, "v-structure": 4, "time": 5}
         self._modifier2idx = {utils.all_zeroes: 0, utils.unknown_el: 1, "argmax": 2, "argmin": 3, "num": 4, "filter": 5}
         self._feature_vector_size = sum(v if type(v) == int else 1 for f, v in self._p.get('symbolic.features', {}).items())
         self.logger.debug("Feature vector size: {}".format(self._feature_vector_size))
+        super(GraphFeaturesModel, self).__init__(**kwargs)
+
+    def prepare_model(self, train_tokens, properties_set):
+        assert len(properties_set) > 0
         self.init_property_index(properties_set)
+        super(GraphFeaturesModel, self).prepare_model(train_tokens, properties_set)
 
     def init_property_index(self, properties_set):
         properties_set = properties_set | wdaccess.HOP_UP_RELATIONS | wdaccess.HOP_DOWN_RELATIONS

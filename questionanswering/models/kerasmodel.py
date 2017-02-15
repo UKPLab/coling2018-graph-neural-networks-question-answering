@@ -13,6 +13,15 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         self._file_extension = "kerasmodel"
         super(KerasModel, self).__init__(**kwargs)
 
+    @abc.abstractmethod
+    def prepare_model(self, train_tokens, properties_set):
+        """
+        Method that should override to init objects and parameters that are needed for the model training.
+        E.g. vocabulary index.
+
+        :param train_tokens:
+        :param properties_set:
+        """
         self.logger.debug(self._p)
         assert "graph.choices" in self._p
         assert "vocab.size" in self._p
@@ -121,6 +130,9 @@ class TwinsModel(KerasModel, metaclass=abc.ABCMeta):
 
         super(TwinsModel, self).__init__(**kwargs)
 
+    @abc.abstractmethod
+    def prepare_model(self, train_tokens, properties_set):
+        super(TwinsModel, self).prepare_model(train_tokens, properties_set)
         assert self._model is not None
         self._sibling_model = self._model.get_layer(name="sibiling_model")
         self.logger.debug("Sibling model: {}".format(self._sibling_model))
@@ -156,11 +168,15 @@ class BrothersModel(KerasModel, metaclass=abc.ABCMeta):
 
         super(BrothersModel, self).__init__(**kwargs)
 
+    @abc.abstractmethod
+    def prepare_model(self, train_tokens, properties_set):
+        super(BrothersModel, self).prepare_model(train_tokens, properties_set)
         assert self._model is not None
         self._sentence_model = self._model.get_layer(name=self._sentence_model_name)
         self._graph_model = self._model.get_layer(name=self._graph_model_name).layer
         self.logger.debug("Sentence model: {}".format(self._sentence_model))
         self.logger.debug("Graph model: {}".format(self._graph_model))
+
 
     def scores_for_instance(self, instance):
         tokens_encoded, edges_encoded = self.encode_data_instance(instance)

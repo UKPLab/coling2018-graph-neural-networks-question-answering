@@ -89,6 +89,16 @@ class TrainableQAModel(QAModel, metaclass=abc.ABCMeta):
             self._model_file_name = "{}_{}.{}".format(self.__class__.__name__, self._model_number, self._file_extension)
 
     @abc.abstractmethod
+    def prepare_model(self, train_tokens, properties_set):
+        """
+        Method that should override to init objects and parameters that are needed for the model training.
+        E.g. vocabulary index.
+
+        :param train_tokens:
+        :param properties_set:
+        """
+
+    @abc.abstractmethod
     def train(self, data_with_targets, validation_with_targets=None):
         raise NotImplementedError
 
