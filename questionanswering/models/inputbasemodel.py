@@ -50,7 +50,7 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def encode_data_instance(self, instance):
         sentence_encoded, graphs_encoded = self.encode_by_trigram(instance)
-        sentence_ids = keras.preprocessing.sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
+        sentence_ids = keras.preprocessing.sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int8")
         graph_matrix = np.zeros((len(graphs_encoded), self._p.get('max.graph.size', 3),
                                  self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
         for i, graph_encoded in enumerate(graphs_encoded):
