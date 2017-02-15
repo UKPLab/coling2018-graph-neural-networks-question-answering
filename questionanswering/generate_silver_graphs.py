@@ -106,7 +106,9 @@ def generate(config_file_path):
                                 'edgeSet': [],
                                 'entities': question_entities}
             logger.log(level=0, msg="Generating from: {}".format(ungrounded_graph))
-            gold_answers = [e.lower() for e in webquestions_io.get_answers_from_question(webquestions_questions[i])]
+            gold_answers = webquestions_io.get_answers_from_question(webquestions_questions[i])
+            if staged_generation.generation_p['label.query.results']:
+                gold_answers = [e.lower() for e in gold_answers]
             generated_graphs = staged_generation.generate_with_gold(ungrounded_graph, gold_answers)
             silver_dataset.append(generated_graphs)
         if i % 100 == 0:

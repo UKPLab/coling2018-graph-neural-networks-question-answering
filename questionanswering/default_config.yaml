@@ -75,8 +75,8 @@ model:
   conv.size: 100
   conv.width: 3
   conv.layers: False
-  dropout.sibling: 0.1
-  dropout.sibling.pooling: 0.1
+  dropout.sibling: 0.0
+  dropout.sibling.pooling: 0.0
   early.stopping: 5
   monitor: acc
   twin.similarity: cos

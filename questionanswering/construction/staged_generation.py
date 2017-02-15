@@ -163,7 +163,7 @@ def ground_one_with_gold(s_g, gold_answers, min_fscore):
             retrieved_answers.append(wdaccess.filter_denotation_by_importance(retrieved_answers[i]))
 
     post_process_results = wdaccess.label_query_results if generation_p[
-        'label.query.results'] else wdaccess.map_query_results
+        'label.query.results'] else lambda x: x
     retrieved_answers = [post_process_results(answer_set) for answer_set in retrieved_answers]
     retrieved_answers = [post_process_answers_given_graph(answer_set, grounded_graphs[i]) for i, answer_set in enumerate(retrieved_answers)]
     logger.debug(
@@ -356,6 +356,8 @@ def post_process_answers_given_graph(model_answers_labels, g):
     :return: list of list of answers
     >>> post_process_answers_given_graph([['eng', 'english']], {'edgeSet':[{'kbID': 'P37v', 'rightkbID':'Q843'}]})
     [['eng', 'english', 'eng language', 'english language'], ['pakistani english', 'pakistani english language']]
+    >>> post_process_answers_given_graph([['Q76']], {'edgeSet':[{'kbID': 'P31v', 'rightkbID':'Q3'}]})
+    [['Q76']]
     """
     # Language
     relevant_edge = [e for e in g.get('edgeSet', []) if e.get("kbID", "")[:-1] == "P37"]
