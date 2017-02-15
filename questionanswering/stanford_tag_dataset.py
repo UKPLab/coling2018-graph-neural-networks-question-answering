@@ -5,7 +5,7 @@ import logging
 
 import utils
 
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.DEBUG)
 
 
 @click.command()
