@@ -95,6 +95,8 @@ def get_property_str_representation(edge, property2label, use_placeholder=False)
     '<argmax> part of <e> part of <x>'
     >>> get_property_str_representation({'canonical_right': 'Washington Redskins', 'hopDown': 'P361v', 'kbID': 'P361v', 'type': 'direct', 'filter':'importance'}, {'P361': 'part of'}, use_placeholder=True)
     '<filter> part of <e> part of <x>'
+    >>> get_property_str_representation({'canonical_right': 'Washington Redskins', 'hopDown': 'P361v', 'kbID': 'P361v', 'type': 'direct', 'filter':'importance'}, {'P361': 'part of'}, use_placeholder=False)
+    '<filter> part of Washington Redskins part of <x>'
     >>> get_property_str_representation({'kbID': 'P69s',  'right': ['Missouri'], \
     'rightkbID': 'Q189', 'type': 'direct', 'num': '2012'}, {'P69': "educated at", 'P131': 'located in'}, use_placeholder=True)
     'educated at <e> <num>'
