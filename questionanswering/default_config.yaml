@@ -75,13 +75,13 @@ model:
   conv.size: 100
   conv.width: 3
   conv.layers: False
-  dropout.sibling: 0.0
+  dropout.sibling: 0.3
   dropout.sibling.pooling: 0.0
   early.stopping: 5
   monitor: acc
   twin.similarity: cos
   sibling.activation: relu
-  sibling.singleton: False
+  sibling.singleton: True
   relu.on.top: False
   symbolic.features:
     kbID: True # dummy

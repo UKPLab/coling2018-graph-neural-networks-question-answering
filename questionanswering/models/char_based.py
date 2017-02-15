@@ -196,6 +196,7 @@ class EdgeLabelsModel(TrigramBasedModel, BrothersModel):
         graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
                                                 self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='graph_input')
         sentence_vector = self._get_sibling_model()(sentence_input)
+        sentence_vector = keras.layers.Dropout(self._p['dropout.sibling'])(sentence_vector)
         graph_vectors = keras.layers.TimeDistributed(self._get_graph_model(), name=self._graph_model_name)(graph_input)
 
         if self._p.get("twin.similarity", 'cos') == 'dense':
@@ -220,8 +221,7 @@ class EdgeLabelsModel(TrigramBasedModel, BrothersModel):
                                                self._p['vocab.size'],), dtype='float32', name='edge_input')
         self.logger.debug(K.int_shape(edge_input))
         edge_vectors = keras.layers.TimeDistributed(self._get_sibling_model())(edge_input)
-        # edge_vectors = keras.layers.TimeDistributed(keras.layers.GlobalMaxPooling1D())(edge_input)
-        # edge_vectors = keras.layers.TimeDistributed(keras.layers.Dense(self._p['sem.layer.size']))(edge_vectors)
+        edge_vectors = keras.layers.Dropout(self._p['dropout.sibling'])(edge_vectors)
         if self._p.get("graph.sum", 'sum') == 'sum':
             graph_vector = keras.layers.Lambda(lambda x: K.sum(x, axis=1),
                                                output_shape=(self._p['sem.layer.size'],))(edge_vectors)
@@ -247,12 +247,10 @@ class EdgeLabelsModel(TrigramBasedModel, BrothersModel):
         sentence_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
                                                      init=self._p.get("sibling.weight.init", 'glorot_uniform'))(word_input)
         semantic_vector = keras.layers.GlobalMaxPooling1D()(sentence_vector)
-        semantic_vector = keras.layers.Dropout(self._p['dropout.sibling.pooling'])(semantic_vector)
         for i in range(self._p.get("sem.layer.depth", 1)):
             semantic_vector = keras.layers.Dense(self._p['sem.layer.size'],
                                                  activation=self._p.get("sibling.activation", 'tanh'),
                                                  init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
-        # semantic_vector = keras.layers.Dropout(self._p['dropout.sibling'])(semantic_vector)
         if self._p.get("relu.on.top", False):
             semantic_vector = keras.layers.Activation('relu')(semantic_vector)
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._sentence_model_name)
