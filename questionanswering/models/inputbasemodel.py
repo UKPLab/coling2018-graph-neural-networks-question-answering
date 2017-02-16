@@ -13,6 +13,9 @@ from models.qamodel import TrainableQAModel
 from wikidata import wdaccess
 
 
+PROPERTY_VOCABULARY = ["<e>", "<num>", "<argmax>", "<argmin>", "<x>", "<v>", "<filter>"]
+
+
 class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
     def __init__(self, **kwargs):
@@ -22,6 +25,9 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
     def prepare_model(self, train_tokens, properties_set):
         if self._p.get("mark.sent.boundaries", False):
             train_tokens.extend(["<S>", "<E>"])
+        if self._p.get('vocabulary.with.edgelabels', True):
+            train_tokens.extend(PROPERTY_VOCABULARY)
+            train_tokens.extend([w for p in properties_set for w in wdaccess.property2label[p].split()])
         self._trigram_vocabulary = list({t for tokens in train_tokens
                                          for token in tokens
                                          for t in string_to_trigrams(token)})
