@@ -359,7 +359,7 @@ def post_process_answers_given_graph(model_answers_labels, g):
     >>> post_process_answers_given_graph([['Q76']], {'edgeSet':[{'kbID': 'P31v', 'rightkbID':'Q3'}]})
     [['Q76']]
     """
-    # Language
+    # Language -> add english variants
     relevant_edge = [e for e in g.get('edgeSet', []) if e.get("kbID", "")[:-1] == "P37"]
     if len(relevant_edge) > 0:
         for answer_set in model_answers_labels:
@@ -375,7 +375,7 @@ def post_process_answers_given_graph(model_answers_labels, g):
                         model_answers_labels.append([demonym + " english", demonym + " english language"])
                     elif 'arabic' in answer_set:
                         model_answers_labels.append([demonym + " arabic", demonym + " arabic language"])
-    # Character role
+    # Character role -> split name
     relevant_edge = [e for e in g.get('edgeSet', []) if e.get("kbID", "")[:-1] in {"P175", "P453", "P161"}]
     if len(relevant_edge) > 0:
         for answer_set in model_answers_labels:

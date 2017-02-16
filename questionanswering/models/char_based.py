@@ -219,7 +219,6 @@ class EdgeLabelsModel(TrigramBasedModel, BrothersModel):
     def _get_graph_model(self):
         edge_input = keras.layers.Input(shape=(self._p['max.graph.size'], self._p['max.sent.len'],
                                                self._p['vocab.size'],), dtype='float32', name='edge_input')
-        self.logger.debug(K.int_shape(edge_input))
         edge_vectors = keras.layers.TimeDistributed(self._get_sibling_model())(edge_input)
         edge_vectors = keras.layers.Dropout(self._p['dropout.sibling'])(edge_vectors)
         if self._p.get("graph.sum", 'sum') == 'sum':
