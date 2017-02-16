@@ -88,10 +88,8 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
         sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
         graph_matrix = np.zeros((len(graphs), len(graphs[0][1]), self._p.get('max.graph.size', 3),
                                  self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
-        self.logger.debug(graph_matrix.shape)
         for index, instance in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
             sentence_encoded, graphs_encoded = self.encode_by_trigram(instance)
-            self.logger.debug(len(graphs_encoded))
             assert len(graphs_encoded) == graph_matrix.shape[1]
             sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
             sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded
