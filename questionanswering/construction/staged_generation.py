@@ -245,7 +245,8 @@ def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
     logger.debug("First one: {}".format(grounded_graphs[:1]))
     if len(grounded_graphs) == 0:
         return []
-    model_scores = qa_model.scores_for_instance(grounded_graphs)
+    tokens = grounded_graphs[0]['tokens']
+    model_scores = qa_model.scores_for_instance((tokens, grounded_graphs))
     logger.debug("model_scores: {}".format(model_scores))
     assert len(model_scores) == len(grounded_graphs)
     all_chosen_graphs = [(grounded_graphs[i], model_scores[i])
