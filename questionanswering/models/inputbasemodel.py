@@ -20,13 +20,14 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
         super(TrigramBasedModel, self).__init__(**kwargs)
 
     def prepare_model(self, train_tokens, properties_set):
-        if train_tokens is not None:
-            self._trigram_vocabulary = list({t for tokens in train_tokens
-                                             for token in tokens
-                                             for t in string_to_trigrams(token)})
+        if self._p.get("mark.sent.boundaries", False):
+            train_tokens.extend(["<S>", "<E>"])
+        self._trigram_vocabulary = list({t for tokens in train_tokens
+                                         for token in tokens
+                                         for t in string_to_trigrams(token)})
+        self.logger.debug('Trigram vocabulary created, size: {}'.format(len(self._trigram_vocabulary)))
         if len(self._trigram_vocabulary) > 0:
             self._p['vocab.size'] = len(self._trigram_vocabulary)
-            self.logger.debug('Trigram vocabulary created, size: {}'.format(len(self._trigram_vocabulary)))
             with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number), 'w') as out:
                 json.dump(self._trigram_vocabulary, out, indent=2)
         super(TrigramBasedModel, self).prepare_model(train_tokens, properties_set)

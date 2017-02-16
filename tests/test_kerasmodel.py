@@ -65,4 +65,5 @@ def test_edges_model_train():
 
 
 if __name__ == '__main__':
-    pytest.main([__file__])
+    test_edges_model_train()
+    # pytest.main([__file__])

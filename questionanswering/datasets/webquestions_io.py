@@ -202,7 +202,7 @@ class WebQuestions(Loggable):
         """
         return [[w for w, _, _ in self._dataset_tagged[i]] +
                 [w for g in self._silver_graphs[i] for e in g[0].get('edgeSet', []) for w in e.get('label', '').split()]
-                for i in self._get_sample_indices(self._questions_train)] + [["<S>", "<E>"]] if self._p.get("mark.sent.boundaries", False) else []
+                for i in self._get_sample_indices(self._questions_train)]
 
     def get_property_set(self):
         """

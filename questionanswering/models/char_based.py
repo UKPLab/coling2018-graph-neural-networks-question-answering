@@ -190,7 +190,7 @@ class EdgeLabelsModel(TrigramBasedModel, BrothersModel):
         self.logger.debug("Create keras model.")
         #Make sure the important parameters are set
         self._p['vocab.size'] = len(self._trigram_vocabulary)
-
+        assert self._p['vocab.size'] != 0
         # Brothers model
         sentence_input = keras.layers.Input(shape=(self._p['max.sent.len'],  self._p['vocab.size']), dtype='float32', name='sentence_input')
         graph_input = keras.layers.Input(shape=(self._p['graph.choices'], self._p['max.graph.size'],
@@ -253,7 +253,7 @@ class EdgeLabelsModel(TrigramBasedModel, BrothersModel):
         if self._p.get("relu.on.top", False):
             semantic_vector = keras.layers.Activation('relu')(semantic_vector)
         sibiling_model = keras.models.Model(input=[word_input], output=[semantic_vector], name=self._sentence_model_name)
-        self.logger.debug("Sibling model is finished.")
+        self.logger.debug("Sibling model is finished: {}.".format(sibiling_model))
         self._sentence_model = sibiling_model
         return sibiling_model
 
