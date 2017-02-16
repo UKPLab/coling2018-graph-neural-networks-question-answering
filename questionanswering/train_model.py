@@ -51,7 +51,7 @@ def train(config_file_path):
     config['model']['graph.choices'] = config['webquestions'].get("max.negative.samples", 30)
 
     trainablemodel = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
-    trainablemodel.prepare_model(webquestions.get_training_tokens() if config['model'].get('vocabulary.with.edgelabels', True) else webquestions.get_question_tokens(),
+    trainablemodel.prepare_model(webquestions.get_training_tokens() if config['model'].get('vocabulary.with.edgelabels', True) else webquestions.get_all_question_tokens(),
                                  webquestions.get_property_set())
     if results_logger:
         results_logger.info("Model save to: {}".format(trainablemodel._model_file_name))

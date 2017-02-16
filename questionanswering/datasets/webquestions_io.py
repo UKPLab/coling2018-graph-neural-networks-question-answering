@@ -44,7 +44,10 @@ class WebQuestions(Loggable):
         # Load the generated graphs
         if "train_silvergraphs" in path_to_dataset:
             with open(path_to_dataset["train_silvergraphs"]) as f:
-                self._silver_graphs = json.load(f)
+                if self._p.get("optimize.storage", True):
+                    self._silver_graphs = json.load(f, object_hook=dict_to_graph_with_no_tokens)
+                else:
+                    self._silver_graphs = json.load(f)
             self.logger.debug("Silver: {}".format(len(self._silver_graphs)))
 
         if len(self._silver_graphs) > 0:
@@ -63,24 +66,6 @@ class WebQuestions(Loggable):
                 self._silver_graphs = [[g for g in graph_set if all(e.get('rightkbID') in target_entities[i] for e in g[0].get('edgeSet', []))]
                                        for i, graph_set in enumerate(self._silver_graphs)]
                 self.logger.debug("Average number of choices per question: {}".format(np.mean([len(graphs) for graphs in self._silver_graphs])))
-
-        if self._p.get("replace.entities", False):
-            self.logger.debug("Replacing entities in questions")
-            for graph_set in self._silver_graphs:
-                for g in graph_set:
-                    g[0] = graph.replace_entities(g[0])
-        if self._p.get("normalize.tokens", False):
-            self.logger.debug("Normalizing tokens in questions")
-            for graph_set in self._silver_graphs:
-                for g in graph_set:
-                    g[0] = graph.normalize_tokens(g[0])
-
-        self.logger.debug("Constructing string representations for entities")
-        for graph_set in self._silver_graphs:
-            for g in graph_set:
-                g[0] = graph.add_string_representations_to_edges(g[0], wdaccess.property2label, self._p.get("replace.entities", False), self._p.get("mark.sent.boundaries", False))
-                if self._p.get("mark.sent.boundaries", False):
-                    g[0]['tokens'] = ["<S>"] + g[0]['tokens'] + ["<E>"]
 
     def _get_samples(self, questions):
         indices = self._get_sample_indices(questions)
@@ -121,7 +106,8 @@ class WebQuestions(Loggable):
                                                                       self._p.get("max.silver.samples", 15),
                                                                       replace=False)]
             graph_list, target = self._instance_with_negative(graph_list, negative_pool)
-            graph_lists.append(graph_list)
+            question_tokens = self._get_question_tokens(index)
+            graph_lists.append((question_tokens, graph_list))
             targets.append(target)
         return graph_lists, np.asarray(targets)
 
@@ -155,9 +141,16 @@ class WebQuestions(Loggable):
             for g in graph_list:
                 if len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5):
                     instance, target = self._instance_with_negative([g], negative_pool)
-                    graph_lists.append(instance)
+                    question_tokens = self._get_question_tokens(index)
+                    graph_lists.append((question_tokens, graph_list))
                     targets.append(target)
         return graph_lists, np.asarray(targets, dtype='int32')
+
+    def _get_question_tokens(self, index):
+        tokens = [w for w, _, _ in self._dataset_tagged[index]]
+        if self._p.get("normalize.tokens", False):
+            tokens = graph.normalize_tokens({'tokens': tokens})['tokens']
+        return tokens
 
     def get_training_samples(self):
         """
@@ -193,7 +186,7 @@ class WebQuestions(Loggable):
 
         return self._get_full(self._questions_val)
 
-    def get_question_tokens(self):
+    def get_all_question_tokens(self):
         """
         Generate a list of tokens that appear in question in the complete dataset.
 
@@ -307,6 +300,10 @@ def get_main_entity_from_question(question_object):
         return [w.title() for w in entity_tokens], 'URL'
     return ()
 
+def dict_to_graph_with_no_tokens(d):
+    if 'tokens' in d:
+        del d['tokens']
+    return d
 
 def softmax(x):
     """

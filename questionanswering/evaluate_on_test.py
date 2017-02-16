@@ -53,7 +53,7 @@ def generate(path_to_model, config_file_path):
 
     logger.debug('Extracting entities.')
     webquestions_entities = webquestions.extract_question_entities()
-    webquestions_tokens = webquestions.get_question_tokens()
+    webquestions_tokens = webquestions.get_all_question_tokens()
 
     logger.debug('Loading the model from: {}'.format(path_to_model))
     qa_model = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)

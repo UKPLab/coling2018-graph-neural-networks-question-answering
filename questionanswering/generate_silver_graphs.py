@@ -63,7 +63,7 @@ def generate(config_file_path):
 
     logger.debug('Extracting entities.')
     webquestions_entities = webquestions.extract_question_entities()
-    webquestions_tokens = webquestions.get_question_tokens()
+    webquestions_tokens = webquestions.get_all_question_tokens()
 
     silver_dataset = []
     previous_silver = []

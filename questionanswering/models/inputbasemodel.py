@@ -8,6 +8,7 @@ import numpy as np
 import tqdm
 
 import utils
+from construction import graph
 from models.qamodel import TrainableQAModel
 from wikidata import wdaccess
 
@@ -30,19 +31,26 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
                 json.dump(self._trigram_vocabulary, out, indent=2)
         super(TrigramBasedModel, self).prepare_model(train_tokens, properties_set)
 
-    def encode_question(self, graph_set):
-        sentence_tokens = graph_set[0].get("tokens", [])
+    def encode_question(self, instance):
+        sentence_tokens, graph_set = instance
+        if self._p.get("replace.entities", False) and len(graph_set) > 0:
+            sentence_tokens = graph.replace_entities({'tokens': sentence_tokens, 'edgeSet': graph_set[0]['edgeSet']})['tokens']
+        if self._p.get("mark.sent.boundaries", False):
+            sentence_tokens = ["<S>"] + sentence_tokens + ["<E>"]
         sentence_trigrams = [set(string_to_trigrams(token)) for token in sentence_tokens]
         sentence_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
                             for trigrams in sentence_trigrams]
         return sentence_encoded
 
-    def encode_graphs(self, graph_set):
+    def encode_graphs(self, instance):
+        _, graph_set = instance
         graphs_encoded = []
         for g in graph_set:
             edges_encoded = []
             for edge in g.get('edgeSet', []):
-                property_label = edge.get('label', '')
+                property_label = graph.get_property_str_representation(edge, wdaccess.property2label, self._p.get("replace.entities", False))
+                if self._p.get("mark.sent.boundaries", False):
+                    property_label = "<S> " + property_label + " <E>"
                 edge_trigrams = [set(string_to_trigrams(token)) for token in property_label.split()]
                 edge_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
                                 for trigrams in edge_trigrams]
@@ -76,13 +84,14 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
         return self.encode_question(graph_set), self.encode_graphs(graph_set)
 
     def encode_batch_by_trigrams(self, graphs, verbose=False):
-        graphs = [el for el in graphs if el]
+        graphs = [el for el in graphs if len(el) == 2 and len(el[1]) > 0]
         sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
-        graph_matrix = np.zeros((len(graphs), len(graphs[0]), self._p.get('max.graph.size', 3),
+        graph_matrix = np.zeros((len(graphs), len(graphs[0][1]), self._p.get('max.graph.size', 3),
                                  self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
-
-        for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
-            sentence_encoded, graphs_encoded = self.encode_by_trigram(graph_set)
+        self.logger.debug(graph_matrix.shape)
+        for index, instance in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
+            sentence_encoded, graphs_encoded = self.encode_by_trigram(instance)
+            self.logger.debug(len(graphs_encoded))
             assert len(graphs_encoded) == graph_matrix.shape[1]
             sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
             sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded

@@ -35,7 +35,6 @@ webquestions:
   max.silver.samples: 15
   max.negative.samples: 30
   target.dist: True
-  replace.entities: False
   normalize.tokens: False
   extensions: ['hopUp', 'hopDown', 'temporal', 'multi_rel', 'qualifier_rel', 'v-structure', 'filter']
   use.whitelist: False
@@ -53,6 +52,8 @@ model:
   models.save.path: "../trainedmodels/"
   word.embeddings: "../resources/glove.6B.50d.txt"
   vocabulary.with.edgelabels: True
+  replace.entities: False
+  mark.sent.boundaries: True
   max.sent.len: 70
   max.graph.size: 3
   loss: kld
