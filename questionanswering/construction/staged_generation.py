@@ -228,8 +228,6 @@ def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
         grounded_graphs = [g for g in grounded_graphs if all(e.get('type') in {'time', 'v-structure'} or e.get("kbID")[:-1] in wdaccess.property_whitelist for e in g.get('edgeSet', []))]
     logger.debug("Number of possible groundings: {}".format(len(grounded_graphs)))
     grounded_graphs = [graph.add_string_representations_to_edges(g, wdaccess.property2label, generation_p.get("replace.entities", False)) for g in grounded_graphs]
-    if generation_p.get("replace.entities", False):
-        grounded_graphs = [graph.replace_entities(g) for g in grounded_graphs]
     direct_relations = {graph.get_graph_last_edge(g).get('kbID', "")[:-1]
                         for g in grounded_graphs if graph.get_graph_last_edge(g).get('type') in {'direct', 'reverse', 'v-structure'}
                         and graph.get_graph_last_edge(g).get('kbID', " ")[-1] not in 'qr'}
