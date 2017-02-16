@@ -269,7 +269,7 @@ def get_answers_from_question(question_object):
     """
     if 'answers' in question_object or "answer" in question_object:
         answers = []
-        for a in question_object.get('answers', question_object['answer']):
+        for a in question_object.get('answers', question_object.get('answer')):
             if a.startswith(wdaccess.WIKIDATA_ENTITY_PREFIX):
                 a = a.replace(wdaccess.WIKIDATA_ENTITY_PREFIX, "")
             answers.append(a)
