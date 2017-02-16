@@ -122,7 +122,7 @@ property_blacklist = load_blacklist(RESOURCES_FOLDER + "property_blacklist.txt")
 entity_blacklist = load_blacklist(RESOURCES_FOLDER + "entity_blacklist.txt")
 property_whitelist = load_blacklist(RESOURCES_FOLDER + "property_whitelist.txt")
 property2label = load_property_labels(RESOURCES_FOLDER + "properties_with_labels.txt")
-
+entity_tokens_blacklist = load_blacklist(RESOURCES_FOLDER + "filter_out_tokens.txt")
 
 sparql_restriction_time_argmax = "?m ?a [base:time ?n]. FILTER (YEAR(?n) = ?yearvalue)"
 
@@ -701,6 +701,10 @@ def normalize_answer_strings(answers):
     []
     >>> normalize_answer_strings([["eberhard-karls-gymnasium"]])
     [['eberhard-karls-gymnasium', 'eberhard karls gymnasium']]
+    >>> normalize_answer_strings([["brown hair"]])
+    [['brown hair', 'brown']]
+    >>> normalize_answer_strings([["ngurah rai airport"]])
+    [['ngurah rai airport', 'ngurah rai international airport']]
     """
     answers = [[a.replace("–", "-").lower() for a in answer_set] for answer_set in answers]
     new_answers = []
@@ -712,10 +716,12 @@ def normalize_answer_strings(answers):
                 answer_set.extend([w.strip() for w in a.split(",")])
             if " - " in a:
                 answer_set.extend([w.strip() for w in a.split(" - ")])
-            if "-" in a:
+            elif "-" in a:
                 answer_set.append(a.replace("-", " "))
             if "standard time" in a:
                 answer_set.append(a.replace("standard time", "time zone"))
+            if any(re.findall("\\b{}\\b".format(t), a) for t in entity_tokens_blacklist):
+                answer_set.append(" ".join([t for t in a.split() if t not in entity_tokens_blacklist]))
         if not any(re.search("\\b(2014|2015|2016|2017|list of)\\b", a) for a in answer_set):
             new_answers.append(answer_set)
     return new_answers
