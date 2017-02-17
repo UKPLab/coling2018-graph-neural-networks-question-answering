@@ -112,34 +112,18 @@ def tokens_to_trigrams(tokens):
     """
     return [trigram for t in tokens for trigram in nltk.ngrams("#{}#".format(t), 3)]
 
-def get_character_index(sentences):
-    """
-    Create a character index from a list of sentences. Each sentence is a string.
 
-    :param sentences: list of strings
-    :return: character to index mapping
-    >>> len(get_character_index(['who played whom']))
-    11
+def get_elements_index(element_set):
     """
-    character_set = {c for sent in sentences for c in sent}
-    character2idx = {c: i for i, c in enumerate(character_set, 1)}
-    character2idx[all_zeroes] = 0
-    character2idx[unknown_el] = len(character2idx)
-    return character2idx
+    Create an element to index mapping, that includes a zero and an unknown element.
 
-
-def get_word_index(tokens):
+    :param element_set: set of elements to enumerate
+    :return: an index as a dictionary
     """
-    Create a character index from a list of sentences. Each sentence is a string.
-
-    :param tokens: list of strings
-    :return: character to index mapping
-    """
-    token_set = set(tokens)
-    word2idx = {t: i for i, t in enumerate(token_set, 1)}
-    word2idx[all_zeroes] = 0
-    word2idx[unknown_el] = len(word2idx)
-    return word2idx
+    el2idx = {c: i for i, c in enumerate(element_set, 1)}
+    el2idx[all_zeroes] = 0
+    el2idx[unknown_el] = len(el2idx)
+    return el2idx
 
 
 class Loggable(metaclass=abc.ABCMeta):

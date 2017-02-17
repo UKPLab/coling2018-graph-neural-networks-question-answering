@@ -16,7 +16,36 @@ from wikidata import wdaccess
 PROPERTY_VOCABULARY = {"<e>", "<num>", "<argmax>", "<argmin>", "<x>", "<v>", "<filter>"}
 
 
+class CharBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
+    """
+    A model that encodes input on a character level, using single characters or n-grams. Input is encoded as a sequence
+    of indices from a vocabulary.
+    """
+    def __init__(self, **kwargs):
+        self._character2idx = None
+        super(CharBasedModel, self).__init__(**kwargs)
+
+    def prepare_model(self, train_tokens, properties_set):
+        if self._p.get("mark.sent.boundaries", False):
+            train_tokens.update({"<S>", "<E>"})
+        if self._p.get('vocabulary.with.edgelabels', True):
+            train_tokens.update(get_property_token_set(properties_set))
+        if not self._character2idx:
+            self._character2idx = utils.get_elements_index({c for token in train_tokens for c in token} | {" "})
+            self.logger.debug('Character index created, size: {}'.format(len(self._character2idx)))
+            with open(self._save_model_to + "character2idx_{}.json".format(self._model_number), 'w') as out:
+                json.dump(self._character2idx, out, indent=2)
+        self._p['vocab.size'] = len(self._character2idx)
+
+        super(CharBasedModel, self).prepare_model(train_tokens, properties_set)
+
+
+
 class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
+    """
+    A model that uses the hashing trick to encode the input. Each word is represented as a vector of
+    of boolean values, the dimensionality is the size of the trigram vocabulary.
+    """
 
     def __init__(self, **kwargs):
         self._trigram_vocabulary = None
