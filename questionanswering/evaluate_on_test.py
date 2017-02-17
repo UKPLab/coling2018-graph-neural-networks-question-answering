@@ -52,7 +52,6 @@ def generate(path_to_model, config_file_path):
 
     logger.debug('Extracting entities.')
     webquestions_entities = webquestions.extract_question_entities()
-    webquestions_tokens = webquestions.get_all_question_tokens()
 
     logger.debug('Loading the model from: {}'.format(path_to_model))
     qa_model = getattr(models, config['model']['class'])(parameters=config['model'], logger=logger)
@@ -67,7 +66,7 @@ def generate(path_to_model, config_file_path):
         nes = [e for e in question_entities if e[1] != "NN"]
         if config['evaluation'].get('only.named.entities', False) and len(nes) > 0:
             question_entities = nes
-        ungrounded_graph = {'tokens': webquestions_tokens[i],
+        ungrounded_graph = {'tokens': webquestions.get_question_tokens(i),
                             'edgeSet': [],
                             'entities': question_entities[:config['evaluation'].get("max.num.entities", 1)]}
         chosen_graphs = staged_generation.generate_with_model(ungrounded_graph, qa_model, beam_size=config['evaluation'].get("beam.size", 10))

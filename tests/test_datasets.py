@@ -23,7 +23,7 @@ webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logge
 
 def test_load_webquestions():
     assert len(webquestions.get_full_validation()) == 2
-    assert len(webquestions.get_all_question_tokens()) == 3778
+    assert len(webquestions._dataset_tagged) == 3778
 
 
 def test_access_sample():

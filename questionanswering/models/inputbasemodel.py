@@ -13,7 +13,7 @@ from models.qamodel import TrainableQAModel
 from wikidata import wdaccess
 
 
-PROPERTY_VOCABULARY = ["<e>", "<num>", "<argmax>", "<argmin>", "<x>", "<v>", "<filter>"]
+PROPERTY_VOCABULARY = {"<e>", "<num>", "<argmax>", "<argmin>", "<x>", "<v>", "<filter>"}
 
 
 class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
@@ -23,15 +23,10 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
         super(TrigramBasedModel, self).__init__(**kwargs)
 
     def prepare_model(self, train_tokens, properties_set):
-        train_tokens = [t for s in train_tokens for t in s]
         if self._p.get("mark.sent.boundaries", False):
-            train_tokens.extend(["<S>", "<E>"])
+            train_tokens.update({"<S>", "<E>"})
         if self._p.get('vocabulary.with.edgelabels', True):
-            train_tokens.extend(PROPERTY_VOCABULARY)
-            train_tokens.extend(wdaccess.HOP_DOWN_RELATIONS)
-            train_tokens.extend(wdaccess.HOP_UP_RELATIONS)
-            train_tokens.extend(wdaccess.TEMPORAL_RELATIONS)
-            train_tokens.extend([w for p in properties_set for w in wdaccess.property2label.get(p, utils.unknown_el).split()])
+            train_tokens.update(get_property_token_set(properties_set))
         self._trigram_vocabulary = list({t for token in train_tokens for t in string_to_trigrams(token)})
         self.logger.debug('Trigram vocabulary created, size: {}'.format(len(self._trigram_vocabulary)))
         if len(self._trigram_vocabulary) > 0:
@@ -128,14 +123,15 @@ class WordBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
         super(WordBasedModel, self).__init__(**kwargs)
 
     def prepare_model(self, train_tokens, properties_set):
-        if train_tokens is not None:
-            if "word.embeddings" in self._p:
-                self._embedding_matrix, self._word2idx = utils.load(self._p['word.embeddings'])
-            else:
-                self._word2idx = utils.get_word_index([t for tokens in train_tokens for t in tokens])
-        if self._embedding_matrix is not None:
+        if "word.embeddings" in self._p:
+            self._embedding_matrix, self._word2idx = utils.load(self._p['word.embeddings'])
             self.logger.debug('Word index loaded, size: {}'.format(len(self._word2idx)))
-        elif len(self._word2idx) > 0:
+        else:
+            if self._p.get("mark.sent.boundaries", False):
+                train_tokens.update({"<S>", "<E>"})
+            if self._p.get('vocabulary.with.edgelabels', True):
+                train_tokens.update(get_property_token_set(properties_set))
+            self._word2idx = utils.get_word_index([t for tokens in train_tokens for t in tokens])
             self.logger.debug('Word index created, size: {}'.format(len(self._word2idx)))
             with open(self._save_model_to + "word2idx_{}.json".format(self._model_number), 'w') as out:
                 json.dump(self._word2idx, out, indent=2)
@@ -298,6 +294,16 @@ class GraphFeaturesModel(WordBasedModel, TrainableQAModel, metaclass=abc.ABCMeta
         with open(self._save_model_to + "property2idx_{}.json".format(self._model_number)) as f:
             self._property2idx = json.load(f)
         self.logger.debug("Property2idx size: {}.".format(len(self._property2idx)))
+
+
+def get_property_token_set(properties_set):
+    token_set = set()
+    token_set.update(PROPERTY_VOCABULARY)
+    token_set.update(wdaccess.HOP_DOWN_RELATIONS)
+    token_set.update(wdaccess.HOP_UP_RELATIONS)
+    token_set.update(wdaccess.TEMPORAL_RELATIONS)
+    token_set.update({w for p in properties_set for w in wdaccess.property2label.get(p, utils.unknown_el).split()})
+    return token_set
 
 
 def string_to_unigrams(input_string, character2idx):

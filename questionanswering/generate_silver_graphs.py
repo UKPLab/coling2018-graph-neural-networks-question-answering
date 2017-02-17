@@ -63,7 +63,6 @@ def generate(config_file_path):
 
     logger.debug('Extracting entities.')
     webquestions_entities = webquestions.extract_question_entities()
-    webquestions_tokens = webquestions.get_all_question_tokens()
 
     silver_dataset = []
     previous_silver = []
@@ -102,7 +101,7 @@ def generate(config_file_path):
                 if not any(e == url_entity[0] for e, t in question_entities):
                     # question_entities = [url_entity] + [(e, t) for e, t in question_entities if e != url_entity[0]]
                     question_entities = [url_entity] + question_entities
-            ungrounded_graph = {'tokens': webquestions_tokens[i],
+            ungrounded_graph = {'tokens': webquestions.get_question_tokens(i),
                                 'edgeSet': [],
                                 'entities': question_entities}
             logger.log(level=0, msg="Generating from: {}".format(ungrounded_graph))

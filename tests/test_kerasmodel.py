@@ -29,7 +29,7 @@ webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logge
 
 def test_model_train():
     trainablemodel = models.CharCNNModel(parameters=config['model'], logger=logger)
-    trainablemodel.prepare_model(webquestions.get_all_question_tokens(), webquestions.get_property_set())
+    trainablemodel.prepare_model(webquestions.get_question_tokens_set(), webquestions.get_property_set())
     assert type(trainablemodel._model) == keras.engine.training.Model
     input_set, targets = webquestions.get_training_samples()
     input_set, targets = input_set[:200], targets[:200]
@@ -41,7 +41,7 @@ def test_model_train():
 
 def test_main_edge_model_train():
     trainablemodel = models.MainEdgeModel(parameters=config['model'], logger=logger)
-    trainablemodel.prepare_model(webquestions.get_all_question_tokens(), webquestions.get_property_set())
+    trainablemodel.prepare_model(webquestions.get_question_tokens_set(), webquestions.get_property_set())
     assert type(trainablemodel._model) == keras.engine.training.Model
     input_set, targets = webquestions.get_training_samples()
     encoded_for_training = trainablemodel.encode_data_for_training((input_set, targets))
@@ -53,7 +53,7 @@ def test_main_edge_model_train():
 
 def test_edges_model_train():
     trainablemodel = models.EdgeLabelsModel(parameters=config['model'], logger=logger)
-    trainablemodel.prepare_model(webquestions.get_all_question_tokens(), webquestions.get_property_set())
+    trainablemodel.prepare_model(webquestions.get_question_tokens_set(), webquestions.get_property_set())
     assert type(trainablemodel._model) == keras.engine.training.Model
     print(trainablemodel._model.layers)
     input_set, targets = webquestions.get_training_samples()

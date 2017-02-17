@@ -106,7 +106,7 @@ class WebQuestions(Loggable):
                                                                       self._p.get("max.silver.samples", 15),
                                                                       replace=False)]
             graph_list, target = self._instance_with_negative(graph_list, negative_pool)
-            question_tokens = self._get_question_tokens(index)
+            question_tokens = self.get_question_tokens(index)
             graph_lists.append((question_tokens, graph_list))
             targets.append(target)
         return graph_lists, np.asarray(targets)
@@ -141,12 +141,12 @@ class WebQuestions(Loggable):
             for g in graph_list:
                 if len(g) > 1 and g[1][2] > self._p.get("f1.samples.threshold", 0.5):
                     instance, target = self._instance_with_negative([g], negative_pool)
-                    question_tokens = self._get_question_tokens(index)
+                    question_tokens = self.get_question_tokens(index)
                     graph_lists.append((question_tokens, graph_list))
                     targets.append(target)
         return graph_lists, np.asarray(targets, dtype='int32')
 
-    def _get_question_tokens(self, index):
+    def get_question_tokens(self, index):
         tokens = [w for w, _, _ in self._dataset_tagged[index]]
         if self._p.get("normalize.tokens", False):
             tokens = graph.normalize_tokens({'tokens': tokens})['tokens']
@@ -186,23 +186,13 @@ class WebQuestions(Loggable):
 
         return self._get_full(self._questions_val)
 
-    def get_all_question_tokens(self):
+    def get_question_tokens_set(self):
         """
         Generate a list of tokens that appear in question in the complete dataset.
 
         :return: list of lists of tokens
         """
-        return [[w for w, _, _ in q] for q in self._dataset_tagged]
-
-    def get_training_tokens(self):
-        """
-        Generate a list of tokens that appear in the training data in the questions and in the edge labels.
-
-        :return: list of lists of tokens
-        """
-        return [[w for w, _, _ in self._dataset_tagged[i]] +
-                [w for g in self._silver_graphs[i] for e in g[0].get('edgeSet', []) for w in e.get('label', '').split()]
-                for i in self._get_sample_indices(self._questions_train)]
+        return {w for q in self._dataset_tagged for w, _, _ in q}
 
     def get_property_set(self):
         """
