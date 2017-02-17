@@ -9,30 +9,6 @@ argmax_time_markers = {"president", "2012"}
 argmin_time_markers = {"first", "oldest"}
 
 
-
-def last_relation_subentities(g):
-    """
-    Takes a graph with an existing relation and suggests a set of graphs with the same relation but one of the entities
-     is a sub-span of the original entity.
-
-    :param g: a graph with an non-empty edgeSet
-    :return: a list of suggested graphs
-    >>> last_relation_subentities({'edgeSet': [], 'entities': [(['grand', 'bahama', 'island'], 'LOCATION')], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']})
-    []
-    >>> len(last_relation_subentities({'edgeSet': [{'right': (['grand', 'bahama', 'island'], 'LOCATION')}], 'entities': [], 'tokens': ['what', 'country', 'is', 'the', 'grand', 'bahama', 'island', 'in', '?']}))
-    5
-    """
-    if len(g.get('edgeSet', [])) == 0 or len(g['edgeSet'][-1]['right']) < 1:
-        return []
-    new_graphs = []
-    right_entity = g['edgeSet'][-1]['right']
-    for new_entity in entity_linking.possible_subentities(*right_entity):
-        new_g = graph.copy_graph(g)
-        new_g['edgeSet'][-1]['right'] = list(new_entity)
-        new_graphs.append(new_g)
-    return new_graphs
-
-
 def last_relation_hop(g):
     """
     Takes a graph with an existing relation and an intermediate variable by performing a hop-up for the second entity.
