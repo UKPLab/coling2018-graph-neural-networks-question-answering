@@ -1,8 +1,10 @@
 import abc
+import keras
 import numpy as np
 import os
 import tqdm
 from collections import deque
+from construction import graph
 from datasets import evaluation
 from utils import Loggable
 from wikidata import wdaccess
@@ -103,8 +105,31 @@ class TrainableQAModel(QAModel, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def encode_data_for_training(self, data_with_targets):
+    def encode_batch(self, graphs, verbose=False):
         raise NotImplementedError
+
+    def encode_data_for_training(self, data_with_targets):
+        input_set, targets = data_with_targets
+        if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
+            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
+
+        sentences_matrix, graph_matrix = self.encode_batch(input_set, verbose=False)
+        assert len(sentences_matrix) == len(graph_matrix) == len(targets)
+        return sentences_matrix, graph_matrix, targets
+
+    def _preprocess_sentence_tokens(self, sentence_tokens, graph_set):
+        if self._p.get("replace.entities", False) and len(graph_set) > 0:
+            sentence_tokens = graph.replace_entities({'tokens': sentence_tokens, 'edgeSet': graph_set[0]['edgeSet']})[
+                'tokens']
+        if self._p.get("mark.sent.boundaries", False):
+            sentence_tokens = ["<S>"] + sentence_tokens + ["<E>"]
+        return sentence_tokens
+
+    def _get_edge_label(self, edge):
+        property_label = graph.get_property_str_representation(edge, wdaccess.property2label, self._p.get("replace.entities", False))
+        if self._p.get("mark.sent.boundaries", False):
+            property_label = "<S> " + property_label + " <E>"
+        return property_label
 
     @abc.abstractmethod
     def encode_question(self, graph_set):

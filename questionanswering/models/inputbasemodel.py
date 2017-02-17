@@ -38,6 +38,62 @@ class CharBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
         super(CharBasedModel, self).prepare_model(train_tokens, properties_set)
 
+    def encode_question(self, instance):
+        sentence_tokens, graph_set = instance
+        sentence_tokens = self._preprocess_sentence_tokens(sentence_tokens, graph_set)
+        sentence_str = " ".join(sentence_tokens)
+        sentence_encoded = string_to_unigrams(sentence_str, self._character2idx)
+        return sentence_encoded
+
+    def encode_graphs(self, instance):
+        _, graph_set = instance
+        graphs_encoded = []
+        for g in graph_set:
+            edges_encoded = []
+            for edge in g.get('edgeSet', []):
+                property_label = self._get_edge_label(edge)
+                edges_encoded.append(string_to_unigrams(property_label, self._character2idx))
+            graphs_encoded.append(edges_encoded)
+        return graphs_encoded
+
+    @abc.abstractmethod
+    def encode_data_instance(self, instance, **kwargs):
+        sentence_encoded, graphs_encoded = self.encode_question(instance), self.encode_graphs(instance)
+        sentence_ids = keras.preprocessing.sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 70), padding='post', truncating='post', dtype="int16")
+        graph_matrix = np.zeros((len(graphs_encoded), self._p.get('max.graph.size', 3), self._p.get('max.sent.len', 70)), dtype="int16")
+        for i, graph_encoded in enumerate(graphs_encoded):
+            graph_encoded = graph_encoded[:self._p.get('max.graph.size', 3)]
+            for j, edge_encoded in enumerate(graph_encoded):
+                edge_encoded = edge_encoded[:self._p.get('max.sent.len', 70)]
+                graph_matrix[i, j, :len(edge_encoded)] = edge_encoded
+        return sentence_ids, graph_matrix
+
+    def encode_batch(self, graphs, verbose=False):
+        graphs = [el for el in graphs if len(el) == 2 and len(el[1]) > 0]
+        sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 70)), dtype="int16")
+        graph_matrix = np.zeros((len(graphs), len(graphs[0][1]), self._p.get('max.graph.size', 3),
+                                 self._p.get('max.sent.len', 70)), dtype="int16")
+        for index, instance in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
+            sentence_encoded, graphs_encoded = self.encode_question(instance), self.encode_graphs(instance)
+            assert len(graphs_encoded) == graph_matrix.shape[1]
+            sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 70)]
+            sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded
+            for i, graph_encoded in enumerate(graphs_encoded):
+                graph_encoded = graph_encoded[:self._p.get('max.graph.size', 3)]
+                for j, edge_encoded in enumerate(graph_encoded):
+                    edge_encoded = edge_encoded[:self._p.get('max.sent.len', 70)]
+                    graph_matrix[index, i, j, :len(edge_encoded)] = edge_encoded
+        return sentences_matrix, graph_matrix
+
+    def load_from_file(self, path_to_model):
+        super(CharBasedModel, self).load_from_file(path_to_model=path_to_model)
+
+        self.logger.debug("Loading vocabulary from: character2idx_{}.json".format(self._model_number))
+        with open(self._save_model_to + "character2idx_{}.json".format(self._model_number)) as f:
+            self._character2idx = json.load(f)
+        self._p['vocab.size'] = len(self._character2idx)
+        self.logger.debug("Vocabulary size: {}.".format(len(self._character2idx)))
+
 
 class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
     """
@@ -64,10 +120,7 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
     def encode_question(self, instance):
         sentence_tokens, graph_set = instance
-        if self._p.get("replace.entities", False) and len(graph_set) > 0:
-            sentence_tokens = graph.replace_entities({'tokens': sentence_tokens, 'edgeSet': graph_set[0]['edgeSet']})['tokens']
-        if self._p.get("mark.sent.boundaries", False):
-            sentence_tokens = ["<S>"] + sentence_tokens + ["<E>"]
+        sentence_tokens = self._preprocess_sentence_tokens(sentence_tokens, graph_set)
         sentence_trigrams = [set(string_to_trigrams(token)) for token in sentence_tokens]
         sentence_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
                             for trigrams in sentence_trigrams]
@@ -91,7 +144,7 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def encode_data_instance(self, instance):
-        sentence_encoded, graphs_encoded = self.encode_by_trigram(instance)
+        sentence_encoded, graphs_encoded = self.encode_question(instance), self.encode_graphs(instance)
         sentence_ids = keras.preprocessing.sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int8")
         graph_matrix = np.zeros((len(graphs_encoded), self._p.get('max.graph.size', 3),
                                  self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
@@ -102,25 +155,13 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
                 graph_matrix[i, j, :len(edge_encoded)] = edge_encoded
         return sentence_ids, graph_matrix
 
-    @abc.abstractmethod
-    def encode_data_for_training(self, data_with_targets):
-        input_set, targets = data_with_targets
-        if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
-            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
-
-        sentences_matrix, graph_matrix = self.encode_batch_by_trigrams(input_set, verbose=False)
-        return sentences_matrix, graph_matrix, targets
-
-    def encode_by_trigram(self, graph_set):
-        return self.encode_question(graph_set), self.encode_graphs(graph_set)
-
-    def encode_batch_by_trigrams(self, graphs, verbose=False):
+    def encode_batch(self, graphs, verbose=False):
         graphs = [el for el in graphs if len(el) == 2 and len(el[1]) > 0]
         sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
         graph_matrix = np.zeros((len(graphs), len(graphs[0][1]), self._p.get('max.graph.size', 3),
                                  self._p.get('max.sent.len', 10), len(self._trigram_vocabulary)), dtype="int8")
         for index, instance in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
-            sentence_encoded, graphs_encoded = self.encode_by_trigram(instance)
+            sentence_encoded, graphs_encoded = self.encode_question(instance), self.encode_graphs(instance)
             assert len(graphs_encoded) == graph_matrix.shape[1]
             sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
             sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded
@@ -182,7 +223,7 @@ class WordBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def encode_data_instance(self, instance):
-        sentence_encoded, graphs_encoded = self.encode_by_tokens(instance)
+        sentence_encoded, graphs_encoded = self.encode_question(instance), self.encode_graphs(instance)
         sentence_ids = keras.preprocessing.sequence.pad_sequences([sentence_encoded], maxlen=self._p.get('max.sent.len', 10), padding='post', truncating='post', dtype="int32")
         graph_matrix = np.zeros((len(graphs_encoded), self._p.get('max.graph.size', 3),
                                  self._p.get('max.sent.len', 10)), dtype="int8")
@@ -193,24 +234,13 @@ class WordBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
                 graph_matrix[i, j, :len(edge_encoded)] = edge_encoded
         return sentence_ids, graph_matrix
 
-    @abc.abstractmethod
-    def encode_data_for_training(self, data_with_targets):
-        input_set, targets = data_with_targets
-        sentences_matrix, edges_matrix = self.encode_batch_by_tokens(input_set, verbose=False)
-        if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
-            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
-        return sentences_matrix, edges_matrix, targets
-
-    def encode_by_tokens(self, graph_set):
-        return self.encode_question(graph_set), self.encode_graphs(graph_set)
-
-    def encode_batch_by_tokens(self, graphs, verbose=False):
+    def encode_batch(self, graphs, verbose=False):
         sentences_matrix = np.zeros((len(graphs), self._p.get('max.sent.len', 10)), dtype="int32")
         graph_matrix = np.zeros((len(graphs), len(graphs[0]), self._p.get('max.graph.size', 3),
                                  self._p.get('max.sent.len', 10)), dtype="int8")
 
-        for index, graph_set in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
-            sentence_encoded, graphs_encoded = self.encode_by_tokens(graph_set)
+        for index, instance in enumerate(tqdm.tqdm(graphs, ascii=True, disable=(not verbose))):
+            sentence_encoded, graphs_encoded = self.encode_question(instance), self.encode_graphs(instance)
             assert len(graphs_encoded) == graph_matrix.shape[1]
             sentence_encoded = sentence_encoded[:self._p.get('max.sent.len', 10)]
             sentences_matrix[index, :len(sentence_encoded)] = sentence_encoded

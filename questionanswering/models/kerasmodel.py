@@ -25,6 +25,7 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         self.logger.debug(self._p)
         assert "graph.choices" in self._p
         assert "vocab.size" in self._p
+        assert self._p["vocab.size"] > 0
         self._model = self._get_keras_model()
 
     @abc.abstractmethod
@@ -34,6 +35,7 @@ class KerasModel(TrainableQAModel, metaclass=abc.ABCMeta):
         as instance variables.
         :return: a Keras model to be trained
         """
+        raise NotImplementedError
 
     @abc.abstractmethod
     def load_from_file(self, path_to_model):

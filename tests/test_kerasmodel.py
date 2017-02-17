@@ -28,18 +28,16 @@ webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logge
 
 
 def test_model_train():
-    trainablemodel = models.CharCNNModel(parameters=config['model'], logger=logger)
+    config['model']['max.sent.len'] = 70
+    trainablemodel = models.CharEdgeLabelsModel(parameters=config['model'], logger=logger)
     trainablemodel.prepare_model(webquestions.get_question_tokens_set(), webquestions.get_property_set())
     assert type(trainablemodel._model) == keras.engine.training.Model
-    input_set, targets = webquestions.get_training_samples()
-    input_set, targets = input_set[:200], targets[:200]
-    trainablemodel.train((input_set, targets),
-                         validation_with_targets=webquestions.get_validation_samples()
-                         if 'train_validation' in config['webquestions']['path.to.dataset'] else None)
+    trainablemodel.train(webquestions.get_training_samples(), validation_with_targets=None)
     print('Training finished')
 
 
 def test_main_edge_model_train():
+    config['model']['max.sent.len'] = 10
     trainablemodel = models.MainEdgeModel(parameters=config['model'], logger=logger)
     trainablemodel.prepare_model(webquestions.get_question_tokens_set(), webquestions.get_property_set())
     assert type(trainablemodel._model) == keras.engine.training.Model
@@ -52,6 +50,7 @@ def test_main_edge_model_train():
 
 
 def test_edges_model_train():
+    config['model']['max.sent.len'] = 10
     trainablemodel = models.EdgeLabelsModel(parameters=config['model'], logger=logger)
     trainablemodel.prepare_model(webquestions.get_question_tokens_set(), webquestions.get_property_set())
     assert type(trainablemodel._model) == keras.engine.training.Model
