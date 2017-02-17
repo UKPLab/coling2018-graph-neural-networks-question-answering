@@ -16,6 +16,7 @@ evaluation:
   save.answers.to: "../data/generated/webquestions.examples.test.answers.json"
   beam.size: 10
   use.whitelist: False
+  v.structure: True
   label.answers: True
 
 generation:
