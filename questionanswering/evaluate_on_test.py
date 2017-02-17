@@ -45,6 +45,8 @@ def generate(path_to_model, config_file_path):
         stages.HOP_TYPES = set(config['wikidata']['hop.types'])
     if 'arg.types' in config['wikidata']:
         stages.ARG_TYPES = set(config['wikidata']['arg.types'])
+    if 'filter.out.relation.classes' in config['wikidata']:
+        wdaccess.FILTER_RELATION_CLASSES = set(config['wikidata']['filter.out.relation.classes'])
 
     with open(config['evaluation']['questions']) as f:
         webquestions_questions = json.load(f)
