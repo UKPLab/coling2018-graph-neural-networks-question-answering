@@ -41,10 +41,10 @@ def generate(config_file_path):
     wdaccess.sparql_init()
     wdaccess.update_sparql_clauses()
     if 'hop.types' in config['wikidata']:
-        stages.HOP_TYPES = config['wikidata']['hop.types']
+        stages.HOP_TYPES = set(config['wikidata']['hop.types'])
     logger.debug("Hop types set to: {}".format(stages.HOP_TYPES))
     if 'arg.types' in config['wikidata']:
-        stages.ARG_TYPES = config['wikidata']['arg.types']
+        stages.ARG_TYPES = set(config['wikidata']['arg.types'])
     logger.debug("Arg types set to: {}".format(stages.ARG_TYPES))
 
     if wdaccess.wdaccess_p["restrict.hop"]:

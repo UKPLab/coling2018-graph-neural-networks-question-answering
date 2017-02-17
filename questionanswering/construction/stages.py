@@ -134,12 +134,12 @@ def last_relation_temporal(g):
     if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g):
         return []
     new_graphs = []
-    consider_types = []
+    consider_types = set()
     if any(t in argmax_markers for t in g.get('tokens',[])):
-        consider_types.append('argmax')
+        consider_types.add('argmax')
     if any(t in argmin_markers for t in g.get('tokens',[])):
-        consider_types.append('argmin')
-    for t in consider_types:
+        consider_types.add('argmin')
+    for t in consider_types.intersection(ARG_TYPES):
         new_g = graph.copy_graph(g)
         new_g['edgeSet'][-1][t] = "time"
         new_graphs.append(new_g)
@@ -165,12 +165,12 @@ def add_temporal_relation(g):
     if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g):
         return []
     new_graphs = []
-    consider_types = []
+    consider_types = set()
     if any(t in argmax_time_markers for t in g.get('tokens',[])):
-        consider_types.append('argmax')
+        consider_types.add('argmax')
     if any(t in argmin_time_markers for t in g.get('tokens',[])):
-        consider_types.append('argmin')
-    for t in consider_types:
+        consider_types.add('argmin')
+    for t in consider_types.intersection(ARG_TYPES):
         new_g = graph.copy_graph(g)
         new_edge = {'type': 'time', t: 'time'}
         new_g['edgeSet'].append(new_edge)
@@ -192,8 +192,8 @@ WIKIDATA_ACTIONS = {add_entity_and_relation, last_relation_hop}
 #   Hop-up is always possible anyway, temporal is possible most of the time.
 NON_LINKING_ACTIONS = {last_relation_temporal, add_temporal_relation, last_relation_numeric}
 
-ARG_TYPES = ['argmax', 'argmin']
-HOP_TYPES = ['hopUp', 'hopDown']
+ARG_TYPES = {'argmax', 'argmin'}
+HOP_TYPES = {'hopUp', 'hopDown'}
 
 
 def expand(g):

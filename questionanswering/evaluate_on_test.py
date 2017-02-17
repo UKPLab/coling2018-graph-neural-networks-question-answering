@@ -42,9 +42,9 @@ def generate(path_to_model, config_file_path):
     staged_generation.generation_p["use.whitelist"] = config['evaluation'].get("use.whitelist", False)
     logger.debug("max.entity.options: {}".format(entity_linking.entity_linking_p["max.entity.options"]))
     if 'hop.types' in config['wikidata']:
-        stages.HOP_TYPES = config['wikidata']['hop.types']
+        stages.HOP_TYPES = set(config['wikidata']['hop.types'])
     if 'arg.types' in config['wikidata']:
-        stages.ARG_TYPES = config['wikidata']['arg.types']
+        stages.ARG_TYPES = set(config['wikidata']['arg.types'])
 
     with open(config['evaluation']['questions']) as f:
         webquestions_questions = json.load(f)
