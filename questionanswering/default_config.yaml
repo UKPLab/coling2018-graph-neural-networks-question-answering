@@ -55,6 +55,8 @@ model:
   vocabulary.with.edgelabels: True
   replace.entities: False
   mark.sent.boundaries: True
+  char.model:
+    ngram.len: 1
   max.sent.len: 70
   max.graph.size: 3
   loss: kld

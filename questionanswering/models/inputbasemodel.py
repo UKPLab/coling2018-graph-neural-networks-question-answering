@@ -22,7 +22,7 @@ class CharBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
     of indices from a vocabulary.
     """
     def __init__(self, **kwargs):
-        self._character2idx = None
+        self._character2idx = None  # This is actually ngram2idx
         super(CharBasedModel, self).__init__(**kwargs)
 
     def prepare_model(self, train_tokens, properties_set):
@@ -31,7 +31,7 @@ class CharBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
             train_tokens.update({"<S>", "<E>"})
         if self._p.get('vocabulary.with.edgelabels', True):
             train_tokens.update(get_property_token_set(properties_set))
-        self._character2idx = utils.get_elements_index({c for token in train_tokens for c in token} | {" "})
+        self._character2idx = utils.get_elements_index({c for token in train_tokens for c in string_to_ngrams(token, self._p["char.model"].get("ngram.len", 1))})
         self.logger.debug('Character index created, size: {}'.format(len(self._character2idx)))
         with open(self._save_model_to + "character2idx_{}.json".format(self._model_number), 'w') as out:
             json.dump(self._character2idx, out, indent=2)
@@ -39,11 +39,14 @@ class CharBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
 
         super(CharBasedModel, self).prepare_model(train_tokens, properties_set)
 
+    def _encode_string(self, s):
+        return [self._character2idx.get(c, self._character2idx[utils.unknown_el]) for c in string_to_ngrams(s, self._p["char.model"].get("ngram.len", 1))]
+
     def encode_question(self, instance):
         sentence_tokens, graph_set = instance
         sentence_tokens = self._preprocess_sentence_tokens(sentence_tokens, graph_set)
         sentence_str = " ".join(sentence_tokens)
-        sentence_encoded = string_to_unigrams(sentence_str, self._character2idx)
+        sentence_encoded = self._encode_string(sentence_str)
         return sentence_encoded
 
     def encode_graphs(self, instance):
@@ -53,7 +56,7 @@ class CharBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
             edges_encoded = []
             for edge in g.get('edgeSet', []):
                 property_label = self._get_edge_label(edge)
-                edges_encoded.append(string_to_unigrams(property_label, self._character2idx))
+                edges_encoded.append(self._encode_string(property_label))
             graphs_encoded.append(edges_encoded)
         return graphs_encoded
 
@@ -365,6 +368,13 @@ def get_property_token_set(properties_set):
 
 
 def string_to_unigrams(input_string, character2idx):
+    """
+    Depricated
+
+    :param input_string:
+    :param character2idx:
+    :return:
+    """
     return [character2idx.get(c, character2idx[utils.unknown_el]) for c in input_string]
 
 
@@ -376,12 +386,12 @@ def string_to_ngrams(t, n=1):
     :param n: ngram size
     :return: list of triples of characters
     >>> list(string_to_ngrams('who', n=3))
-    [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#')]
+    ['#wh', 'who', 'ho#']
     >>> list(string_to_ngrams('who'))
-    [('#',), ('w',), ('h',), ('o',), ('#',)]
+    ['#', 'w', 'h', 'o', '#']
     """
     assert n > 0
-    return nltk.ngrams("#{}#".format(t), n)
+    return ["".join(ngram) for ngram in nltk.ngrams("#{}#".format(t), n)]
 
 
 def string_to_trigrams(t):
@@ -391,6 +401,6 @@ def string_to_trigrams(t):
     :param t: a single token as a string
     :return: list of triples of characters
     >>> list(string_to_trigrams('who'))
-    [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#')]
+    ['#wh', 'who', 'ho#']
     """
     return string_to_ngrams(t, n=3)

@@ -36,6 +36,16 @@ def test_model_train():
     print('Training finished')
 
 
+def test_bigram_model_train():
+    config['model']['max.sent.len'] = 70
+    config['model']['char.model']['ngram.len'] = 2
+    trainablemodel = models.CharEdgeLabelsModel(parameters=config['model'], logger=logger)
+    trainablemodel.prepare_model(webquestions.get_question_tokens_set(), webquestions.get_property_set())
+    assert type(trainablemodel._model) == keras.engine.training.Model
+    trainablemodel.train(webquestions.get_training_samples(), validation_with_targets=None)
+    print('Training finished')
+
+
 def test_main_edge_model_train():
     config['model']['max.sent.len'] = 10
     trainablemodel = models.MainEdgeModel(parameters=config['model'], logger=logger)
