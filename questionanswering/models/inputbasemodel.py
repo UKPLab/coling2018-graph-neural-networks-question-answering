@@ -26,6 +26,7 @@ class CharBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
         super(CharBasedModel, self).__init__(**kwargs)
 
     def prepare_model(self, train_tokens, properties_set):
+        assert "char.model" in self._p
         if self._p.get("mark.sent.boundaries", False):
             train_tokens.update({"<S>", "<E>"})
         if self._p.get('vocabulary.with.edgelabels', True):
@@ -367,13 +368,29 @@ def string_to_unigrams(input_string, character2idx):
     return [character2idx.get(c, character2idx[utils.unknown_el]) for c in input_string]
 
 
+def string_to_ngrams(t, n=1):
+    """
+    Convert a token to a list of ngrams. Word boundaries are marked with hashes
+
+    :param t: a single token as a string
+    :param n: ngram size
+    :return: list of triples of characters
+    >>> list(string_to_ngrams('who', n=3))
+    [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#')]
+    >>> list(string_to_ngrams('who'))
+    [('#',), ('w',), ('h',), ('o',), ('#',)]
+    """
+    assert n > 0
+    return nltk.ngrams("#{}#".format(t), n)
+
+
 def string_to_trigrams(t):
     """
-    Convert a token to a list of trigrams following the hashing technique.
+    Convert a token to a list of trigrams.
 
     :param t: a single token as a string
     :return: list of triples of characters
     >>> list(string_to_trigrams('who'))
     [('#', 'w', 'h'), ('w', 'h', 'o'), ('h', 'o', '#')]
     """
-    return nltk.ngrams("#{}#".format(t), 3)
+    return string_to_ngrams(t, n=3)
