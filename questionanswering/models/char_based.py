@@ -67,7 +67,7 @@ class CharEdgeLabelsModel(CharBasedModel, BrothersModel):
         semantic_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
                                                      init=self._p.get("sibling.weight.init", 'glorot_uniform'))(character_embeddings)
         if self._p.get('conv.layers', False):
-            semantic_vector = keras.layers.MaxPooling1D(pool_length=self._p['conv.width'], stride=4)(semantic_vector)
+            semantic_vector = keras.layers.MaxPooling1D(pool_length=self._p['conv.width'], stride=self._p['conv.width'])(semantic_vector)
             semantic_vector = keras.layers.Convolution1D(self._p['conv.size'], self._p['conv.width'], border_mode='same',
                                                          init=self._p.get("sibling.weight.init", 'glorot_uniform'))(semantic_vector)
 
