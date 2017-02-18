@@ -246,7 +246,7 @@ def copy_graph(g):
 np_grammar = r"""
     NP:
     {(<NN|NNS>+|<NNP|NNPS>+)<IN|CC>(<PRP\$|DT><NN|NNS>+|<NNP|NNPS>+)}
-    {<JJ|RB|CD|VBG|VBN>*(<NNS|NN>+|<NNP|NNPS>+<NNS|NN>*)}
+    {<JJ|RB|CD|VBG|VBN>*(<NNS|NN>+|<NNP|NNPS>+<NNS|NN>*)<RB|CD|VBG|VBN>?}
     {<NNP|NN|NNS|NNPS>+}
     """
 np_parser = nltk.RegexpParser(np_grammar)
@@ -311,6 +311,8 @@ def extract_entities(tokens_ne_pos):
     [(['Connecticut'], 'LOCATION'), (['senator'], 'NN'), (['2010'], 'CD')]
     >>> extract_entities([['Which', 'O', 'WDT'],['actors', 'O', 'NNS'],['play', 'O', 'VBP'],['in', 'O', 'IN'],['Big', 'O', 'JJ'],['Bang', 'O', 'NNP'],['Theory', 'O', 'NNP'],['?', 'O', '.']])
     [(['Big', 'Bang', 'Theory'], 'NNP'), (['actors'], 'NN')]
+    >>> extract_entities([('Who', 'O', 'WP'), ('was', 'O', 'VBD'), ('on', 'O', 'IN'), ('the', 'O', 'DT'), ('Apollo', 'O', 'NNP'), ('11', 'O', 'CD'), ('mission', 'O', 'NN'), ('?', 'O', '.')])
+    [(['Apollo', '11'], 'NNP'), (['mission'], 'NN')]
     """
     persons = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['PERSON'])
     locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])
