@@ -1,4 +1,5 @@
 import nltk
+from nltk.metrics import distance
 import re
 
 import utils
@@ -12,6 +13,7 @@ lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
 roman_nums_pattern = re.compile("^(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$")
 labels_blacklist = utils.load_blacklist(utils.RESOURCES_FOLDER + "labels_blacklist.txt")
 stop_words_en = set(nltk.corpus.stopwords.words('english'))
+entity_map = utils.load_entity_map(utils.RESOURCES_FOLDER + "manual_entity_map.tsv")
 
 
 def possible_variants(entity_tokens, entity_type):
@@ -232,63 +234,75 @@ def link_entity(entity, try_subentities=True):
     :param try_subentities:
     :return: list of KB ids
     >>> link_entity((['Martin', 'Luther', 'King', 'Junior'], 'PERSON'))
-    ['Q8027', 'Q6776048']
+    [('Q8027', 'Martin Luther King, Jr.'), ('Q6776048', 'Martin Luther King, Jr.')]
     >>> link_entity((['movies', 'does'], 'NN'))
     []
     >>> link_entity((['lord', 'of', 'the', 'rings'], 'NN'))
-    ['Q131074', 'Q190214']
+    [('Q15228', 'The Lord of the Rings'), ('Q131074', 'The Lord of the Rings'), ('Q190214', 'The Lord of the Rings')]
     >>> link_entity((['state'], 'NN'))
-    ['Q7275', 'Q230855', 'Q599031']
+    [('Q7275', 'state'), ('Q2913313', 'State'), ('Q2917249', 'state')]
     >>> link_entity((["Chile"], 'NNP'))
-    ['Q298', 'Q272795', 'Q1045129']
+    [('Q298', 'Chilito'), ('Q1045129', '4636 Chile'), ('Q272795', 'Tacna')]
     >>> link_entity((["Bela", "Fleck"], 'NNP'))
-    ['Q561390']
+    [('Q561390', 'Béla Fleck')]
     >>> link_entity((["thai"], 'NN'))
-    ['Q869', 'Q9217', 'Q42732']
+    [('Q9217', 'Thai'), ('Q869', 'Thailand'), ('Q42732', 'Thai')]
     >>> link_entity((['romanian', 'people'], 'NN'))
-    ['Q218', 'Q7913']
+    [('Q218', 'Romania'), ('Q7913', 'Romanian')]
     >>> link_entity((['college'], 'NN'))
-    ['Q23002039', 'Q189004']
+    [('Q189004', 'college'), ('Q728520', 'College'), ('Q996048', 'College')]
     >>> link_entity((['House', 'Of', 'Representatives'], 'ORGANIZATION'))
-    ['Q11701', 'Q233262', 'Q320256']
+    [('Q11701', 'House of Representatives'), ('Q233262', 'House of Representatives'), ('Q320256', 'House of Representatives')]
     >>> link_entity((['senator', 'of', 'the', 'state'], 'NN'))
-    ['Q13217683', 'Q15686806']
+    [('Q13217683', 'senator'), ('Q15686806', 'senator')]
     >>> link_entity((['Michael', 'J', 'Fox'], 'PERSON'))
-    ['Q395274']
+    [('Q395274', 'Michael J. Fox')]
     >>> link_entity((['Eowyn'], 'PERSON'))
-    ['Q716565']
+    [('Q716565', 'Éowyn'), ('Q10727030', 'Eowyn')]
     >>> link_entity((['Jackie','Kennedy'], 'PERSON'))
-    ['Q9696', 'Q34821', 'Q165421']
+    [('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family'), ('Q165421', 'Jacqueline Kennedy Onassis')]
+    >>> link_entity((['JFK'], 'NNP'))
+    [('Q9696', 'JFK'), ('Q741823', 'JFK'), ('Q17092870', 'JFK')]
     >>> link_entity((['Indian', 'company'], 'NN'))
-    ['Q668', 'Q102538', 'Q225093']
-    >>> link_entity((['Indian', 'company'], 'NN'))
-    ['Q668', 'Q102538', 'Q225093']
+    [('Q668', 'India'), ('Q102538', 'company'), ('Q225093', 'Company')]
+    >>> link_entity((['Indian'], 'LOCATION'))
+    [('Q668', 'India'), ('Q1091034', 'Indian'), ('Q3111799', 'Indian')]
     >>> link_entity((['supervisor', 'of', 'Albert', 'Einstein'], 'NN'))
-    ['Q937', 'Q30940', 'Q168657']
+    [('Q937', 'Albert Einstein'), ('Q30940', 'Albert'), ('Q60059', 'Albertus Magnus')]
     """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
         return []
     entity_variants = possible_variants(entity_tokens, entity_type)
     subentities = possible_subentities(entity_tokens, entity_type)
-    if any(" ".join(t).lower() in wdaccess.entity_map for t in [entity_tokens] + entity_variants + subentities):
-        keys = {" ".join(t).lower() for t in [entity_tokens] + entity_variants + subentities}
-        return [e for t in keys for e in wdaccess.entity_map.get(t, [])][:entity_linking_p.get("max.entity.options", 3)]
     linkings = wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(entity_tokens)]), starts_with=None)
+    map_keys = {" ".join(t).lower() for t in [entity_tokens] + entity_variants + subentities}
+    if any(t in entity_map for t in map_keys):
+        linkings += [{'e2': e, 'label': l} for t in map_keys for e, l in entity_map.get(t, [])][:entity_linking_p.get("max.entity.options", 3)]
     # if entity_type not in {"NN"} or not linkings:
     entity_variants = {" ".join(s) for s in entity_variants}
     linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants), starts_with=None)
     if try_subentities and not linkings: # or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
         subentities = {" ".join(s) for s in subentities}
         linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(subentities), starts_with=None)
-    linkings = post_process_entity_linkings(linkings)
+    linkings = post_process_entity_linkings(entity_tokens, linkings)
+    linkings = [l[:2] for l in linkings]
     return linkings
 
 
-def post_process_entity_linkings(linkings):
-    linkings = {l.get("e20", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, "") for l in linkings if l}
-    linkings = [l for l in linkings if l not in wdaccess.entity_blacklist]
-    linkings = sorted(linkings, key=lambda k: int(k[1:]))
+def post_process_entity_linkings(entity_tokens, linkings):
+    """
+    :param entity_tokens: list of entity tokens as appear in the sentence
+    :param linkings: possible linkings
+    :return: sorted linkings
+    >>> post_process_entity_linkings(['writers', 'studied'], wdaccess.query_wikidata(wdaccess.multi_entity_query({" ".join(s) for s in possible_subentities(['writers', 'studied'], "NN")}), starts_with=None))
+    [('Q36180', 'writer', 9), ('Q25183171', 'Writers', 9), ('Q28389', 'screenwriter', 12)]
+    """
+    linkings = {(l.get("e2", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, ""), l.get("label", "")) for l in linkings if l}
+    linkings = [l for l in linkings if l[0] not in wdaccess.entity_blacklist]
+    linkings = [(q, l, distance.edit_distance(" ".join(entity_tokens), l, substitution_cost=2)) for q, l in linkings]
+    linkings = [(q, l, d, r) for r, (q, l, d) in enumerate(sorted(linkings, key=lambda k: int(k[0][1:])))]
+    linkings = sorted(linkings, key=lambda k: (k[2] + k[3]*2, k[3]))
     linkings = linkings[:entity_linking_p.get("max.entity.options", 3)]
     return linkings
 

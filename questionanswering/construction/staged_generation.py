@@ -116,9 +116,9 @@ def link_entities_in_graph(ungrounded_graph):
             entities.append(entity)
     if any(w in set(ungrounded_graph.get('tokens', [])) for w in v_structure_markers):
         for entity in [e for e in entities if e[1] == "PERSON" and len(e[0]) == 1 and len(e) == 3]:
-            for film_id in [e_id for e in [e for e in entities if len(e) == 3] for e_id in e[2] if e != entity]:
+            for film_id in [e_id for e in [e for e in entities if len(e) == 3] for e_id, l in e[2] if e != entity]:
                 character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity[0]), film_id))
-                character_linkings = entity_linking.post_process_entity_linkings(character_linkings)
+                character_linkings = entity_linking.post_process_entity_linkings(" ".join(entity[0]), character_linkings)
                 entity[2] = character_linkings + entity[2]
                 entity[2] = entity[2][:entity_linking.entity_linking_p.get("max.entity.options", 3)]
     entities = [tuple(e) for e in entities]
@@ -341,7 +341,7 @@ def add_canonical_labels_to_entities(g):
     """
     for edge in g.get('edgeSet', []):
         entitykbID = edge.get('rightkbID')
-        if entitykbID and 'canonical_right' not in edge:
+        if entitykbID and ('canonical_right' not in edge or edge['canonical_right'] is None):
             entity_label = wdaccess.label_entity(entitykbID)
             if entity_label:
                 edge['canonical_right'] = entity_label

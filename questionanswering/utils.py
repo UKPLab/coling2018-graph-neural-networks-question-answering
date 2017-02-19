@@ -187,16 +187,16 @@ def load_entity_map(path_to_map):
     try:
         with open(path_to_map) as f:
             return_map = [l.strip().split("\t") for l in f.readlines()]
-        return nltk.Index([(t[1], t[0]) for t in return_map])
+        return nltk.Index([(t[1], (t[0], t[2])) for t in return_map])
     except Exception as ex:
         logger.error("No entity map found. {}".format(ex))
     try:
         with open("../" + path_to_map) as f:
             return_map = [l.strip().split("\t") for l in f.readlines()]
-        return nltk.Index([(t[1], t[0]) for t in return_map])
+        return nltk.Index([(t[1], (t[0], t[2])) for t in return_map])
     except Exception as ex:
         logger.error("No entity map found. {}".format(ex))
-        return {"Q76": ["Barack Obama"]}
+        return {"Barack Obama": [("Q76", "Barack Obama")]}
 
 
 RESOURCES_FOLDER = "../resources/"

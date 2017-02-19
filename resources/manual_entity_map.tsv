@@ -1,20 +1,20 @@
-Q23002039	college
-Q189004	college
-Q23002039	colleges
-Q189004	colleges
-Q13217683	senator
-Q15686806	senator
-Q13217683	senators
-Q15686806	senators
-Q889821	governor
-Q1307214	government
-Q1307214	system
-Q131074	lord of the rings
-Q190214	lord of the rings
-Q716565	eowyn
-Q1744	madonna
-Q34821	kennedys
-Q9696	kennedy
-Q34821	kennedy
-Q165421	kennedy
-Q9696	jfk
+Q23002039	college	college
+Q189004	college	college
+Q23002039	colleges	college
+Q189004	colleges	college
+Q13217683	senator	senator
+Q15686806	senator	senator
+Q13217683	senators	senator
+Q15686806	senators	senator
+Q889821	governor	U.S. governor
+Q1307214	government	government
+Q1307214	system	system
+Q131074	lord of the rings	The Lord of the Rings
+Q190214	lord of the rings	The Lord of the Rings
+Q716565	eowyn	Éowyn
+Q1744	madonna	Madonna
+Q34821	kennedys	Kennedy family
+Q9696	kennedy	John F. Kennedy
+Q34821	kennedy	Kennedy family
+Q9696	jfk	JFK
+Q11701	house of representatives	House of Representatives

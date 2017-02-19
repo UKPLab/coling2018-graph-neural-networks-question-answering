@@ -42,7 +42,7 @@ class QAModel(Loggable, metaclass=abc.ABCMeta):
                     index = sorted_indices.popleft()
                     g = graphs[i][index]
                     retrieved_answers = wdaccess.query_graph_denotations(g)
-                retrieved_answers = wdaccess.map_query_results(retrieved_answers)
+                retrieved_answers = wdaccess.label_query_results(retrieved_answers)
                 metrics = evaluation.retrieval_prec_rec_f1_with_altlabels(gold_answers[i], retrieved_answers)
                 if metrics[-1]:
                     successes.append((i, metrics[-1], g))

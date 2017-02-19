@@ -117,7 +117,6 @@ sparql_get_demonym = """
         }
         """
 
-entity_map = load_entity_map(RESOURCES_FOLDER + "manual_entity_map.tsv")
 property_blacklist = load_blacklist(RESOURCES_FOLDER + "property_blacklist.txt")
 entity_blacklist = load_blacklist(RESOURCES_FOLDER + "entity_blacklist.txt")
 property_whitelist = load_blacklist(RESOURCES_FOLDER + "property_whitelist.txt")
@@ -453,16 +452,20 @@ def multi_entity_query(labels, limit=100):
     :param labels: entity labels as a list of str
     :param limit: limit on the result list size
     :return: a query that can be executed against WikiData
+    >>> query_wikidata(multi_entity_query(["Barack Obama"]), starts_with=None) == \
+    [{'label': 'Barack Obama', 'e2': 'http://www.wikidata.org/entity/Q76', 'labelright': 'Barack Obama'}, {'label': 'Barack Obama', 'e2': 'http://www.wikidata.org/entity/Q76', 'labelright': 'Barack Obama'}]
+    True
     """
     query = sparql_prefix
     variables = []
     query += sparql_select
     query += "{"
-    sparql_entity_label_inst = sparql_entity_label.replace("?e2", "?e2" + str(0))
+    sparql_entity_label_inst = sparql_entity_label +  sparql_canoncial_label_entity
     labels = ["\"{}\"@en \"{}\"@de".format(l, l) for l in labels]
     sparql_entity_label_inst = sparql_entity_label_inst.replace("%entitylabels", " ".join(labels))
-    variables.append("?e2" + str(0))
+    variables.append("?e2")
     variables.append("?labelright")
+    variables.append("?label")
     query += sparql_entity_label_inst
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
@@ -608,24 +611,6 @@ def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False):
     else:
         logger.debug(results)
         return []
-
-
-def map_query_results(query_results, question_variable='e1'):
-    """
-    Extract the variable values from the query results and map them to canonical WebQuestions strings.
-
-    :param query_results: list of dictionaries returned by the sparql endpoint
-    :param question_variable: the variable to extract
-    :return: list of answers as entity labels or an original id if no canonical label was found.
-    >>> map_query_results([{'e1':'Q76'}, {'e1':'Q235234'}])
-    [['barack obama'], ['q235234']]
-    """
-    answers = [r[question_variable] for r in query_results]
-    answers = [a for a in answers if '-' not in a and a[0] in 'pqPQ']  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
-    answers = [[e.lower() for e in entity_map.get(a, [a])] for a in answers]
-    # TODO: what to do about further inconsistencies
-    # answers = [[e.lower() for e in entity_map.get(a, [l.get('label0') for l in query_wikidata(label_query(a), starts_with="", use_cache=True)])] for a in answers]
-    return answers
 
 
 def label_entity(entity):
