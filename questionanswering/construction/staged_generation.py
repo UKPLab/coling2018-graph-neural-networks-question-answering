@@ -13,6 +13,7 @@ generation_p = {
     'replace.entities': True,
     'use.whitelist': False,
     'v.structure': True,
+    'min.fscore.to.stop': 0.9
 }
 
 logger = generation_p['logger']
@@ -42,12 +43,12 @@ def generate_with_gold(ungrounded_graph, gold_answers):
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
     positive_graphs, negative_graphs = [], []
     iterations = 0
-    while pool and (positive_graphs[-1][1][2] if len(positive_graphs) > 0 else 0.0) < 0.9:
+    while pool and (positive_graphs[-1][1][2] if len(positive_graphs) > 0 else 0.0) < generation_p['min.fscore.to.stop']:
         iterations += 1
         g = pool.pop(0)
         logger.debug("Pool length: {}, Graph: {}".format(len(pool), g))
         master_g_fscore = g[1][2]
-        if master_g_fscore < 0.7:
+        if master_g_fscore < generation_p['min.fscore.to.stop']:
             logger.debug("Restricting")
             restricted_graphs = stages.restrict(g[0])
             restricted_graphs = [add_canonical_labels_to_entities(r_g) for r_g in restricted_graphs]
