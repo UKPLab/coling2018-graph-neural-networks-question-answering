@@ -117,6 +117,12 @@ sparql_get_demonym = """
         }
         """
 
+sparql_map_f_id = """
+        {
+          GRAPH <http://wikidata.org/statements> { ?e2 e:P646s/e:P646v ?fid }
+        }
+        """
+
 property_blacklist = load_blacklist(RESOURCES_FOLDER + "property_blacklist.txt")
 entity_blacklist = load_blacklist(RESOURCES_FOLDER + "entity_blacklist.txt")
 property_whitelist = load_blacklist(RESOURCES_FOLDER + "property_whitelist.txt")
@@ -552,6 +558,26 @@ def main_label_query(entity):
     return query
 
 
+def f_id_mapping_query(f_id):
+    """
+    Map a Freebase id to a Wikidata entity
+
+    :param f_id: Freebase id
+    :return: a WikiData query
+    >>> query_wikidata(f_id_mapping_query("/m/0d3k14"))
+    [{'e2': 'Q9696'}]
+    """
+    query = sparql_prefix
+    query += sparql_select
+    query += "{"
+    sparql_label_entity_inst = sparql_map_f_id.replace("?fid", "\"{}\"".format(f_id))
+    query += sparql_label_entity_inst
+    query += "}"
+    query = query.replace("%queryvariables%", "?e2")
+    query += sparql_close.format(1)
+    return query
+
+
 def demonym_query(entity):
     """
     Construct a WikiData query to retrieve the main entity label for the given entity id.
@@ -625,6 +651,22 @@ def label_entity(entity):
     results = query_wikidata(main_label_query(entity), starts_with="", use_cache=True)
     if results and 'label0' in results[0]:
         return results[0]['label0']
+    return None
+
+
+def map_f_id(f_id):
+    """
+    Map the given Freebase id to a Wikidata id
+
+    :param f_id: Freebase id as a string
+    :return: Wikidata kbID
+    """
+    f_id = f_id.replace(".", "/")
+    if not f_id.startswith("/"):
+        f_id = "/" + f_id
+    results = query_wikidata(f_id_mapping_query(f_id))
+    if results and 'e2' in results[0]:
+        return results[0]['e2']
     return None
 
 
