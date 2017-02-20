@@ -25,7 +25,7 @@ def possible_variants(entity_tokens, entity_type):
     :param entity_type:  type of the entity
     :return: a list of entity variants
     >>> possible_variants(['the', 'current', 'senators'], 'NN')
-    [('The', 'Current', 'Senators'), ('the', 'current', 'senator'), ('current', 'senators')]
+    [('The', 'Current', 'Senators'), ('the', 'current', 'senator'), ('The', 'Current', 'Senator'), ('current', 'senators')]
     >>> possible_variants(['the', 'senator'], 'NN')
     [('The', 'Senator'), ('senator',)]
     >>> possible_variants(["awards"], "NN")
@@ -33,7 +33,7 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(["senators"], "NN")
     [('Senators',), ('senator',)]
     >>> possible_variants(["star", "wars"], "NN")
-    [('Star', 'Wars'), ('star', 'war')]
+    [('Star', 'Wars'), ('star', 'war'), ('Star', 'War')]
     >>> possible_variants(["rings"], "NN")
     [('Rings',), ('ring',)]
     >>> possible_variants(["Jfk"], "NNP")
@@ -59,7 +59,7 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(['2009'], 'CD')
     []
     >>> possible_variants(['102', 'dalmatians'], 'NN')
-    [('102', 'Dalmatians'), ('102', 'dalmatian')]
+    [('102', 'Dalmatians'), ('102', 'dalmatian'), ('102', 'Dalmatian')]
     >>> possible_variants(['Martin', 'Luther', 'King', 'Jr'], 'PERSON')
     [('Martin', 'Luther', 'King', 'Jr.'), ('Martin', 'Luther', 'King,', 'Jr.')]
     >>> possible_variants(['St', 'Louis', 'Rams'], 'ORGANIZATION')
@@ -82,6 +82,8 @@ def possible_variants(entity_tokens, entity_type):
     [('Michael', 'J.', 'Fox')]
     >>> possible_variants(['M.C.', 'Escher'], 'PERSON')
     [('M. C.', 'Escher')]
+    >>> possible_variants(['chancellors', 'of', 'Germany'], 'NN')
+    [('Chancellors', 'of', 'Germany'), ('chancellor', 'of', 'Germany'), ('Chancellor', 'of', 'Germany'), ('chancellors', 'Germany')]
     """
     new_entities = []
     entity_lemmas = []
@@ -122,6 +124,10 @@ def possible_variants(entity_tokens, entity_type):
         if entity_type in ['NN']:
             if entity_lemmas != entity_tokens:
                 new_entities.append(tuple(entity_lemmas))
+                if len(entity_lemmas) > 1:
+                    proper_title = [ne.title() if ne.lower() not in stop_words_en or i == 0 else ne.lower() for i, ne in enumerate(entity_lemmas)]
+                    if proper_title != entity_tokens:
+                        new_entities.append(tuple(proper_title))
             no_stop_title = [ne for ne in entity_tokens if ne.lower() not in stop_words_en]
             if no_stop_title != entity_tokens:
                 new_entities.append(tuple(no_stop_title))
