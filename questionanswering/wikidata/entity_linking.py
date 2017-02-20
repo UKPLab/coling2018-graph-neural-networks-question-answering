@@ -269,6 +269,8 @@ def link_entity(entity, try_subentities=True):
     [('Q668', 'India'), ('Q1091034', 'Indian'), ('Q3111799', 'Indian')]
     >>> link_entity((['supervisor', 'of', 'Albert', 'Einstein'], 'NN'))
     [('Q937', 'Albert Einstein'), ('Q30940', 'Albert'), ('Q60059', 'Albertus Magnus')]
+    >>> link_entity((['Obama'], "PERSON"))[0]
+    ('Q76', 'Barack Obama')
     """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
@@ -301,8 +303,9 @@ def post_process_entity_linkings(entity_tokens, linkings):
     linkings = {(l.get("e2", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, ""), l.get("label", "")) for l in linkings if l}
     linkings = [l for l in linkings if l[0] not in wdaccess.entity_blacklist]
     linkings = [(q, l, distance.edit_distance(" ".join(entity_tokens), l, substitution_cost=2)) for q, l in linkings]
-    linkings = [(q, l, d, r) for r, (q, l, d) in enumerate(sorted(linkings, key=lambda k: int(k[0][1:])))]
-    linkings = sorted(linkings, key=lambda k: (k[2] + k[3]*2, k[3]))
+    # linkings = [(q, l, d, r) for r, (q, l, d) in enumerate(sorted(linkings, key=lambda k: int(k[0][1:])))]
+    linkings = [(q, l, d, int(q[1:]) // 10000) for q, l, d in linkings]
+    linkings = sorted(linkings, key=lambda k: (k[2] + k[3], int(k[0][1:])))
     linkings = linkings[:entity_linking_p.get("max.entity.options", 3)]
     return linkings
 
