@@ -239,21 +239,21 @@ def link_entity(entity, try_subentities=True):
     >>> link_entity((['movies', 'does'], 'NN'))
     []
     >>> link_entity((['lord', 'of', 'the', 'rings'], 'NN'))
-    [('Q15228', 'The Lord of the Rings'), ('Q131074', 'The Lord of the Rings'), ('Q190214', 'The Lord of the Rings')]
+    [('Q15228', 'The Lord of the Rings'), ('Q127367', 'The Lord of the Rings: The Fellowship of the Ring'), ('Q131074', 'The Lord of the Rings')]
     >>> link_entity((['state'], 'NN'))
-    [('Q7275', 'state'), ('Q2913313', 'State'), ('Q2917249', 'state')]
+    [('Q7275', 'state'), ('Q230855', 'state of physical system'), ('Q599031', 'state of information system')]
     >>> link_entity((["Chile"], 'NNP'))
     [('Q298', 'Chilito'), ('Q1045129', '4636 Chile'), ('Q272795', 'Tacna')]
     >>> link_entity((["Bela", "Fleck"], 'NNP'))
     [('Q561390', 'Béla Fleck')]
     >>> link_entity((["thai"], 'NN'))
-    [('Q9217', 'Thai'), ('Q869', 'Thailand'), ('Q42732', 'Thai')]
+    [('Q869', 'Thailand'), ('Q9217', 'Thai'), ('Q42732', 'Thai')]
     >>> link_entity((['romanian', 'people'], 'NN'))
     [('Q218', 'Romania'), ('Q7913', 'Romanian')]
     >>> link_entity((['college'], 'NN'))
-    [('Q189004', 'college'), ('Q728520', 'College'), ('Q996048', 'College')]
+    [('Q189004', 'college'), ('Q1459186', 'college'), ('Q728520', 'College')]
     >>> link_entity((['House', 'Of', 'Representatives'], 'ORGANIZATION'))
-    [('Q11701', 'House of Representatives'), ('Q233262', 'House of Representatives'), ('Q320256', 'House of Representatives')]
+    [('Q11701', 'United States House of Representatives'), ('Q233262', 'House of Representatives'), ('Q320256', 'House of Representatives')]
     >>> link_entity((['senator', 'of', 'the', 'state'], 'NN'))
     [('Q13217683', 'senator'), ('Q15686806', 'senator')]
     >>> link_entity((['Michael', 'J', 'Fox'], 'PERSON'))
@@ -261,19 +261,19 @@ def link_entity(entity, try_subentities=True):
     >>> link_entity((['Eowyn'], 'PERSON'))
     [('Q716565', 'Éowyn'), ('Q10727030', 'Eowyn')]
     >>> link_entity((['Jackie','Kennedy'], 'PERSON'))
-    [('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family'), ('Q165421', 'Jacqueline Kennedy Onassis')]
+    [('Q165421', 'Jacqueline Kennedy Onassis'), ('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family')]
     >>> link_entity((['JFK'], 'NNP'))
-    [('Q9696', 'JFK'), ('Q741823', 'JFK'), ('Q17092870', 'JFK')]
+    [('Q8685', 'John F. Kennedy International Airport'), ('Q9696', 'John F. Kennedy'), ('Q741823', 'JFK')]
     >>> link_entity((['Kennedy'], 'PERSON'))
-    [('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family')]
+    [('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family'), ('Q67761', 'Kennedy')]
     >>> link_entity((['Indian', 'company'], 'NN'))
     [('Q668', 'India'), ('Q102538', 'company'), ('Q225093', 'Company')]
     >>> link_entity((['Indian'], 'LOCATION'))
     [('Q668', 'India'), ('Q1091034', 'Indian'), ('Q3111799', 'Indian')]
     >>> link_entity((['supervisor', 'of', 'Albert', 'Einstein'], 'NN'))
-    [('Q937', 'Albert Einstein'), ('Q30940', 'Albert'), ('Q60059', 'Albertus Magnus')]
+    [('Q937', 'Albert Einstein'), ('Q1168822', 'house of Albert of Luynes'), ('Q152245', 'Albert, Prince Consort')]
     >>> link_entity((['Obama'], "PERSON"))
-    [('Q76', 'Barack Obama')]
+    [('Q76', 'Barack Obama'), ('Q41773', 'Obama'), ('Q5280414', 'Obama')]
     """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
