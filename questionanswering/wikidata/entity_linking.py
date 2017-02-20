@@ -286,6 +286,8 @@ def link_entity(entity, try_subentities=True):
     [('Q937', 'Albert Einstein'), ('Q1168822', 'house of Albert of Luynes'), ('Q152245', 'Albert, Prince Consort')]
     >>> link_entity((['Obama'], "PERSON"))
     [('Q76', 'Barack Obama'), ('Q41773', 'Obama'), ('Q5280414', 'Obama')]
+    >>> link_entity((['Canadians'], 'NNP'))
+    [('Q16', 'Canada'), ('Q44676', 'Canadian English'), ('Q1196645', 'Canadians')]
     """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
