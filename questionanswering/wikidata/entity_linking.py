@@ -83,12 +83,14 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(['M.C.', 'Escher'], 'PERSON')
     [('M. C.', 'Escher')]
     >>> possible_variants(['chancellors', 'of', 'Germany'], 'NN')
-    [('Chancellors', 'of', 'Germany'), ('chancellor', 'of', 'Germany'), ('Chancellor', 'of', 'Germany'), ('chancellors', 'Germany')]
+    [('Chancellors', 'of', 'Germany'), ('chancellor', 'of', 'germany'), ('Chancellor', 'of', 'Germany'), ('chancellors', 'Germany')]
+    >>> possible_variants(['Canadians'], 'NNP')
+    [('canadian',), ('Canadian',)]
     """
     new_entities = []
     entity_lemmas = []
-    if entity_type is "NN":
-        entity_lemmas = [lemmatizer.lemmatize(n) for n in entity_tokens]
+    if entity_type in {'NN', 'NNP'}:
+        entity_lemmas = _lemmatize_tokens(entity_tokens)
     if entity_type is "PERSON":
         if entity_tokens[-1].lower() == "junior":
             entity_tokens[-1] = "Jr"
@@ -119,12 +121,12 @@ def possible_variants(entity_tokens, entity_type):
         proper_title = [ne.title() if ne.lower() not in stop_words_en or i == 0 else ne.lower() for i, ne in enumerate(entity_tokens)]
         if proper_title != entity_tokens:
             new_entities.append(tuple(proper_title))
-        if entity_type in ['ORGANIZATION'] and len(entity_tokens) > 1:
+        if entity_type in {'ORGANIZATION'} and len(entity_tokens) > 1:
             new_entities.append(tuple([entity_tokens[0].title()] + [ne.lower() for ne in entity_tokens[1:]]))
-        if entity_type in ['NN']:
-            if entity_lemmas != entity_tokens:
+        if entity_type in {'NN', 'NNP'}:
+            if [l.lower() for l in entity_lemmas] != [t.lower() for t in entity_tokens]:
                 new_entities.append(tuple(entity_lemmas))
-                if len(entity_lemmas) > 1:
+                if len(entity_lemmas) > 1 or entity_type is "NNP":
                     proper_title = [ne.title() if ne.lower() not in stop_words_en or i == 0 else ne.lower() for i, ne in enumerate(entity_lemmas)]
                     if proper_title != entity_tokens:
                         new_entities.append(tuple(proper_title))
@@ -203,7 +205,7 @@ def possible_subentities(entity_tokens, entity_type):
     new_entities = []
     entity_lemmas = []
     if entity_type is "NN":
-        entity_lemmas = [lemmatizer.lemmatize(n) for n in entity_tokens]
+        entity_lemmas = _lemmatize_tokens(entity_tokens)
 
     if entity_type is "PERSON":
         if entity_tokens[-1].lower() == "jr":
@@ -230,6 +232,10 @@ def possible_subentities(entity_tokens, entity_type):
             if entity_type in {'NN'}:
                 new_entities.extend([(ne.title(),) for ne in entity_tokens if not ne.isnumeric() and ne.lower() not in stop_words_en | labels_blacklist])
     return new_entities
+
+
+def _lemmatize_tokens(entity_tokens):
+    return [lemmatizer.lemmatize(n.lower()) for n in entity_tokens]
 
 
 def link_entity(entity, try_subentities=True):
