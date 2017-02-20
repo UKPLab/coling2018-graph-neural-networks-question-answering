@@ -1,6 +1,7 @@
 import nltk
 from nltk.metrics import distance
 import re
+import numpy as np
 
 import utils
 from wikidata import wdaccess
@@ -263,14 +264,16 @@ def link_entity(entity, try_subentities=True):
     [('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family'), ('Q165421', 'Jacqueline Kennedy Onassis')]
     >>> link_entity((['JFK'], 'NNP'))
     [('Q9696', 'JFK'), ('Q741823', 'JFK'), ('Q17092870', 'JFK')]
+    >>> link_entity((['Kennedy'], 'PERSON'))
+    [('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family')]
     >>> link_entity((['Indian', 'company'], 'NN'))
     [('Q668', 'India'), ('Q102538', 'company'), ('Q225093', 'Company')]
     >>> link_entity((['Indian'], 'LOCATION'))
     [('Q668', 'India'), ('Q1091034', 'Indian'), ('Q3111799', 'Indian')]
     >>> link_entity((['supervisor', 'of', 'Albert', 'Einstein'], 'NN'))
     [('Q937', 'Albert Einstein'), ('Q30940', 'Albert'), ('Q60059', 'Albertus Magnus')]
-    >>> link_entity((['Obama'], "PERSON"))[0]
-    ('Q76', 'Barack Obama')
+    >>> link_entity((['Obama'], "PERSON"))
+    [('Q76', 'Barack Obama')]
     """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
@@ -302,12 +305,61 @@ def post_process_entity_linkings(entity_tokens, linkings):
     """
     linkings = {(l.get("e2", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, ""), l.get("label", "")) for l in linkings if l}
     linkings = [l for l in linkings if l[0] not in wdaccess.entity_blacklist]
-    linkings = [(q, l, distance.edit_distance(" ".join(entity_tokens), l, substitution_cost=2)) for q, l in linkings]
-    # linkings = [(q, l, d, r) for r, (q, l, d) in enumerate(sorted(linkings, key=lambda k: int(k[0][1:])))]
-    linkings = [(q, l, d, int(q[1:]) // 10000) for q, l, d in linkings]
+    linkings = [(q, l, lev_distance(" ".join(entity_tokens), l, costs=(1, 0, 2))) for q, l in linkings]
+    linkings = [(q, l, d, np.log(int(q[1:]))) for q, l, d in linkings]
     linkings = sorted(linkings, key=lambda k: (k[2] + k[3], int(k[0][1:])))
     linkings = linkings[:entity_linking_p.get("max.entity.options", 3)]
     return linkings
+
+
+def lev_distance(s1, s2, costs=(1, 1, 1)):
+    """
+    Levinstein distance with adjustable costs
+
+    :param s1: first string
+    :param s2: second string
+    :param costs: a tuple of costs: (remove, add, substitute)
+    :return: a distance as an integer number
+    >>> lev_distance("Obama", "Barack Obama") == distance.edit_distance("Obama", "Barack Obama")
+    True
+    >>> lev_distance("Chili", "Tacna") == distance.edit_distance("Chili", "Tacna")
+    True
+    >>> lev_distance("Lord of the Rings", "lord of the rings") == distance.edit_distance("Lord of the Rings", "lord of the rings")
+    True
+    >>> lev_distance("Lord of the Rings", "") == distance.edit_distance("Lord of the Rings", "")
+    True
+    >>> lev_distance("Chili", "Tabac", costs=(1,1,2)) == distance.edit_distance("Chili", "Tabac", substitution_cost=2)
+    True
+    >>> lev_distance("Obama", "Barack Obama", costs=(1,0,1))
+    0
+    >>> lev_distance("Obama", "Barack Obama", costs=(0,2,1))
+    14
+    >>> lev_distance("Obama II", "Barack Obama", costs=(1,0,1))
+    3
+    >>> lev_distance("Chile", "Tacna", costs=(2,1,2))
+    10
+    >>> lev_distance("Chile", "Chilito", costs=(2,1,2))
+    4
+    """
+
+    len1 = len(s1)
+    len2 = len(s2)
+    a_cost, b_cost, c_cost = costs
+    lev = np.zeros((len1+1, len2+1), dtype='int16')
+    if a_cost > 0:
+        lev[:, 0] = list(range(0, len1*a_cost+1, a_cost))
+    if b_cost > 0:
+        lev[0] = list(range(0, len2*b_cost+1, b_cost))
+    # iterate over the array
+    for i in range(len1):
+        for j in range(len2):
+            c1 = s1[i]
+            c2 = s2[j]
+            a = lev[i, j+1] + a_cost  # skip character in s1 -> remove
+            b = lev[i+1, j] + b_cost  # skip character in s2 -> add
+            c = lev[i, j] + (c_cost if c1 != c2 else 0) # substitute
+            lev[i+1][j+1] = min(a, b, c)
+    return lev[-1, -1]
 
 
 if __name__ == "__main__":
