@@ -12,7 +12,9 @@ entity_linking_p = {
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
 roman_nums_pattern = re.compile("^(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$")
-labels_blacklist = utils.load_blacklist(utils.RESOURCES_FOLDER + "labels_blacklist.txt")
+# labels_blacklist = utils.load_blacklist(utils.RESOURCES_FOLDER + "labels_blacklist.txt")
+labels_blacklist = set()
+entity_blacklist = utils.load_blacklist(utils.RESOURCES_FOLDER + "entity_blacklist.txt")
 stop_words_en = set(nltk.corpus.stopwords.words('english'))
 entity_map = utils.load_entity_map(utils.RESOURCES_FOLDER + "manual_entity_map.tsv")
 
@@ -249,7 +251,7 @@ def link_entity(entity, try_subentities=True):
     >>> link_entity((['Martin', 'Luther', 'King', 'Junior'], 'PERSON'))
     [('Q8027', 'Martin Luther King, Jr.'), ('Q6776048', 'Martin Luther King, Jr.')]
     >>> link_entity((['movies', 'does'], 'NN'))
-    []
+    [('Q11424', 'film'), ('Q1179487', 'Movies'), ('Q6926907', 'Movies')]
     >>> link_entity((['lord', 'of', 'the', 'rings'], 'NN'))
     [('Q15228', 'The Lord of the Rings'), ('Q127367', 'The Lord of the Rings: The Fellowship of the Ring'), ('Q131074', 'The Lord of the Rings')]
     >>> link_entity((['state'], 'NN'))
@@ -261,7 +263,7 @@ def link_entity(entity, try_subentities=True):
     >>> link_entity((["thai"], 'NN'))
     [('Q869', 'Thailand'), ('Q9217', 'Thai'), ('Q42732', 'Thai')]
     >>> link_entity((['romanian', 'people'], 'NN'))
-    [('Q218', 'Romania'), ('Q7913', 'Romanian')]
+    [('Q218', 'Romania'), ('Q7913', 'Romanian'), ('Q33659', 'People')]
     >>> link_entity((['college'], 'NN'))
     [('Q189004', 'college'), ('Q1459186', 'college'), ('Q728520', 'College')]
     >>> link_entity((['House', 'Of', 'Representatives'], 'ORGANIZATION'))
@@ -290,6 +292,7 @@ def link_entity(entity, try_subentities=True):
     [('Q16', 'Canada'), ('Q44676', 'Canadian English'), ('Q1196645', 'Canadians')]
     """
     entity_tokens, entity_type = entity
+    labels_blacklist = set()
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
         return []
     entity_variants = possible_variants(entity_tokens, entity_type)
@@ -318,7 +321,7 @@ def post_process_entity_linkings(entity_tokens, linkings):
     [('Q36180', 'writer', 9), ('Q25183171', 'Writers', 9), ('Q28389', 'screenwriter', 12)]
     """
     linkings = {(l.get("e2", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, ""), l.get("label", "")) for l in linkings if l}
-    linkings = [l for l in linkings if l[0] not in wdaccess.entity_blacklist]
+    linkings = [l for l in linkings if l[0] not in entity_blacklist]
     linkings = [(q, l, lev_distance(" ".join(entity_tokens), l, costs=(1, 0, 2))) for q, l in linkings]
     linkings = [(q, l, d, np.log(int(q[1:]))) for q, l, d in linkings]
     linkings = sorted(linkings, key=lambda k: (k[2] + k[3], int(k[0][1:])))

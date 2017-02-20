@@ -124,7 +124,6 @@ sparql_map_f_id = """
         """
 
 property_blacklist = load_blacklist(RESOURCES_FOLDER + "property_blacklist.txt")
-entity_blacklist = load_blacklist(RESOURCES_FOLDER + "entity_blacklist.txt")
 property_whitelist = load_blacklist(RESOURCES_FOLDER + "property_whitelist.txt")
 property2label = load_property_labels(RESOURCES_FOLDER + "properties_with_labels.txt")
 entity_tokens_blacklist = load_blacklist(RESOURCES_FOLDER + "filter_out_tokens.txt")
