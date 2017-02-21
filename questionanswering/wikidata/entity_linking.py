@@ -1,3 +1,4 @@
+from collections import defaultdict
 import nltk
 from nltk.metrics import distance
 import re
@@ -135,7 +136,7 @@ def possible_variants(entity_tokens, entity_type):
             no_stop_title = [ne for ne in entity_tokens if ne.lower() not in stop_words_en]
             if no_stop_title != entity_tokens:
                 new_entities.append(tuple(no_stop_title))
-        if entity_type in {'ORGANIZATION'} and all(w not in {t.lower() for t in entity_tokens} for w in {'us', 'university', 'company', 'brothers', 'computer', 'united', 'states'}):
+        if entity_type not in {'PERSON', 'URL'} and all(w not in {t.lower() for t in entity_tokens} for w in {'us', 'united', 'america', 'usa', 'u.s.'}):
             new_entities.append(("US", ) + tuple(proper_title))
     if any(roman_nums_pattern.match(ne.upper()) for ne in entity_tokens):
         new_entities.append(tuple([ne.upper() if roman_nums_pattern.match(ne.upper()) else ne for ne in entity_tokens]))
@@ -290,6 +291,8 @@ def link_entity(entity, try_subentities=True):
     [('Q76', 'Barack Obama'), ('Q41773', 'Obama'), ('Q5280414', 'Obama')]
     >>> link_entity((['Canadians'], 'NNP'))
     [('Q16', 'Canada'), ('Q44676', 'Canadian English'), ('Q1196645', 'Canadians')]
+    >>> link_entity((['president'], 'NN'))
+
     """
     entity_tokens, entity_type = entity
     labels_blacklist = set()
@@ -327,6 +330,33 @@ def post_process_entity_linkings(entity_tokens, linkings):
     linkings = sorted(linkings, key=lambda k: (k[2] + k[3], int(k[0][1:])))
     linkings = linkings[:entity_linking_p.get("max.entity.options", 3)]
     return linkings
+
+
+def group_entities_by_overlap(entities):
+    """
+    Groups entities by token overlap ignoring case.
+
+    :param entities: list of entities as tokens
+    :return: a list of lists of entities
+    >>> group_entities_by_overlap([('star',), ('wars',), ('war',), ('Star',), ('Wars',)])
+    [({'star'}, [('star',), ('Star',)]), ({'wars', 'war'}, [('wars',), ('war',), ('Wars',)])]
+    >>> group_entities_by_overlap([('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',), ('President',), ('Jfk',)]) == \
+    [({'after', 'the', 'jfk', 'president'}, [('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',), ('President',), ('Jfk',)])]
+    True
+    """
+    groupings = []
+    for e in entities:
+        tokens = {t.lower() for t in e}
+        tokens.update({lemmatizer.lemmatize(t) for t in tokens})
+        stored = False
+        for k, entities in groupings:
+            if len(tokens & k) > 0:
+                entities.append(e)
+                k.update(tokens)
+                stored = True
+        if not stored:
+            groupings.append((tokens, [e]))
+    return groupings
 
 
 def lev_distance(s1, s2, costs=(1, 1, 1)):
