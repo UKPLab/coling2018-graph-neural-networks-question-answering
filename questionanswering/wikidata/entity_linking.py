@@ -250,52 +250,51 @@ def link_entity(entity, try_subentities=True):
     :param try_subentities:
     :return: list of KB ids
     >>> link_entity((['Martin', 'Luther', 'King', 'Junior'], 'PERSON'))
-    [('Q8027', 'Martin Luther King, Jr.'), ('Q6776048', 'Martin Luther King, Jr.')]
+    [[('Q8027', 'Martin Luther King, Jr.'), ('Q6776048', 'Martin Luther King, Jr.')]]
     >>> link_entity((['movies', 'does'], 'NN'))
-    [('Q11424', 'film'), ('Q1179487', 'Movies'), ('Q6926907', 'Movies')]
+    [[('Q11424', 'film'), ('Q1179487', 'Movies'), ('Q6926907', 'Movies')]]
     >>> link_entity((['lord', 'of', 'the', 'rings'], 'NN'))
-    [('Q15228', 'The Lord of the Rings'), ('Q127367', 'The Lord of the Rings: The Fellowship of the Ring'), ('Q131074', 'The Lord of the Rings')]
+    [[('Q15228', 'The Lord of the Rings'), ('Q127367', 'The Lord of the Rings: The Fellowship of the Ring'), ('Q131074', 'The Lord of the Rings')]]
     >>> link_entity((['state'], 'NN'))
-    [('Q7275', 'state'), ('Q230855', 'state of physical system'), ('Q599031', 'state of information system')]
+    [[('Q7275', 'state'), ('Q230855', 'state of physical system'), ('Q599031', 'state of information system')]]
     >>> link_entity((["Chile"], 'NNP'))
-    [('Q298', 'Chilito'), ('Q1045129', '4636 Chile'), ('Q272795', 'Tacna')]
+    [[('Q298', 'Chilito'), ('Q1045129', '4636 Chile'), ('Q272795', 'Tacna')]]
     >>> link_entity((["Bela", "Fleck"], 'NNP'))
-    [('Q561390', 'Béla Fleck')]
+    [[('Q561390', 'Béla Fleck')]]
     >>> link_entity((["thai"], 'NN'))
-    [('Q869', 'Thailand'), ('Q9217', 'Thai'), ('Q42732', 'Thai')]
+    [[('Q869', 'Thailand'), ('Q9217', 'Thai'), ('Q42732', 'Thai')]]
     >>> link_entity((['romanian', 'people'], 'NN'))
-    [('Q218', 'Romania'), ('Q7913', 'Romanian'), ('Q33659', 'People')]
+    [[('Q33659', 'People'), ('Q3238275', 'Homo sapiens sapiens'), ('Q2472587', 'people')], [('Q218', 'Romania'), ('Q7913', 'Romanian')]]
     >>> link_entity((['college'], 'NN'))
-    [('Q189004', 'college'), ('Q1459186', 'college'), ('Q728520', 'College')]
+    [[('Q189004', 'college'), ('Q1459186', 'college'), ('Q728520', 'College')]]
     >>> link_entity((['House', 'Of', 'Representatives'], 'ORGANIZATION'))
-    [('Q11701', 'United States House of Representatives'), ('Q233262', 'House of Representatives'), ('Q320256', 'House of Representatives')]
+    [[('Q11701', 'United States House of Representatives'), ('Q233262', 'House of Representatives'), ('Q320256', 'House of Representatives')]]
     >>> link_entity((['senator', 'of', 'the', 'state'], 'NN'))
-    [('Q13217683', 'senator'), ('Q15686806', 'senator')]
+    [[('Q13217683', 'senator'), ('Q15686806', 'senator')]]
     >>> link_entity((['Michael', 'J', 'Fox'], 'PERSON'))
-    [('Q395274', 'Michael J. Fox')]
+    [[('Q395274', 'Michael J. Fox')]]
     >>> link_entity((['Eowyn'], 'PERSON'))
-    [('Q716565', 'Éowyn'), ('Q10727030', 'Eowyn')]
+    [[('Q716565', 'Éowyn'), ('Q10727030', 'Eowyn')]]
     >>> link_entity((['Jackie','Kennedy'], 'PERSON'))
-    [('Q165421', 'Jacqueline Kennedy Onassis'), ('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family')]
+    [[('Q165421', 'Jacqueline Kennedy Onassis'), ('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family')]]
     >>> link_entity((['JFK'], 'NNP'))
-    [('Q8685', 'John F. Kennedy International Airport'), ('Q9696', 'John F. Kennedy'), ('Q741823', 'JFK')]
+    [[('Q8685', 'John F. Kennedy International Airport'), ('Q9696', 'John F. Kennedy'), ('Q741823', 'JFK')]]
     >>> link_entity((['Kennedy'], 'PERSON'))
-    [('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family'), ('Q67761', 'Kennedy')]
+    [[('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family'), ('Q67761', 'Kennedy')]]
     >>> link_entity((['Indian', 'company'], 'NN'))
-    [('Q668', 'India'), ('Q102538', 'company'), ('Q225093', 'Company')]
+    [[('Q102538', 'company'), ('Q225093', 'Company'), ('Q681815', 'The Company')], [('Q668', 'India'), ('Q1091034', 'Indian'), ('Q3111799', 'Indian')]]
     >>> link_entity((['Indian'], 'LOCATION'))
-    [('Q668', 'India'), ('Q1091034', 'Indian'), ('Q3111799', 'Indian')]
+    [[('Q668', 'India'), ('Q1091034', 'Indian'), ('Q3111799', 'Indian')]]
     >>> link_entity((['supervisor', 'of', 'Albert', 'Einstein'], 'NN'))
-    [('Q937', 'Albert Einstein'), ('Q1168822', 'house of Albert of Luynes'), ('Q152245', 'Albert, Prince Consort')]
+    [[('Q937', 'Albert Einstein'), ('Q1168822', 'house of Albert of Luynes'), ('Q152245', 'Albert, Prince Consort')], [('Q903385', 'clinical supervision'), ('Q1240788', 'Supervisor'), ('Q363802', 'doctoral advisor')]]
     >>> link_entity((['Obama'], "PERSON"))
-    [('Q76', 'Barack Obama'), ('Q41773', 'Obama'), ('Q5280414', 'Obama')]
+    [[('Q76', 'Barack Obama'), ('Q41773', 'Obama'), ('Q5280414', 'Obama')]]
     >>> link_entity((['Canadians'], 'NNP'))
-    [('Q16', 'Canada'), ('Q44676', 'Canadian English'), ('Q1196645', 'Canadians')]
+    [[('Q16', 'Canada'), ('Q44676', 'Canadian English'), ('Q1196645', 'Canadians')]]
     >>> link_entity((['president'], 'NN'))
-
+    [[('Q30461', 'president'), ('Q11696', 'President of the United States of America'), ('Q1255921', 'president')]]
     """
     entity_tokens, entity_type = entity
-    labels_blacklist = set()
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
         return []
     entity_variants = possible_variants(entity_tokens, entity_type)
@@ -303,7 +302,7 @@ def link_entity(entity, try_subentities=True):
     linkings = wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(entity_tokens)]), starts_with=None)
     map_keys = {" ".join(t).lower() for t in [entity_tokens] + entity_variants + subentities}
     if any(t in entity_map for t in map_keys):
-        linkings += [{'e2': e, 'label': l} for t in map_keys for e, l in entity_map.get(t, [])][:entity_linking_p.get("max.entity.options", 3)]
+        linkings += [{'e2': e, 'label': l, 'labelright': t} for t in map_keys for e, l in entity_map.get(t, [])][:entity_linking_p.get("max.entity.options", 3)]
     # if entity_type not in {"NN"} or not linkings:
     entity_variants = {" ".join(s) for s in entity_variants}
     linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants), starts_with=None)
@@ -311,7 +310,6 @@ def link_entity(entity, try_subentities=True):
         subentities = {" ".join(s) for s in subentities}
         linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(subentities), starts_with=None)
     linkings = post_process_entity_linkings(entity_tokens, linkings)
-    linkings = [l[:2] for l in linkings]
     return linkings
 
 
@@ -321,15 +319,20 @@ def post_process_entity_linkings(entity_tokens, linkings):
     :param linkings: possible linkings
     :return: sorted linkings
     >>> post_process_entity_linkings(['writers', 'studied'], wdaccess.query_wikidata(wdaccess.multi_entity_query({" ".join(s) for s in possible_subentities(['writers', 'studied'], "NN")}), starts_with=None))
-    [('Q36180', 'writer', 9), ('Q25183171', 'Writers', 9), ('Q28389', 'screenwriter', 12)]
+    [[('Q36180', 'writer'), ('Q25183171', 'Writers'), ('Q28389', 'screenwriter')]]
     """
-    linkings = {(l.get("e2", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, ""), l.get("label", "")) for l in linkings if l}
+    linkings = {(l.get("e2", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, ""), l.get("label", ""), l.get("labelright", "")) for l in linkings if l}
     linkings = [l for l in linkings if l[0] not in entity_blacklist]
-    linkings = [(q, l, lev_distance(" ".join(entity_tokens), l, costs=(1, 0, 2))) for q, l in linkings]
-    linkings = [(q, l, d, np.log(int(q[1:]))) for q, l, d in linkings]
-    linkings = sorted(linkings, key=lambda k: (k[2] + k[3], int(k[0][1:])))
-    linkings = linkings[:entity_linking_p.get("max.entity.options", 3)]
-    return linkings
+    grouped_linkings = []
+    for linkings in [g[1] for g in group_entities_by_overlap(linkings)]:
+        linkings = [l[:2] for l in linkings]
+        linkings = [l + (lev_distance(" ".join(entity_tokens), l[1], costs=(1, 0, 2)),) for l in linkings]
+        linkings = {l + (np.log(int(l[0][1:])),) for l in linkings if l[0].startswith("Q")}
+        linkings = sorted(linkings, key=lambda k: (k[-2] + k[-1], int(k[0][1:])))
+        linkings = linkings[:entity_linking_p.get("max.entity.options", 3)]
+        linkings = [l[:2] for l in linkings]
+        grouped_linkings.append(linkings)
+    return grouped_linkings
 
 
 def group_entities_by_overlap(entities):
@@ -338,23 +341,32 @@ def group_entities_by_overlap(entities):
 
     :param entities: list of entities as tokens
     :return: a list of lists of entities
-    >>> group_entities_by_overlap([('star',), ('wars',), ('war',), ('Star',), ('Wars',)])
-    [({'star'}, [('star',), ('Star',)]), ({'wars', 'war'}, [('wars',), ('war',), ('Wars',)])]
-    >>> group_entities_by_overlap([('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',), ('President',), ('Jfk',)]) == \
-    [({'after', 'the', 'jfk', 'president'}, [('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',), ('President',), ('Jfk',)])]
-    True
+    # >>> group_entities_by_overlap([('star',), ('wars',), ('war',), ('Star',), ('Wars',)])
+    # [({'star'}, [('star',), ('Star',)]), ({'wars', 'war'}, [('wars',), ('war',), ('Wars',)])]
+    # >>> group_entities_by_overlap([('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',), ('President',), ('Jfk',)]) == \
+    # [({'after', 'the', 'jfk', 'president'}, [('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',), ('President',), ('Jfk',)])]
+    # True
+    >>> group_entities_by_overlap([('Q36180', 'writer', "writer"), ('Q25183171', 'Writers', "writer"), ('Q28389', 'screenwriter', "writer")])
+    [({'writer'}, [('Q36180', 'writer', 'writer'), ('Q25183171', 'Writers', 'writer'), ('Q28389', 'screenwriter', 'writer')])]
+    >>> group_entities_by_overlap([('Q36180', 'star', "star"), ('Q25183171', 'Star Wars', "star wars"), ('Q28389', 'Star Wars saga', "star wars")])
+    [({'wars', 'star', 'war'}, [('Q36180', 'star', 'star'), ('Q25183171', 'Star Wars', 'star wars'), ('Q28389', 'Star Wars saga', 'star wars')])]
+    >>> group_entities_by_overlap([('Q36180', 'star', "star"), ('Q25183171', 'war', "war"), ('Q28389', 'The Wars', "wars")])
+    [({'star'}, [('Q36180', 'star', 'star')]), ({'wars', 'war'}, [('Q25183171', 'war', 'war'), ('Q28389', 'The Wars', 'wars')])]
     """
     groupings = []
-    for e in entities:
-        tokens = {t.lower() for t in e}
-        tokens.update({lemmatizer.lemmatize(t) for t in tokens})
-        stored = False
-        for k, entities in groupings:
+    for e in sorted(entities, key=lambda el: len(el[1]), reverse=True):
+        tokens = {t for t in e[2].lower().split()}
+        tokens.update(set(_lemmatize_tokens(tokens)))
+        i = 0
+        while len(groupings) > i >= 0:
+            k, entities = groupings[i]
             if len(tokens & k) > 0:
                 entities.append(e)
                 k.update(tokens)
-                stored = True
-        if not stored:
+                i = -1
+            else:
+                i += 1
+        if i == len(groupings):
             groupings.append((tokens, [e]))
     return groupings
 

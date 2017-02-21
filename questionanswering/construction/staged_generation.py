@@ -99,26 +99,27 @@ def link_entities_in_graph(ungrounded_graph):
     :param ungrounded_graph: graph as a dictionary with 'entities'
     :return: graph with entity linkings in the 'entities' array
     >>> link_entities_in_graph({'entities': [(['Norway'], 'LOCATION'), (['oil'], 'NN')], 'tokens': ['where', 'does', 'norway', 'get', 'their', 'oil', '?']})['entities']
-    [(['Norway'], 'LOCATION', ['Q20', 'Q546607', 'Q944765']), (['oil'], 'NN', ['Q42962', 'Q1130872', 'Q7081283'])]
+    [(['Norway'], 'LOCATION', [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')]), (['oil'], 'NN', [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')])]
     >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities']
-    [(['Bella'], 'PERSON', ['Q223757', 'Q52533', 'Q156571']), (['Twilight'], 'NNP', ['Q44523', 'Q160071', 'Q189378'])]
+    [(['Bella'], 'PERSON', [[('Q223757', 'Bella Swan')], ('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella')]), (['Twilight'], 'NNP', [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')])]
     >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['2012'], 'CD')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities']
-    [(['Bella'], 'PERSON', ['Q52533', 'Q156571', 'Q231665']), (['2012'], 'CD')]
+    [(['Bella'], 'PERSON', [('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella'), ('Q231665', 'Belladonna')]), (['2012'], 'CD')]
     """
     entities = []
     if all(len(e) == 3 for e in ungrounded_graph.get('entities', [])):
         return ungrounded_graph
     for entity in ungrounded_graph.get('entities', []):
         if len(entity) == 2 and entity[1] != "CD":
-            linkings = entity_linking.link_entity(entity)
-            entities.append(list(entity) + [linkings])
+            grouped_linkings = entity_linking.link_entity(entity)
+            for linkings in grouped_linkings:
+                entities.append(list(entity) + [linkings])
         else:
             entities.append(entity)
     if any(w in set(ungrounded_graph.get('tokens', [])) for w in v_structure_markers):
         for entity in [e for e in entities if e[1] == "PERSON" and len(e[0]) == 1 and len(e) == 3]:
             for film_id in [e_id for e in [e for e in entities if len(e) == 3] for e_id, l in e[2] if e != entity]:
-                character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity[0]), film_id))
-                character_linkings = entity_linking.post_process_entity_linkings(" ".join(entity[0]), character_linkings)
+                character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity[0]), film_id), starts_with=None)
+                character_linkings = entity_linking.post_process_entity_linkings(entity[0], character_linkings)
                 entity[2] = character_linkings + entity[2]
                 entity[2] = entity[2][:entity_linking.entity_linking_p.get("max.entity.options", 3)]
     entities = [tuple(e) for e in entities]

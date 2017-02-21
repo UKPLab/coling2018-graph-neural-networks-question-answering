@@ -429,19 +429,23 @@ def character_query(label, film_id, limit=3):
     :param label: label of the entity as str
     :param limit: limit on the result list size
     :return: a query that can be executed against WikiData
-    >>> query_wikidata(character_query("Bella", "Q160071"))
-    [{'e20': 'Q223757'}]
-    >>> query_wikidata(character_query("Anakin", "Q42051"))
-    [{'e20': 'Q51752'}]
+    >>> query_wikidata(character_query("Bella", "Q160071"), starts_with=None) == \
+    [{'labelright': 'Bella Swan', 'e2': 'http://www.wikidata.org/entity/Q223757', 'label': 'Bella Swan'}]
+    True
+    >>> query_wikidata(character_query("Anakin", "Q42051"), starts_with=None) == \
+    [{'labelright': 'Anakin Skywalker', 'e2': 'http://www.wikidata.org/entity/Q51752', 'label': 'Anakin Skywalker'}, {'labelright': 'Anakin Skywalker', 'e2': 'http://www.wikidata.org/entity/Q51752', 'label': 'Anakin Skywalker'}]
+    True
     """
     query = sparql_prefix
     variables = []
     query += sparql_select
     query += "{"
-    sparql_entity_label_inst = sparql_character_label.replace("?e2", "?e2" + str(0))
+    sparql_entity_label_inst = sparql_character_label + sparql_canoncial_label_entity
     sparql_entity_label_inst = sparql_entity_label_inst.replace("?e1", "e:{}".format(film_id))
     sparql_entity_label_inst = sparql_entity_label_inst.replace("%entitylabels", "\"{}\"".format(label, label))
-    variables.append("?e2" + str(0))
+    variables.append("?e2")
+    variables.append("?labelright")
+    variables.append("?label")
     query += sparql_entity_label_inst
     query += "}"
     query = query.replace("%queryvariables%", " ".join(variables))
@@ -465,7 +469,7 @@ def multi_entity_query(labels, limit=100):
     variables = []
     query += sparql_select
     query += "{"
-    sparql_entity_label_inst = sparql_entity_label +  sparql_canoncial_label_entity
+    sparql_entity_label_inst = sparql_entity_label + sparql_canoncial_label_entity
     labels = ["\"{}\"@en \"{}\"@de".format(l, l) for l in labels]
     sparql_entity_label_inst = sparql_entity_label_inst.replace("%entitylabels", " ".join(labels))
     variables.append("?e2")

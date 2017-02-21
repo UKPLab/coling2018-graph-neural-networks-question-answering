@@ -67,7 +67,8 @@ def add_entity_and_relation(g):
             if len(entity) == 3:
                 linkings = entity[2]
             else:
-                linkings = entity_linking.link_entity(entity[:2])
+                grouped_linkings = entity_linking.link_entity(entity[:2])
+                linkings = [l for l in grouped_linkings]
             for kbID, label in linkings:
                 new_g = graph.copy_graph(g)
                 new_g['entities'] = entities[:] + skipped
