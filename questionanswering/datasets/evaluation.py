@@ -10,6 +10,8 @@ def retrieval_precision(gold, predicted):
     1.0
     >>> retrieval_precision({2}, {1,2,3})
     0.3333333333333333
+    >>> retrieval_precision({2,3,4,8}, {1,2,3})
+    0.3333333333333333
     """
     gold = set(gold)
     predicted = set(predicted)
@@ -18,18 +20,20 @@ def retrieval_precision(gold, predicted):
     return tp/fp_tp
 
 
-def retrieval_precision_with_altlabels(gold, predicted_sets):
+def retrieval_tp_with_altlabels(gold, predicted_sets):
     """
-    Compute retrieval precision on the given gold set and predicted set.
+    Compute rtrue positives on the given gold set and predicted set.
     Note that it doesn't take into account the order or repeating elements.
 
     :param gold: the set of gold retrieved elements
     :param predicted_sets: the set of predicted elements
-    :return: precision value
-    >>> retrieval_precision_with_altlabels({1,2,3},[[2,8,4], [1], [6,7], [12, 45]])
-    0.5
+    :return: number of true positives
+    >>> retrieval_tp_with_altlabels({1,2,3},[[2,8,4], [1], [6,7], [12, 45]])
+    2
+    >>> retrieval_tp_with_altlabels({1,2,3},[[2,3,4], [8]])
+    1
     """
-    return sum(any(l in gold for l in label_set) for label_set in predicted_sets) / len(predicted_sets)
+    return sum(any(l in gold for l in label_set) for label_set in predicted_sets)
 
 
 def retrieval_prec_rec_f1(gold, predicted):
@@ -76,8 +80,9 @@ def retrieval_prec_rec_f1_with_altlabels(gold, predicted_sets):
     >>> retrieval_prec_rec_f1_with_altlabels(['Leon'], [['Black Swan'],['Leon']])
     (0.5, 1.0, 0.6666666666666666)
     """
-    prec = retrieval_precision_with_altlabels(gold, predicted_sets) if len(predicted_sets) > 0 else 0.0
-    rec = retrieval_precision({label for label_set in predicted_sets for label in label_set}, gold) if len(gold) > 0 else 0.0
+    tp = retrieval_tp_with_altlabels(gold, predicted_sets)
+    prec = tp / len(predicted_sets) if len(predicted_sets) > 0 else 0.0
+    rec = tp / len(gold) if len(gold) > 0 else 0.0
     f1 = 0.0
     if (rec+prec) > 0:
         f1 = 2.0 * prec * rec / (prec + rec)
