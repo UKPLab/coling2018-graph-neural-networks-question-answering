@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from SPARQLWrapper import SPARQLWrapper, JSON
 
+import utils
 from construction import graph
 from utils import load_blacklist, load_property_labels, RESOURCES_FOLDER
 

@@ -1,11 +1,13 @@
 import nltk
+import itertools
 from nltk.metrics import distance
 import re
 import numpy as np
 
 import utils
-from construction.staged_generation import v_structure_markers
 from wikidata import wdaccess
+
+v_structure_markers = utils.load_blacklist(utils.RESOURCES_FOLDER + "v_structure_markers.txt")
 
 entity_linking_p = {
     "max.entity.options": 3
@@ -247,33 +249,76 @@ def link_entities_in_graph(ungrounded_graph):
 
     :param ungrounded_graph: graph as a dictionary with 'entities'
     :return: graph with entity linkings in the 'entities' array
-    >>> link_entities_in_graph({'entities': [(['Norway'], 'LOCATION'), (['oil'], 'NN')], 'tokens': ['where', 'does', 'norway', 'get', 'their', 'oil', '?']})['entities']
-    [(['Norway'], 'LOCATION', [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')]), (['oil'], 'NN', [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')])]
-    >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities']
-    [(['Bella'], 'PERSON', [[('Q223757', 'Bella Swan')], ('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella')]), (['Twilight'], 'NNP', [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')])]
-    >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['2012'], 'CD')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities']
-    [(['Bella'], 'PERSON', [('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella'), ('Q231665', 'Belladonna')]), (['2012'], 'CD')]
+    >>> link_entities_in_graph({'entities': [(['Norway'], 'LOCATION'), (['oil'], 'NN')], 'tokens': ['where', 'does', 'norway', 'get', 'their', 'oil', '?']})['entities'] == \
+    [{'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')], 'tokens': ['Norway'], 'type': 'LOCATION'}, {'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')], 'tokens': ['oil'], 'type': 'NN'}]
+    True
+    >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] == \
+    [{'linkings': [('Q223757', 'Bella Swan'), ('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella')], 'tokens': ['Bella'], 'type': 'PERSON'}, {'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')], 'tokens': ['Twilight'], 'type': 'NNP'}]
+    True
+    >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['2012'], 'CD')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] == \
+    [{'linkings': [('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella'), ('Q231665', 'Belladonna')], 'tokens': ['Bella'], 'type': 'PERSON'}, {'linkings': [(['2012'],)], 'type': 'CD'}]
+    True
+    >>> link_entities_in_graph({'entities': [(['first', 'Queen', 'album'], 'NN')], 'tokens': "What was the first Queen album ?".split()})['entities'] == \
+    [{'linkings': [('Q139', 'queen'), ('Q116', 'monarch'), ('Q19643', 'queen regnant')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q146378', 'Album'), ('Q482994', 'album'), ('Q1173065', 'album')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q154898', 'First'), ('Q3746013', 'First'), ('Q5452237', 'First')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}]
     """
     entities = []
     if all(len(e) == 3 for e in ungrounded_graph.get('entities', [])):
         return ungrounded_graph
     for entity in ungrounded_graph.get('entities', []):
-        if len(entity) == 2 and entity[1] != "CD":
-            grouped_linkings = link_entity(entity)
-            for linkings in grouped_linkings:
-                entities.append(list(entity) + [linkings])
-        else:
+        if len(entity) == 2:
+            if entity[1] == "CD":
+                entities.append({"linkings": [(entity[0], entity[0])], "type": entity[1]})
+            else:
+                grouped_linkings = link_entity(entity)
+                for linkings in grouped_linkings:
+                    entities.append({"linkings": linkings, "type": entity[1], 'tokens': entity[0]})
+        elif len(entity) == 3:
             entities.append(entity)
     if any(w in set(ungrounded_graph.get('tokens', [])) for w in v_structure_markers):
-        for entity in [e for e in entities if e[1] == "PERSON" and len(e[0]) == 1 and len(e) == 3]:
-            for film_id in [e_id for e in [e for e in entities if len(e) == 3] for e_id, l in e[2] if e != entity]:
-                character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity[0]), film_id), starts_with=None)
-                character_linkings = post_process_entity_linkings(entity[0], character_linkings)
-                entity[2] = character_linkings + entity[2]
-                entity[2] = entity[2][:entity_linking_p.get("max.entity.options", 3)]
-    entities = [tuple(e) for e in entities]
+        for entity in [e for e in entities if e.get("type") == "PERSON" and len(e.get('tokens', [])) == 1 and "linkings" in e]:
+            for film_id in [l[0] for e in entities for l in e.get("linkings", []) if e != entity]:
+                character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity.get('tokens',[])), film_id), starts_with=None)
+                character_linkings = post_process_entity_linkings(entity.get("tokens"), character_linkings)
+                entity['linkings'] = [l for linking in character_linkings for l in linking] + entity.get("linkings", [])
+                entity['linkings'] = entity['linkings'][:entity_linking_p.get("max.entity.options", 3)]
+    # entities = [e.get('linkings') for e in entities]
     ungrounded_graph['entities'] = entities
     return ungrounded_graph
+
+
+def build_linkings_graph(entities):
+    """
+
+    :param entities:
+    :return:
+    >>> build_linkings_graph([{'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')], 'tokens': ['Norway'], 'type': 'LOCATION'}, {'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')], 'tokens': ['oil'], 'type': 'NN'}]) ==\
+    [{'type': 'LOCATION', 'tokens': ['Norway'], 'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')]}, {'type': 'NN', 'tokens': ['oil'], 'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')]}]
+    True
+    >>> build_linkings_graph([{'linkings': [('Q223757', 'Bella Swan'), ('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella')], 'tokens': ['Bella'], 'type': 'PERSON'}, {'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')], 'tokens': ['Twilight'], 'type': 'NNP'}]) ==\
+    [{'tokens': ['Bella'], 'linkings': [('Q223757', 'Bella Swan')], 'type': 'PERSON'}, {'tokens': ['Twilight'], 'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')], 'type': 'NNP'}]
+    True
+    >>> build_linkings_graph([{'linkings': [('Q139', 'queen'), ('Q116', 'monarch'), ('Q15862', 'Queen')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q146378', 'Album'), ('Q482994', 'album'), ('Q1173065', 'album')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q154898', 'First'), ('Q3746013', 'First'), ('Q5452237', 'First')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}]) ==\
+    [{'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q15862', 'Queen')]}, {'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q482994', 'album')]}, {'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q3746013', 'First')]}]
+    True
+    """
+    for e in entities:
+        e['linkings'] = [{"kbID": l[0], "links": 0, "label": l[1]} for l in e.get('linkings', [])]
+    entity_pairs = list(itertools.combinations([e for e in entities if e.get("type") != "CD"], 2))
+    if len(entity_pairs) == 0:
+        return entities
+    for e1, e2 in entity_pairs:
+        for l1 in e1['linkings']:
+            for l2 in e2['linkings']:
+                have_link = wdaccess.verify_grounding({'edgeSet':[{"rightkbID": l1.get('kbID')}, {"rightkbID": l2.get('kbID')}]})
+                if have_link:
+                    l1['links'] = l1.get('links', 0) + 1
+                    l2['links'] = l2.get('links', 0) + 1
+    for e in entities:
+        if e.get("type") != "CD":
+            max_links = np.max([l.get('links') for l in e['linkings']])
+            e['linkings'] = [(l.get('kbID'), l.get('label')) for l in e['linkings'] if l.get('links') == max_links]
+    return entities
+
 
 
 def link_entity(entity, try_subentities=True):
