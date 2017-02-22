@@ -1,11 +1,11 @@
-import logging
 import itertools
+import logging
 
 import utils
-from wikidata import entity_linking
-from wikidata import wdaccess
 from construction import stages, graph
 from datasets import evaluation
+from wikidata import entity_linking
+from wikidata import wdaccess
 
 generation_p = {
     'label.query.results': True,
@@ -209,16 +209,6 @@ def find_groundings(g):
         edge['type'] = 'v-structure'
         query_results += wdaccess.query_graph_groundings(t)
     return query_results
-
-
-def verify_grounding(g):
-    """
-    Verify the given graph with (partial) grounding exists in Wikidata.
-
-    :param g: graph as a dictionary
-    :return: true if the graph exists, false otherwise
-    """
-    return wdaccess.query_wikidata(wdaccess.graph_to_ask(g))
 
 
 def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):

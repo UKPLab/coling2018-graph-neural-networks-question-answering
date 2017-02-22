@@ -602,6 +602,20 @@ def demonym_query(entity):
     return query
 
 
+def verify_grounding(g):
+    """
+    Verify the given graph with (partial) grounding exists in Wikidata.
+
+    :param g: graph as a dictionary
+    :return: true if the graph exists, false otherwise
+    >>> verify_grounding({'edgeSet':[{"rightkbID": "Q76", "type":"direct" }]})
+    True
+    >>> verify_grounding({'edgeSet':[{"rightkbID": "Q76"}, {"rightkbID": "Q30"}]})
+    True
+    """
+    return query_wikidata(graph_to_ask(g))
+
+
 query_cache = {}
 
 
@@ -760,4 +774,3 @@ def normalize_answer_strings(answers):
 if __name__ == "__main__":
     import doctest
     print(doctest.testmod())
-
