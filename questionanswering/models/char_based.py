@@ -1,4 +1,3 @@
-
 from keras import backend as K
 from keras.preprocessing import sequence
 from models import keras_extensions

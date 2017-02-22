@@ -1,4 +1,3 @@
-from collections import defaultdict
 import nltk
 from nltk.metrics import distance
 import re

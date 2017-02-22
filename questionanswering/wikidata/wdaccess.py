@@ -5,7 +5,7 @@ from collections import defaultdict
 from SPARQLWrapper import SPARQLWrapper, JSON
 
 from construction import graph
-from utils import load_blacklist, load_property_labels, load_entity_map, RESOURCES_FOLDER
+from utils import load_blacklist, load_property_labels, RESOURCES_FOLDER
 
 WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 
