@@ -132,6 +132,7 @@ sparql_restriction_time_argmax = "?m ?a [base:time ?n]. FILTER (YEAR(?n) = ?year
 
 sparql_relation_filter = 'FILTER NOT EXISTS { GRAPH <http://wikidata.org/properties> {%relationvar% rdf:type base:Property}}'
 
+sparql_filter_main_entity = " FILTER(STRSTARTS(STR(?e1), \"http://www.wikidata.org/entity/\")) "
 sparql_close_order = " ORDER BY {}"
 sparql_close = " LIMIT {}"
 
@@ -362,6 +363,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
         # query = query.replace("%queryvariables%", " ".join(local_variables))
 
     query = sparql_prefix + (sparql_select if not ask else sparql_ask) + query
+    query += sparql_filter_main_entity
 
     if return_var_values and not ask:
         variables.append("?e1")
@@ -612,8 +614,13 @@ def verify_grounding(g):
     True
     >>> verify_grounding({'edgeSet':[{"rightkbID": "Q76"}, {"rightkbID": "Q30"}]})
     True
+    >>> verify_grounding({'edgeSet':[{"rightkbID": "Q139"}, {"rightkbID": "Q482994"}]})
+    False
     """
-    return query_wikidata(graph_to_ask(g))
+    verified = query_wikidata(graph_to_ask(g), timeout=1)
+    if verified  == []:
+        return False
+    return verified
 
 
 query_cache = {}
@@ -624,7 +631,7 @@ def clear_cache():
     query_cache = {}
 
 
-def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False):
+def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False, timeout=-1):
     """
     Execute the following query against WikiData
     :param query: SPARQL query to execute
@@ -634,12 +641,17 @@ def query_wikidata(query, starts_with=WIKIDATA_ENTITY_PREFIX, use_cache=False):
     """
     if use_cache and query in query_cache:
         return query_cache[query]
+    if timeout > 0:
+        sparql.setTimeout(timeout)
     sparql.setQuery(query)
     try:
         results = sparql.query().convert()
     except Exception as inst:
         logger.debug(inst)
         return []
+    # Change the timeout back to the default
+    if timeout > 0:
+        sparql.setTimeout(wdaccess_p.get('timeout', 40))
     if "results" in results and len(results["results"]["bindings"]) > 0:
         results = results["results"]["bindings"]
         logger.debug("Results bindings: {}".format(results[0].keys()))
