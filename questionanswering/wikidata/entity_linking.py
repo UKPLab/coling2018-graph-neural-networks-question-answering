@@ -304,6 +304,9 @@ def jointly_disambiguate_entities(entities, min_num_links=0):
     >>> jointly_disambiguate_entities([{'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')], 'tokens': ['Norway'], 'type': 'LOCATION'}, {'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')], 'tokens': ['oil'], 'type': 'NN'}]) ==\
     [{'type': 'LOCATION', 'tokens': ['Norway'], 'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')]}, {'type': 'NN', 'tokens': ['oil'], 'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')]}]
     True
+    >>> jointly_disambiguate_entities([{'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')], 'tokens': ['Norway'], 'type': 'LOCATION'}]) ==\
+    [{'type': 'LOCATION', 'tokens': ['Norway'], 'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')]}]
+    True
     >>> jointly_disambiguate_entities([{'linkings': [('Q223757', 'Bella Swan'), ('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella')], 'tokens': ['Bella'], 'type': 'PERSON'}, {'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')], 'tokens': ['Twilight'], 'type': 'NNP'}]) ==\
     [{'tokens': ['Bella'], 'linkings': [('Q223757', 'Bella Swan')], 'type': 'PERSON'}, {'tokens': ['Twilight'], 'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')], 'type': 'NNP'}]
     True
@@ -314,15 +317,14 @@ def jointly_disambiguate_entities(entities, min_num_links=0):
     for e in entities:
         e['linkings'] = [{"kbID": l[0], "links": 0, "label": l[1]} for l in e.get('linkings', [])]
     entity_pairs = list(itertools.combinations([e for e in entities if e.get("type") != "CD"], 2))
-    if len(entity_pairs) == 0 or all(len(e.get("linkings", [])) < 2 for e in entities):
-        return entities
-    for e1, e2 in entity_pairs:
-        for l1 in e1['linkings']:
-            for l2 in e2['linkings']:
-                have_link = wdaccess.verify_grounding({'edgeSet':[{"rightkbID": l1.get('kbID')}, {"rightkbID": l2.get('kbID')}]})
-                if have_link:
-                    l1['links'] = l1.get('links', 0) + 1
-                    l2['links'] = l2.get('links', 0) + 1
+    if not(len(entity_pairs) == 0 or all(len(e.get("linkings", [])) < 2 for e in entities)):
+        for e1, e2 in entity_pairs:
+            for l1 in e1['linkings']:
+                for l2 in e2['linkings']:
+                    have_link = wdaccess.verify_grounding({'edgeSet':[{"rightkbID": l1.get('kbID')}, {"rightkbID": l2.get('kbID')}]})
+                    if have_link:
+                        l1['links'] = l1.get('links', 0) + 1
+                        l2['links'] = l2.get('links', 0) + 1
     filtered_entities = []
     for e in entities:
         if e.get("type") != "CD":
