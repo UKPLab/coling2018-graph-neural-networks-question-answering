@@ -334,6 +334,7 @@ def jointly_disambiguate_entities(entities, min_num_links=0):
                                  if l.get('links') == max_links]
                 filtered_entities.append(e)
         else:
+            e['linkings'] = [(l.get('kbID'), l.get('label')) for l in e['linkings']]
             filtered_entities.append(e)
     return filtered_entities
 
