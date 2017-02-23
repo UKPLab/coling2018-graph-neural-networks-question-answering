@@ -332,7 +332,6 @@ def jointly_disambiguate_entities(entities, min_num_links=0):
     return filtered_entities
 
 
-
 def link_entity(entity, try_subentities=True):
     """
     Link the given list of tokens to an entity in a knowledge base. If none linkings is found try all combinations of

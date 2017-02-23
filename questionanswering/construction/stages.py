@@ -64,16 +64,13 @@ def add_entity_and_relation(g):
         if entity[1] == 'CD':
             skipped.append(entity)
         else:
-            if len(entity) == 3:
-                linkings = entity[2]
-            else:
-                grouped_linkings = entity_linking.link_entity(entity[:2])
-                linkings = [l for l in grouped_linkings]
-            for kbID, label in linkings:
-                new_g = graph.copy_graph(g)
-                new_g['entities'] = entities[:] + skipped
-                new_g['edgeSet'].append({'right': entity[0], 'rightkbID': kbID, 'canonical_right': label})
-                new_graphs.append(new_g)
+            if len(entity.get("linkings",[])) > 0:
+                linkings = entity['linkings']
+                for kbID, label in linkings:
+                    new_g = graph.copy_graph(g)
+                    new_g['entities'] = entities[:] + skipped
+                    new_g['edgeSet'].append({'right': entity[0], 'rightkbID': kbID, 'canonical_right': label})
+                    new_graphs.append(new_g)
     return new_graphs
 
 
