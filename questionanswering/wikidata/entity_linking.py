@@ -10,7 +10,8 @@ from wikidata import wdaccess
 v_structure_markers = utils.load_blacklist(utils.RESOURCES_FOLDER + "v_structure_markers.txt")
 
 entity_linking_p = {
-    "max.entity.options": 3
+    "max.entity.options": 3,
+    "min.num.links": 0
 }
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
@@ -281,30 +282,35 @@ def link_entities_in_graph(ungrounded_graph):
                 character_linkings = post_process_entity_linkings(entity.get("tokens"), character_linkings)
                 entity['linkings'] = [l for linking in character_linkings for l in linking] + entity.get("linkings", [])
                 entity['linkings'] = entity['linkings'][:entity_linking_p.get("max.entity.options", 3)]
-    # entities = [e.get('linkings') for e in entities]
+    entities = jointly_disambiguate_entities(entities, entity_linking_p.get("min.num.links", 0))
     ungrounded_graph['entities'] = entities
     return ungrounded_graph
 
 
-def build_linkings_graph(entities):
+def jointly_disambiguate_entities(entities, min_num_links=0):
     """
+    This method jointly disambiguates ambiguous entities. For each entity it selects the linkings the have
+    the most connections to any linking of the other entities. Note that it can still select multiple linkinigs
+    for a single entity if the have the same number of connections. Right now, it doesn't also guarantee that selected
+    linkings of different entities agree, i.e. have connections between them. Although this is mostly true in practice.
 
-    :param entities:
-    :return:
-    >>> build_linkings_graph([{'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')], 'tokens': ['Norway'], 'type': 'LOCATION'}, {'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')], 'tokens': ['oil'], 'type': 'NN'}]) ==\
+    :param entities: a list of entities as dictionaries, that have 'linkings'
+    :return: a list of entities as dictionaries
+    :param min_num_links: filter out entities that don't have a linking that has equal or more links than specified
+    >>> jointly_disambiguate_entities([{'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')], 'tokens': ['Norway'], 'type': 'LOCATION'}, {'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')], 'tokens': ['oil'], 'type': 'NN'}]) ==\
     [{'type': 'LOCATION', 'tokens': ['Norway'], 'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')]}, {'type': 'NN', 'tokens': ['oil'], 'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')]}]
     True
-    >>> build_linkings_graph([{'linkings': [('Q223757', 'Bella Swan'), ('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella')], 'tokens': ['Bella'], 'type': 'PERSON'}, {'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')], 'tokens': ['Twilight'], 'type': 'NNP'}]) ==\
+    >>> jointly_disambiguate_entities([{'linkings': [('Q223757', 'Bella Swan'), ('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella')], 'tokens': ['Bella'], 'type': 'PERSON'}, {'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')], 'tokens': ['Twilight'], 'type': 'NNP'}]) ==\
     [{'tokens': ['Bella'], 'linkings': [('Q223757', 'Bella Swan')], 'type': 'PERSON'}, {'tokens': ['Twilight'], 'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')], 'type': 'NNP'}]
     True
-    >>> build_linkings_graph([{'linkings': [('Q139', 'queen'), ('Q116', 'monarch'), ('Q15862', 'Queen')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q146378', 'Album'), ('Q482994', 'album'), ('Q1173065', 'album')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q154898', 'First'), ('Q3746013', 'First'), ('Q5452237', 'First')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}]) ==\
+    >>> jointly_disambiguate_entities([{'linkings': [('Q139', 'queen'), ('Q116', 'monarch'), ('Q15862', 'Queen')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q146378', 'Album'), ('Q482994', 'album'), ('Q1173065', 'album')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q154898', 'First'), ('Q3746013', 'First'), ('Q5452237', 'First')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}]) ==\
     [{'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q15862', 'Queen')]}, {'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q482994', 'album')]}, {'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q3746013', 'First')]}]
     True
     """
     for e in entities:
         e['linkings'] = [{"kbID": l[0], "links": 0, "label": l[1]} for l in e.get('linkings', [])]
     entity_pairs = list(itertools.combinations([e for e in entities if e.get("type") != "CD"], 2))
-    if len(entity_pairs) == 0:
+    if len(entity_pairs) == 0 or all(len(e.get("linkings", [])) < 2 for e in entities):
         return entities
     for e1, e2 in entity_pairs:
         for l1 in e1['linkings']:
@@ -313,11 +319,17 @@ def build_linkings_graph(entities):
                 if have_link:
                     l1['links'] = l1.get('links', 0) + 1
                     l2['links'] = l2.get('links', 0) + 1
+    filtered_entities = []
     for e in entities:
         if e.get("type") != "CD":
             max_links = np.max([l.get('links') for l in e['linkings']])
-            e['linkings'] = [(l.get('kbID'), l.get('label')) for l in e['linkings'] if l.get('links') == max_links]
-    return entities
+            if max_links > min_num_links:
+                e['linkings'] = [(l.get('kbID'), l.get('label')) for l in e['linkings']
+                                 if l.get('links') == max_links]
+                filtered_entities.append(e)
+        else:
+            filtered_entities.append(e)
+    return filtered_entities
 
 
 
