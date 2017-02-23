@@ -11,6 +11,7 @@ v_structure_markers = utils.load_blacklist(utils.RESOURCES_FOLDER + "v_structure
 
 entity_linking_p = {
     "max.entity.options": 3,
+    "entity.options.to.retrieve": 5,
     "min.num.links": 0
 }
 
@@ -251,16 +252,17 @@ def link_entities_in_graph(ungrounded_graph):
     :param ungrounded_graph: graph as a dictionary with 'entities'
     :return: graph with entity linkings in the 'entities' array
     >>> link_entities_in_graph({'entities': [(['Norway'], 'LOCATION'), (['oil'], 'NN')], 'tokens': ['where', 'does', 'norway', 'get', 'their', 'oil', '?']})['entities'] == \
-    [{'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')], 'tokens': ['Norway'], 'type': 'LOCATION'}, {'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')], 'tokens': ['oil'], 'type': 'NN'}]
+    [{'tokens': ['Norway'], 'type': 'LOCATION', 'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')]}, {'tokens': ['oil'], 'type': 'NN', 'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')]}]
     True
     >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] == \
-    [{'linkings': [('Q223757', 'Bella Swan'), ('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella')], 'tokens': ['Bella'], 'type': 'PERSON'}, {'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')], 'tokens': ['Twilight'], 'type': 'NNP'}]
+    [{'type': 'PERSON', 'tokens': ['Bella'], 'linkings': [('Q223757', 'Bella Swan')]}, {'type': 'NNP', 'tokens': ['Twilight'], 'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')]}]
     True
     >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['2012'], 'CD')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] == \
-    [{'linkings': [('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella'), ('Q231665', 'Belladonna')], 'tokens': ['Bella'], 'type': 'PERSON'}, {'linkings': [(['2012'],)], 'type': 'CD'}]
+    [{'tokens': ['Bella'], 'linkings': [{'label': 'Bella, Basilicata', 'links': 0, 'kbID': 'Q52533'}, {'label': '695 Bella', 'links': 0, 'kbID': 'Q156571'}, {'label': 'Belladonna', 'links': 0, 'kbID': 'Q231665'}], 'type': 'PERSON'}, {'linkings': [{'label': ['2012'], 'links': 0, 'kbID': None}], 'type': 'CD'}]
     True
     >>> link_entities_in_graph({'entities': [(['first', 'Queen', 'album'], 'NN')], 'tokens': "What was the first Queen album ?".split()})['entities'] == \
-    [{'linkings': [('Q139', 'queen'), ('Q116', 'monarch'), ('Q19643', 'queen regnant')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q146378', 'Album'), ('Q482994', 'album'), ('Q1173065', 'album')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q154898', 'First'), ('Q3746013', 'First'), ('Q5452237', 'First')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}]
+    [{'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q15862', 'Queen')]}, {'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q482994', 'album')]}, {'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q3746013', 'First'), ('Q5452238', 'First')]}]
+    True
     """
     entities = []
     if all(len(e) == 3 for e in ungrounded_graph.get('entities', [])):
@@ -281,8 +283,10 @@ def link_entities_in_graph(ungrounded_graph):
                 character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity.get('tokens',[])), film_id), starts_with=None)
                 character_linkings = post_process_entity_linkings(entity.get("tokens"), character_linkings)
                 entity['linkings'] = [l for linking in character_linkings for l in linking] + entity.get("linkings", [])
-                entity['linkings'] = entity['linkings'][:entity_linking_p.get("max.entity.options", 3)]
     entities = jointly_disambiguate_entities(entities, entity_linking_p.get("min.num.links", 0))
+    for e in entities:
+        # If there are many linkings we take the top N, since they are still ordered by ids/lexical_overlap
+        e['linkings'] = e['linkings'][:entity_linking_p.get("max.entity.options", 3)]
     ungrounded_graph['entities'] = entities
     return ungrounded_graph
 
@@ -323,7 +327,7 @@ def jointly_disambiguate_entities(entities, min_num_links=0):
     for e in entities:
         if e.get("type") != "CD":
             max_links = np.max([l.get('links') for l in e['linkings']])
-            if max_links > min_num_links:
+            if max_links >= min_num_links:
                 e['linkings'] = [(l.get('kbID'), l.get('label')) for l in e['linkings']
                                  if l.get('links') == max_links]
                 filtered_entities.append(e)
@@ -420,7 +424,7 @@ def post_process_entity_linkings(entity_tokens, linkings):
         linkings = [l + (lev_distance(" ".join(entity_tokens), l[1], costs=(1, 0, 2)),) for l in linkings]
         linkings = {l + (np.log(int(l[0][1:])),) for l in linkings if l[0].startswith("Q")}
         linkings = sorted(linkings, key=lambda k: (k[-2] + k[-1], int(k[0][1:])))
-        linkings = linkings[:entity_linking_p.get("max.entity.options", 3)]
+        linkings = linkings[:entity_linking_p.get("entity.options.to.retrieve", 3)]
         linkings = [l[:2] for l in linkings]
         grouped_linkings.append(linkings)
     return grouped_linkings
@@ -432,17 +436,15 @@ def group_entities_by_overlap(entities):
 
     :param entities: list of entities as tokens
     :return: a list of lists of entities
-    # >>> group_entities_by_overlap([('star',), ('wars',), ('war',), ('Star',), ('Wars',)])
-    # [({'star'}, [('star',), ('Star',)]), ({'wars', 'war'}, [('wars',), ('war',), ('Wars',)])]
-    # >>> group_entities_by_overlap([('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',), ('President',), ('Jfk',)]) == \
-    # [({'after', 'the', 'jfk', 'president'}, [('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',), ('President',), ('Jfk',)])]
-    # True
-    >>> group_entities_by_overlap([('Q36180', 'writer', "writer"), ('Q25183171', 'Writers', "writer"), ('Q28389', 'screenwriter', "writer")])
-    [({'writer'}, [('Q36180', 'writer', 'writer'), ('Q25183171', 'Writers', 'writer'), ('Q28389', 'screenwriter', 'writer')])]
-    >>> group_entities_by_overlap([('Q36180', 'star', "star"), ('Q25183171', 'Star Wars', "star wars"), ('Q28389', 'Star Wars saga', "star wars")])
-    [({'wars', 'star', 'war'}, [('Q36180', 'star', 'star'), ('Q25183171', 'Star Wars', 'star wars'), ('Q28389', 'Star Wars saga', 'star wars')])]
-    >>> group_entities_by_overlap([('Q36180', 'star', "star"), ('Q25183171', 'war', "war"), ('Q28389', 'The Wars', "wars")])
-    [({'star'}, [('Q36180', 'star', 'star')]), ({'wars', 'war'}, [('Q25183171', 'war', 'war'), ('Q28389', 'The Wars', 'wars')])]
+    >>> sorted(group_entities_by_overlap([('Q36180', 'writer', "writer"), ('Q25183171', 'Writers', "writer"), ('Q28389', 'screenwriter', "writer")])) == \
+    [({'writer'}, [('Q28389', 'screenwriter', 'writer'), ('Q25183171', 'Writers', 'writer'), ('Q36180', 'writer', 'writer')])]
+    True
+    >>> sorted(group_entities_by_overlap([('Q36180', 'star', "star"), ('Q25183171', 'Star Wars', "star wars"), ('Q28389', 'Star Wars saga', "star wars")])) == \
+    [({'star', 'wars', 'war'}, [('Q28389', 'Star Wars saga', 'star wars'), ('Q25183171', 'Star Wars', 'star wars'), ('Q36180', 'star', 'star')])]
+    True
+    >>> sorted(group_entities_by_overlap([('Q36180', 'star', "star"), ('Q25183171', 'war', "war"), ('Q28389', 'The Wars', "wars")])) == \
+    [({'war', 'wars'}, [('Q28389', 'The Wars', 'wars'), ('Q25183171', 'war', 'war')]), ({'star'}, [('Q36180', 'star', 'star')])]
+    True
     """
     groupings = []
     for e in sorted(entities, key=lambda el: len(el[1]), reverse=True):
