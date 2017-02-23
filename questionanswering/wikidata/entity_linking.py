@@ -268,7 +268,7 @@ def link_entities_in_graph(ungrounded_graph):
     for entity in ungrounded_graph.get('entities', []):
         if len(entity) == 2:
             if entity[1] == "CD":
-                entities.append({"linkings": [(entity[0], entity[0])], "type": entity[1]})
+                entities.append({"linkings": [(None, entity[0])], "type": entity[1]})
             else:
                 grouped_linkings = link_entity(entity)
                 for linkings in grouped_linkings:

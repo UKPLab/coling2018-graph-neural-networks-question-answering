@@ -1,7 +1,6 @@
 import copy
 
 from construction import graph
-from wikidata import entity_linking
 
 argmax_markers = {"last", "latest", "currency", "money", "football", "team"}
 argmin_markers = {"first", "oldest"}
@@ -47,11 +46,13 @@ def add_entity_and_relation(g):
     :return: a list of suggested graphs
     >>> add_entity_and_relation({'edgeSet': [], 'entities': []})
     []
-    >>> add_entity_and_relation({'edgeSet': [], 'entities': [(["Natalie", "Portman"], 'PERSON')]}) == [{'edgeSet': [{'right': ['Natalie', 'Portman'], 'rightkbID': 'Q37876'}], 'entities': []}]
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [{'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'PERSON'}]}) == \
+    [{'entities': [], 'edgeSet': [{'rightkbID': 'Q37876', 'canonical_right': 'Natalie Portman', 'right': ['Portman']}]}]
     True
-    >>> add_entity_and_relation({'edgeSet': [], 'entities': [(['2012'], 'CD'), (["Natalie", "Portman"], 'PERSON')]}) == [{'edgeSet': [{'right': ['Natalie', 'Portman'], 'rightkbID': 'Q37876'}], 'entities': [(['2012'], 'CD')]}]
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [{"linkings": [(None, ["2012"])] ,"tokens": ['2012'], "type": 'CD'}, {'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'PERSON'}]}) == \
+    [{'entities': [{'linkings': [(None, ['2012'])], 'type': 'CD', 'tokens': ['2012']}], 'edgeSet': [{'rightkbID': 'Q37876', 'canonical_right': 'Natalie Portman', 'right': ['Portman']}]}]
     True
-    >>> add_entity_and_relation({'edgeSet': [], 'entities': [(['2012'], 'CD')]})
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [{"linkings": [(None, ["2012"])] ,"tokens": ['2012'], "type": 'CD'}]})
     []
     """
     if len(g.get('entities', [])) == 0:
@@ -61,7 +62,7 @@ def add_entity_and_relation(g):
     new_graphs = []
     while entities:
         entity = entities.pop(0)
-        if entity[1] == 'CD':
+        if entity.get("type") == 'CD':
             skipped.append(entity)
         else:
             if len(entity.get("linkings",[])) > 0:
@@ -69,7 +70,7 @@ def add_entity_and_relation(g):
                 for kbID, label in linkings:
                     new_g = graph.copy_graph(g)
                     new_g['entities'] = entities[:] + skipped
-                    new_g['edgeSet'].append({'right': entity[0], 'rightkbID': kbID, 'canonical_right': label})
+                    new_g['edgeSet'].append({'right': entity.get("tokens", []), 'rightkbID': kbID, 'canonical_right': label})
                     new_graphs.append(new_g)
     return new_graphs
 
@@ -80,28 +81,28 @@ def last_relation_numeric(g):
 
     :param g: a graph with a non-empty edgeSet
     :return: a list of suggested graphs
-    >>> last_relation_numeric({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': [(["Natalie", "Portman"], 'PERSON'), (['2012'], 'CD')]}) == \
-    [{'edgeSet': [{'right':[2]}, {'right':[8], 'num': ['2012']}], 'entities': [(["Natalie", "Portman"], 'PERSON')]}]
+    >>> last_relation_numeric({'edgeSet': [{'right':[2]}, {'right':[8]}], 'entities': [{'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'PERSON'}, {'linkings': [(None, ['2012'])], 'type': 'CD', 'tokens': ['2012']}]}) == \
+    [{'edgeSet': [{'right':[2]}, {'right':[8], 'num': ['2012']}], 'entities': [{'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'PERSON'}]}]
     True
-    >>> last_relation_numeric({'edgeSet': [{'right':[2]}, {'right':[8], 'argmin':'time'}], 'entities': [(['2012'], 'CD')]})
+    >>> last_relation_numeric({'edgeSet': [{'right':[2]}, {'right':[8], 'argmin':'time'}], 'entities': [{'linkings': [(None, ['2012'])], 'type': 'CD', 'tokens': ['2012']}]})
     []
-    >>> last_relation_numeric({'edgeSet': [{'right':[2]}, {'right':[8], 'num':'2009'}], 'entities': [(['2012'], 'CD')]})
+    >>> last_relation_numeric({'edgeSet': [{'right':[2]}, {'right':[8], 'num':'2009'}], 'entities': [{'linkings': [(None, ['2012'])], 'type': 'CD', 'tokens': ['2012']}]})
     []
     >>> last_relation_numeric({'edgeSet': [{'right':[2]}], 'entities': []})
     []
-    >>> last_relation_numeric({'edgeSet': [{'right':[2]}], 'entities': [(["Natalie", "Portman"], 'PERSON')]})
+    >>> last_relation_numeric({'edgeSet': [{'right':[2]}], 'entities': [{'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'PERSON'}]})
     []
     """
     if len(g.get('edgeSet', [])) == 0 or graph.graph_has_temporal(g):
         return []
-    if len(g.get('entities', [])) == 0 or not any(e[1] == 'CD' for e in g['entities'] if len(e) > 1):
+    if len(g.get('entities', [])) == 0 or not any(e.get("type") == 'CD' for e in g['entities'] if len(e) > 1):
         return []
     entities = copy.copy(g.get('entities', []))
-    cd_entities = [e[0] for e in entities if e[1] == 'CD']
+    cd_entities = [e.get("tokens") for e in entities if e.get("type") == 'CD']
     if len(cd_entities) == 0:
         return []
     cd_entity = cd_entities[0]
-    entities = [e for e in entities if e[0] != cd_entity]
+    entities = [e for e in entities if e.get("tokens") != cd_entity]
     new_g = graph.copy_graph(g)
     new_g['entities'] = entities
     new_g['edgeSet'][-1]['num'] = cd_entity
@@ -200,9 +201,10 @@ def expand(g):
 
     :param g: dict object representing the graph with "edgeSet" and "entities"
     :return: a list of new graphs that are modified copies
-    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[["Barack", "Obama"]]})
+    >>> expand({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[{'linkings':[("Q76", "Barack Obama")], 'tokens':["Obama"], 'type':'PERSON'}]})
     []
-    >>> expand({"edgeSet":[{"right":["Barack", "Obama"]}]}) == [{'edgeSet': [{'hopUp': None, 'right': ['Barack', 'Obama']}], 'entities': []}, {'edgeSet': [{'hopDown': None, 'right': ['Barack', 'Obama']}], 'entities': []}]
+    >>> expand({"edgeSet":[{"right":["Barack", "Obama"]}]}) == \
+    [{'edgeSet': [{'hopUp': None, 'right': ['Barack', 'Obama']}], 'entities': []}, {'edgeSet': [{'hopDown': None, 'right': ['Barack', 'Obama']}], 'entities': []}]
     True
     """
     if "edgeSet" not in g:
@@ -218,7 +220,8 @@ def restrict(g):
 
     :param g: dict object representing the graph with "edgeSet" and "entities"
     :return: a list of new graphs that are modified copies
-    >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[(['Barack', 'Obama'], "PERSON")]}) == [{'entities': [], 'edgeSet': [{'right': ['Barack', 'Obama'], 'rightkbID': 'Q76'}], 'tokens': ['Who', 'is', 'Barack', 'Obama', '?']}]
+    >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "entities":[{'linkings':[("Q76", "Barack Obama")], 'tokens':["Obama"], 'type':'PERSON'}]}) == \
+    [{'entities': [], 'edgeSet': [{'right': ['Obama'], 'rightkbID': 'Q76', 'canonical_right': "Barack Obama"}], 'tokens': ['Who', 'is', 'Barack', 'Obama', '?']}]
     True
     >>> restrict({"tokens": ['Who', 'is', 'Barack', 'Obama', '?'], "edgeSet":[{"left":[0], "right":[2,3]}]})
     []
