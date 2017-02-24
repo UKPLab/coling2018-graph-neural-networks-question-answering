@@ -5,7 +5,7 @@ import itertools
 
 from utils import Loggable
 from construction import graph
-from wikidata import wdaccess
+from wikidata import wdaccess, entity_linking
 
 
 class WebQuestions(Loggable):
@@ -240,7 +240,7 @@ class WebQuestions(Loggable):
 
         :return: a list of lists of ordered entities as lists of tokens
         """
-        return [graph.extract_entities(tagged_question) for tagged_question in self._dataset_tagged]
+        return [entity_linking.extract_entities(tagged_question) for tagged_question in self._dataset_tagged]
 
 
 def get_answers_from_question(question_object):
