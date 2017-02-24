@@ -567,7 +567,7 @@ def group_entities_by_overlap(entities):
     groupings = []
     for e in sorted(entities, key=lambda el: len(el[1]), reverse=True):
         tokens = {t for t in e[2].lower().split()}
-        tokens.update(set(_lemmatize_tokens(tokens)))
+        tokens.update(set(_lemmatize_tokens(list(tokens))))
         i = 0
         while len(groupings) > i >= 0:
             k, entities = groupings[i]
