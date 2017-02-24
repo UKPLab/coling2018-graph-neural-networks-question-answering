@@ -316,15 +316,7 @@ def jointly_disambiguate_entities(entities, min_num_links=0):
     """
     for e in entities:
         e['linkings'] = [{"kbID": l[0], "links": 0, "label": l[1]} for l in e.get('linkings', [])]
-    entity_pairs = list(itertools.combinations([e for e in entities if e.get("type") != "CD"], 2))
-    if not(len(entity_pairs) == 0 or all(len(e.get("linkings", [])) < 2 for e in entities)):
-        for e1, e2 in entity_pairs:
-            for l1 in e1['linkings']:
-                for l2 in e2['linkings']:
-                    have_link = wdaccess.verify_grounding({'edgeSet':[{"rightkbID": l1.get('kbID')}, {"rightkbID": l2.get('kbID')}]})
-                    if have_link:
-                        l1['links'] = l1.get('links', 0) + 1
-                        l2['links'] = l2.get('links', 0) + 1
+    _count_links_between_entities(entities)
     filtered_entities = []
     for e in entities:
         if e.get("type") != "CD":
@@ -337,6 +329,19 @@ def jointly_disambiguate_entities(entities, min_num_links=0):
             e['linkings'] = [(l.get('kbID'), l.get('label')) for l in e['linkings']]
             filtered_entities.append(e)
     return filtered_entities
+
+
+def _count_links_between_entities(entities):
+    entity_pairs = list(itertools.combinations([e for e in entities if e.get("type") != "CD"], 2))
+    if not (len(entity_pairs) == 0 or all(len(e.get("linkings", [])) < 2 for e in entities)):
+        for e1, e2 in entity_pairs:
+            for l1 in e1['linkings']:
+                for l2 in e2['linkings']:
+                    have_link = wdaccess.verify_grounding(
+                        {'edgeSet': [{"rightkbID": l1.get('kbID')}, {"rightkbID": l2.get('kbID')}]})
+                    if have_link:
+                        l1['links'] = l1.get('links', 0) + 1
+                        l2['links'] = l2.get('links', 0) + 1
 
 
 def link_entity(entity, try_subentities=True):
