@@ -13,7 +13,8 @@ entity_linking_p = {
     "max.entity.options": 3,
     "entity.options.to.retrieve": 5,
     "min.num.links": 0,
-    "respect.case": False
+    "respect.case": False,
+    "overlaping.nn.ne": False
 }
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
@@ -26,8 +27,8 @@ entity_map = utils.load_entity_map(utils.RESOURCES_FOLDER + "manual_entity_map.t
 
 np_grammar = r"""
     NP:
-    {(<NN|NNS>+|<NNP|NNPS>+)<IN|CC>(<PRP\$|DT><NN|NNS>+|<NNP|NNPS>+)}
-    {<JJ|RB|CD|VBG|VBN>*(<NNS|NN>+|<NNP|NNPS>+<NNS|NN>*)<RB|CD|VBG|VBN>?}
+    {(<NN|NNS>+|<NNP|NNPS>+)<IN|CC>(<PRP\$|DT><NN|NNS|NNP|NNPS>+|<NNP|NNPS>+)}
+    {<JJ|RB|CD|VBG|VBN>*(<NNP|NN|NNS|NNPS>+)<RB|CD|VBG|VBN>?}
     {<NNP|NN|NNS|NNPS>+}
     """
 np_parser = nltk.RegexpParser(np_grammar)
@@ -92,12 +93,17 @@ def extract_entities(tokens_ne_pos):
     [(['Big', 'Bang', 'Theory'], 'NNP'), (['actors'], 'NN')]
     >>> extract_entities([('Who', 'O', 'WP'), ('was', 'O', 'VBD'), ('on', 'O', 'IN'), ('the', 'O', 'DT'), ('Apollo', 'O', 'NNP'), ('11', 'O', 'CD'), ('mission', 'O', 'NN'), ('?', 'O', '.')])
     [(['Apollo', '11'], 'NNP'), (['mission'], 'NN')]
+    >>> entity_linking_p['overlaping.nn.ne'] = True
+    >>> extract_entities([['Who', 'O', 'WP'], ['is', 'O', 'VBZ'], ['the', 'O', 'DT'], ['king', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'],['Netherlands', 'LOCATION', 'NNP'], ['?', 'O', '.']])
+    [(['Netherlands'], 'LOCATION'), (['king', 'of', 'the', 'Netherlands'], 'NN')]
+    >>> extract_entities([['Who', 'O', 'WP'], ['wrote', 'O', 'VBD'], ['the', 'O', 'DT'], ['song', 'O', 'NN'], ['Hotel', 'O', 'NNP'], ['California', 'LOCATION', 'NNP'], ['?', 'O', '.']])
+    [(['California'], 'LOCATION'), (['song', 'Hotel', 'California'], 'NN')]
     """
     persons = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['PERSON'])
     locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])
     orgs = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['ORGANIZATION'])
 
-    chunks = np_parser.parse([(w, t if p == "O" else "O") for w, p, t in tokens_ne_pos])
+    chunks = np_parser.parse([(w, t) for w, _, t in tokens_ne_pos] if entity_linking_p.get("overlaping.nn.ne", False) else [(w, t if p == "O" else "O") for w, p, t in tokens_ne_pos])
     nps = [el for el in chunks if type(el) == nltk.tree.Tree and el.label() == "NP"]
     # nns = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NN', 'NNS'])
     # nnps = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NNP', 'NNPS'])
@@ -362,19 +368,20 @@ def link_entities_in_graph(ungrounded_graph):
     :param ungrounded_graph: graph as a dictionary with 'entities'
     :return: graph with entity linkings in the 'entities' array
     >>> link_entities_in_graph({'entities': [(['Norway'], 'LOCATION'), (['oil'], 'NN')], 'tokens': ['where', 'does', 'norway', 'get', 'their', 'oil', '?']})['entities'] == \
-    [{'tokens': ['Norway'], 'type': 'LOCATION', 'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')]}, {'tokens': ['oil'], 'type': 'NN', 'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')]}]
+    [{'linkings': [('Q2480177', 'Norway')], 'type': 'LOCATION', 'tokens': ['Norway']}, {'linkings': [('Q1130872', 'Oil')], 'type': 'NN', 'tokens': ['oil']}]
     True
     >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] == \
-    [{'type': 'PERSON', 'tokens': ['Bella'], 'linkings': [('Q223757', 'Bella Swan')]}, {'type': 'NNP', 'tokens': ['Twilight'], 'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')]}]
+    [{'linkings': [('Q223757', 'Bella Swan')], 'type': 'PERSON', 'tokens': ['Bella']}, {'linkings': [('Q160071', 'Twilight')], 'type': 'NNP', 'tokens': ['Twilight']}]
     True
     >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['2012'], 'CD')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] == \
-    [{'tokens': ['Bella'], 'linkings': [{'label': 'Bella, Basilicata', 'links': 0, 'kbID': 'Q52533'}, {'label': '695 Bella', 'links': 0, 'kbID': 'Q156571'}, {'label': 'Belladonna', 'links': 0, 'kbID': 'Q231665'}], 'type': 'PERSON'}, {'linkings': [{'label': ['2012'], 'links': 0, 'kbID': None}], 'type': 'CD'}]
+    [{'linkings': [('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella'), ('Q231665', 'Belladonna')], 'type': 'PERSON', 'tokens': ['Bella']}, {'linkings': [(None, ['2012'])], 'type': 'CD'}]
     True
     >>> link_entities_in_graph({'entities': [(['first', 'Queen', 'album'], 'NN')], 'tokens': "What was the first Queen album ?".split()})['entities'] == \
-    [{'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q15862', 'Queen')]}, {'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q482994', 'album')]}, {'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q3746013', 'First'), ('Q5452238', 'First')]}]
+    [{'linkings': [('Q15862', 'Queen')], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}, {'linkings': [('Q5452238', 'First')], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}, {'linkings': [('Q482994', 'album')], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}]
     True
     """
     entities = []
+    discovered_entity_ids = set()
     if all(len(e) == 3 for e in ungrounded_graph.get('entities', [])):
         return ungrounded_graph
     for entity in ungrounded_graph.get('entities', []):
@@ -384,7 +391,9 @@ def link_entities_in_graph(ungrounded_graph):
             else:
                 grouped_linkings = link_entity(entity)
                 for linkings in grouped_linkings:
+                    linkings = [l for l in linkings if l[0] not in discovered_entity_ids]
                     entities.append({"linkings": linkings, "type": entity[1], 'tokens': entity[0]})
+                    discovered_entity_ids.update({kbID for kbID, _ in linkings})
         elif len(entity) == 3:
             entities.append(entity)
     if any(w in set(ungrounded_graph.get('tokens', [])) for w in v_structure_markers):
