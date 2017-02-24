@@ -347,6 +347,8 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
         sparql_relation_inst = sparql_relation_inst.replace("?e3", "?e3" + str(i))
         sparql_relation_inst = sparql_relation_inst.replace("?hop", "?hop" + str(i))
 
+        if 'leftkbID' in edge and ask:
+            sparql_relation_inst = sparql_relation_inst.replace("?e1", "e:" + edge['leftkbID'])
         if 'rightkbID' in edge:
             sparql_relation_inst = sparql_relation_inst.replace("?e2", "e:" + edge['rightkbID'])
         elif 'right' in edge:
@@ -367,7 +369,8 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
         # query = query.replace("%queryvariables%", " ".join(local_variables))
 
     query = sparql_prefix + (sparql_select if not ask else sparql_ask) + query
-    query += sparql_filter_main_entity
+    if all('leftkbID' not in edge for edge in g.get('edgeSet', [])):
+        query += sparql_filter_main_entity
 
     if return_var_values and not ask:
         variables.append("?e1")

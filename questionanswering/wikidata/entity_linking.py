@@ -367,9 +367,9 @@ def link_entities_in_graph(ungrounded_graph):
 
     :param ungrounded_graph: graph as a dictionary with 'entities'
     :return: graph with entity linkings in the 'entities' array
-    >>> link_entities_in_graph({'entities': [(['Norway'], 'LOCATION'), (['oil'], 'NN')], 'tokens': ['where', 'does', 'norway', 'get', 'their', 'oil', '?']})['entities'] == \
-    [{'linkings': [('Q2480177', 'Norway')], 'type': 'LOCATION', 'tokens': ['Norway']}, {'linkings': [('Q1130872', 'Oil')], 'type': 'NN', 'tokens': ['oil']}]
-    True
+    # >>> link_entities_in_graph({'entities': [(['Norway'], 'LOCATION'), (['oil'], 'NN')], 'tokens': ['where', 'does', 'norway', 'get', 'their', 'oil', '?']})['entities'] == \
+    # [{'linkings': [('Q2480177', 'Norway')], 'type': 'LOCATION', 'tokens': ['Norway']}, {'linkings': [('Q1130872', 'Oil')], 'type': 'NN', 'tokens': ['oil']}]
+    # True
     >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] == \
     [{'linkings': [('Q223757', 'Bella Swan')], 'type': 'PERSON', 'tokens': ['Bella']}, {'linkings': [('Q160071', 'Twilight')], 'type': 'NNP', 'tokens': ['Twilight']}]
     True
@@ -457,7 +457,10 @@ def _count_links_between_entities(entities):
             for l1 in e1['linkings']:
                 for l2 in e2['linkings']:
                     have_link = wdaccess.verify_grounding(
-                        {'edgeSet': [{"rightkbID": l1.get('kbID')}, {"rightkbID": l2.get('kbID')}]})
+                        {'edgeSet': [{"rightkbID": l1.get('kbID'), "leftkbID": l2.get('kbID')}]})
+                    if not have_link:
+                        have_link = wdaccess.verify_grounding(
+                            {'edgeSet': [{"rightkbID": l1.get('kbID')}, {"rightkbID": l2.get('kbID')}]})
                     if have_link:
                         l1['links'] = l1.get('links', 0) + 1
                         l2['links'] = l2.get('links', 0) + 1
