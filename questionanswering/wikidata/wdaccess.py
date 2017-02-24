@@ -133,7 +133,10 @@ sparql_restriction_time_argmax = "?m ?a [base:time ?n]. FILTER (YEAR(?n) = ?year
 
 sparql_relation_filter = 'FILTER NOT EXISTS { GRAPH <http://wikidata.org/properties> {%relationvar% rdf:type base:Property}}'
 
-sparql_filter_main_entity = " FILTER(STRSTARTS(STR(?e1), \"http://www.wikidata.org/entity/\")) "
+sparql_filter_main_entity = """
+        BIND (STR(?e1) as ?e1s)
+        FILTER(STRSTARTS(?e1s, "http://www.wikidata.org/entity/Q") && !CONTAINS(?e1s, "-"))
+        """
 sparql_close_order = " ORDER BY {}"
 sparql_close = " LIMIT {}"
 
