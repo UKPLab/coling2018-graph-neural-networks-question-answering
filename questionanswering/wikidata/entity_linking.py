@@ -204,6 +204,7 @@ def possible_variants(entity_tokens, entity_type):
     [('Canadian',), ('US', 'Canadians')]
     >>> possible_variants(['canadians'], 'NNP')
     [('canadian',), ('US', 'canadians')]
+    >>> entity_linking_p["respect.case"] = False
     """
     new_entities = []
     entity_lemmas = []
@@ -326,6 +327,7 @@ def possible_subentities(entity_tokens, entity_type):
     >>> entity_linking_p["respect.case"] = True
     >>> possible_subentities(['Romanian', 'people'], 'NN');
     [('Romanian',), ('people',)]
+    >>> entity_linking_p["respect.case"] = False
     """
     if len(entity_tokens) == 1:
         return []
@@ -392,43 +394,52 @@ def link_entities_in_graph(ungrounded_graph, joint_diambiguation=True):
     # >>> link_entities_in_graph({'entities': [(['Norway'], 'LOCATION'), (['oil'], 'NN')], 'tokens': ['where', 'does', 'norway', 'get', 'their', 'oil', '?']})['entities'] == \
     # [{'linkings': [('Q2480177', 'Norway')], 'type': 'LOCATION', 'tokens': ['Norway']}, {'linkings': [('Q1130872', 'Oil')], 'type': 'NN', 'tokens': ['oil']}]
     # True
-    >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] == \
-    [{'linkings': [('Q223757', 'Bella Swan')], 'type': 'PERSON', 'tokens': ['Bella']}, {'linkings': [('Q160071', 'Twilight')], 'type': 'NNP', 'tokens': ['Twilight']}]
+    >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] ==\
+    [{'type': 'NNP', 'tokens': ['Bella'], 'linkings': [('Q223757', 'Bella Swan')]}, {'type': 'NNP', 'tokens': ['Twilight'], 'linkings': [('Q160071', 'Twilight'), ('Q189378', 'Twilight')]}]
     True
     >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['2012'], 'CD')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] == \
-    [{'linkings': [('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella'), ('Q231665', 'Belladonna')], 'type': 'PERSON', 'tokens': ['Bella']}, {'linkings': [(None, ['2012'])], 'type': 'CD'}]
+    [{'type': 'CD', 'tokens': ['2012'], 'linkings':[]}, {'type': 'NNP', 'tokens': ['Bella'], 'linkings': [('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella'), ('Q231665', 'Belladonna')]}]
     True
     >>> link_entities_in_graph({'entities': [(['first', 'Queen', 'album'], 'NN')], 'tokens': "What was the first Queen album ?".split()})['entities'] == \
-    [{'linkings': [('Q15862', 'Queen')], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}, {'linkings': [('Q5452238', 'First')], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}, {'linkings': [('Q482994', 'album')], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}]
+    [{'type': 'NNP', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q15862', 'Queen'), ('Q193490', 'Queen')]}, {'type': 'NNP', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q482994', 'album')]}]
     True
     """
+    linkings = []
     entities = []
     discovered_entity_ids = set()
     if all(len(e) == 3 for e in ungrounded_graph.get('entities', [])):
         return ungrounded_graph
-    for entity in ungrounded_graph.get('entities', []):
-        if len(entity) == 2:
-            if entity[1] == "CD":
-                entities.append({"linkings": [(None, entity[0])], "type": entity[1]})
+    for fragment in ungrounded_graph.get('entities', []):
+        if len(fragment) == 2:
+            if fragment[1] == "CD":
+                entities.append({"tokens": fragment[0], "type": fragment[1]})
             else:
-                grouped_linkings = link_entity(entity)
-                for linkings in grouped_linkings:
-                    linkings = [l for l in linkings if l[0] not in discovered_entity_ids]
-                    if len(linkings) > 0:
-                        entities.append({"linkings": linkings, "type": entity[1], 'tokens': entity[0]})
-                        discovered_entity_ids.update({kbID for kbID, _ in linkings})
-        elif len(entity) == 3:
-            entities.append(entity)
+                _linkings = _link_entity(fragment)
+                _linkings = [l for l in _linkings if l.get("e2") not in discovered_entity_ids]
+                if len(_linkings) > 0:
+                    for l in _linkings:
+                        l['fragment'] = fragment[0]
+                    linkings.extend(_linkings)
+                    discovered_entity_ids.update({l.get("e2") for l in linkings})
+        elif len(fragment) == 3:
+            entities.append(fragment)
+    grouped_linkings = group_entities_by_overlap(linkings)
+    for tokens, _linkings in grouped_linkings:
+        if len(_linkings) > 0:
+            _linkings = post_process_entity_linkings(_linkings)
+            entities.append({"linkings": _linkings, "type": 'NNP', 'tokens': _linkings[0]['fragment']})
+
     if any(w in set(ungrounded_graph.get('tokens', [])) for w in v_structure_markers):
-        for entity in [e for e in entities if e.get("type") == "PERSON" and len(e.get('tokens', [])) == 1 and "linkings" in e]:
-            for film_id in [l[0] for e in entities for l in e.get("linkings", []) if e != entity]:
+        for entity in [e for e in entities if e.get("type") != "CD" and len(e.get('tokens', [])) == 1 and "linkings" in e]:
+            for film_id in [l.get('kbID') for e in entities for l in e.get("linkings", []) if e != entity]:
                 character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity.get('tokens',[])), film_id), starts_with=None)
-                character_linkings = post_process_entity_linkings(entity.get("tokens"), character_linkings)
-                entity['linkings'] = [l for linking in character_linkings for l in linking] + entity.get("linkings", [])
+                character_linkings = post_process_entity_linkings(character_linkings, entity.get("tokens"))
+                entity['linkings'] = [l for l in character_linkings if l.get("e2") not in discovered_entity_ids] + entity.get("linkings", [])
     if joint_diambiguation:
         entities = jointly_disambiguate_entities(entities, entity_linking_p.get("min.num.links", 0))
     for e in entities:
         # If there are many linkings we take the top N, since they are still ordered by ids/lexical_overlap
+        e['linkings'] = [(l.get('kbID'), l.get('label')) for l in e.get('linkings', [])]
         e['linkings'] = e['linkings'][:entity_linking_p.get("max.entity.options", 3)]
     ungrounded_graph['entities'] = entities
     return ungrounded_graph
@@ -444,32 +455,31 @@ def jointly_disambiguate_entities(entities, min_num_links=0):
     :param entities: a list of entities as dictionaries, that have 'linkings'
     :return: a list of entities as dictionaries
     :param min_num_links: filter out entities that don't have a linking that has equal or more links than specified
-    >>> jointly_disambiguate_entities([{'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')], 'tokens': ['Norway'], 'type': 'LOCATION'}, {'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')], 'tokens': ['oil'], 'type': 'NN'}]) ==\
-    [{'type': 'LOCATION', 'tokens': ['Norway'], 'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')]}, {'type': 'NN', 'tokens': ['oil'], 'linkings': [('Q42962', 'oil'), ('Q1130872', 'Oil'), ('Q7081283', 'Oil')]}]
+    >>> jointly_disambiguate_entities([{'linkings': [{'kbID': 'Q20','label': 'Norway'}, {'kbID': 'Q944765','label': 'Norway'}, {'kbID': 'Q1913264','label': 'Norway'}], 'tokens': ['Norway'], 'type': 'LOCATION'}, {'linkings': [{'kbID': 'Q42962','label': 'oil'}, {'kbID': 'Q1130872', 'label': 'Oil'}], 'tokens': ['oil'], 'type': 'NN'}]) ==\
+    [{'linkings': [{'links': 0, 'kbID': 'Q20', 'label': 'Norway'}, {'links': 0, 'kbID': 'Q944765', 'label': 'Norway'}, {'links': 0, 'kbID': 'Q1913264', 'label': 'Norway'}], 'type': 'LOCATION', 'tokens': ['Norway']}, {'linkings': [{'links': 0, 'kbID': 'Q42962', 'label': 'oil'}, {'links': 0, 'kbID': 'Q1130872', 'label': 'Oil'}], 'type': 'NN', 'tokens': ['oil']}]
     True
-    >>> jointly_disambiguate_entities([{'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')], 'tokens': ['Norway'], 'type': 'LOCATION'}]) ==\
-    [{'type': 'LOCATION', 'tokens': ['Norway'], 'linkings': [('Q20', 'Norway'), ('Q944765', 'Norway'), ('Q1913264', 'Norway')]}]
+    >>> jointly_disambiguate_entities([{'linkings': [{'kbID': 'Q20','label': 'Norway'}, {'kbID': 'Q944765','label': 'Norway'}, {'kbID': 'Q1913264','label': 'Norway'}], 'tokens': ['Norway'], 'type': 'NNP'}]) == \
+    [{'linkings': [{'links': 0, 'kbID': 'Q20', 'label': 'Norway'}, {'links': 0, 'kbID': 'Q944765', 'label': 'Norway'}, {'links': 0, 'kbID': 'Q1913264', 'label': 'Norway'}], 'type': 'NNP', 'tokens': ['Norway']}]
     True
-    >>> jointly_disambiguate_entities([{'linkings': [('Q223757', 'Bella Swan'), ('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella')], 'tokens': ['Bella'], 'type': 'PERSON'}, {'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')], 'tokens': ['Twilight'], 'type': 'NNP'}]) ==\
-    [{'tokens': ['Bella'], 'linkings': [('Q223757', 'Bella Swan')], 'type': 'PERSON'}, {'tokens': ['Twilight'], 'linkings': [('Q44523', 'Twilight'), ('Q160071', 'Twilight'), ('Q189378', 'Twilight')], 'type': 'NNP'}]
+    >>> jointly_disambiguate_entities([{'linkings': [{'kbID': 'Q223757','label': 'Bella Swan'}, {'kbID': 'Q52533','label': 'Bella, Basilicata'}, {'kbID': 'Q156571','label': '695 Bella'}], 'tokens': ['Bella'], 'type': 'PERSON'}, {'linkings': [{'kbID': 'Q44523','label': 'Twilight'}, {'kbID': 'Q160071','label': 'Twilight'}, {'kbID': 'Q189378','label': 'Twilight'}], 'tokens': ['Twilight'], 'type': 'NNP'}]) == \
+    [{'linkings': [{'links': 3, 'kbID': 'Q223757', 'label': 'Bella Swan'}], 'type': 'PERSON', 'tokens': ['Bella']}, {'linkings': [{'links': 1, 'kbID': 'Q44523', 'label': 'Twilight'}, {'links': 1, 'kbID': 'Q160071', 'label': 'Twilight'}, {'links': 1, 'kbID': 'Q189378', 'label': 'Twilight'}], 'type': 'NNP', 'tokens': ['Twilight']}]
     True
-    >>> jointly_disambiguate_entities([{'linkings': [('Q139', 'queen'), ('Q116', 'monarch'), ('Q15862', 'Queen')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q146378', 'Album'), ('Q482994', 'album'), ('Q1173065', 'album')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [('Q154898', 'First'), ('Q3746013', 'First'), ('Q5452237', 'First')], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}]) ==\
-    [{'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q15862', 'Queen')]}, {'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q482994', 'album')]}, {'type': 'NN', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q3746013', 'First')]}]
+    >>> jointly_disambiguate_entities([{'linkings': [{'kbID': 'Q139','label': 'queen'}, {'kbID': 'Q116','label': 'monarch'}, {'kbID': 'Q15862','label': 'Queen'}], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [{'kbID': 'Q146378','label': 'Album'}, {'kbID': 'Q482994','label': 'album'}, {'kbID': 'Q1173065','label': 'album'}], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}, {'linkings': [{'kbID': 'Q154898','label': 'First'}, {'kbID': 'Q3746013','label': 'First'}, {'kbID': 'Q5452237','label': 'First'}], 'tokens': ['first', 'Queen', 'album'], 'type': 'NN'}]) == \
+    [{'linkings': [{'links': 1, 'kbID': 'Q15862', 'label': 'Queen'}], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}, {'linkings': [{'links': 2, 'kbID': 'Q482994', 'label': 'album'}], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}, {'linkings': [{'links': 1, 'kbID': 'Q3746013', 'label': 'First'}], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}]
     True
     """
     for e in entities:
-        e['linkings'] = [{"kbID": l[0], "links": 0, "label": l[1]} for l in e.get('linkings', [])]
+        for l in e.get('linkings', []):
+            l['links'] = 0
     _count_links_between_entities(entities)
     filtered_entities = []
     for e in entities:
         if e.get("type") != "CD" and len(e['linkings']) > 0:
             max_links = np.max([l.get('links') for l in e['linkings']])
             if max_links >= min_num_links:
-                e['linkings'] = [(l.get('kbID'), l.get('label')) for l in e['linkings']
-                                 if l.get('links') == max_links]
+                e['linkings'] = [l for l in e['linkings'] if l.get('links') == max_links]
                 filtered_entities.append(e)
         else:
-            e['linkings'] = [(l.get('kbID'), l.get('label')) for l in e['linkings']]
             filtered_entities.append(e)
     return filtered_entities
 
@@ -547,11 +557,20 @@ def link_entity(entity, try_subentities=True):
     [[('Q4970706', 'Federal Chancellor of Germany'), ('Q56022', 'Chancellor of Germany'), ('Q183', 'Germany')]]
     """
     linkings = _link_entity(entity, try_subentities)
-    linkings = post_process_entity_linkings(entity[0], linkings)
-    return linkings
+    grouped_linkings = []
+    for _, _linkings in group_entities_by_overlap(linkings):
+        _linkings = post_process_entity_linkings(_linkings, " ".join(entity[0]))
+        grouped_linkings.append([(l.get('kbID'), l.get('label')) for l in _linkings])
+    return grouped_linkings
 
 
 def _link_entity(entity, try_subentities=True):
+    """
+    :param entity: a tuple where the first element is a list of tokens and the second element is either a part of speech tag or a NE tag
+    :param try_subentities: if substrings of the list of the given tokens should be built to find matches
+    :return: a list of linkings as dictionaries where the "e2" field contains the entity id
+    :rtype list
+    """
     entity_tokens, entity_type = entity
     if " ".join(entity_tokens) in labels_blacklist or all(e.lower() in stop_words_en | labels_blacklist for e in entity_tokens):
         return []
@@ -570,26 +589,33 @@ def _link_entity(entity, try_subentities=True):
     return linkings
 
 
-def post_process_entity_linkings(entity_tokens, linkings):
+def post_process_entity_linkings(linkings, entity_fragment=None):
     """
-    :param entity_tokens: list of entity tokens as appear in the sentence
-    :param linkings: possible linkings
+    :param linkings: possible linkings as a list of dictionaries
+    :param entity_fragment: list of entity tokens as appear in the sentence (optional, either that or linkings should have a key element "fragment")
     :return: sorted linkings
-    >>> post_process_entity_linkings(['writers', 'studied'], wdaccess.query_wikidata(wdaccess.multi_entity_query({" ".join(s) for s in possible_subentities(['writers', 'studied'], "NN")}), starts_with=None))
-    [[('Q36180', 'writer'), ('Q25183171', 'Writers'), ('Q28389', 'screenwriter')]]
+    >>> post_process_entity_linkings(wdaccess.query_wikidata(wdaccess.multi_entity_query({" ".join(s) for s in possible_subentities(['writers', 'studied'], "NN")}), starts_with=None), " ".join(['writers', 'studied'])) == \
+    [{'labelright': 'writer', 'label': 'screenwriter', 'lev': 9, 'e2': 'http://www.wikidata.org/entity/Q28389', 'kbID': 'Q28389', 'id_rank': 10.253757025176343}, {'labelright': 'writer', 'label': 'writer', 'lev': 9, 'e2': 'http://www.wikidata.org/entity/Q36180', 'kbID': 'Q36180', 'id_rank': 10.496261758949286}, {'labelright': 'writer', 'label': 'Déborah Puig-Pey Stiefel', 'lev': 8, 'e2': 'http://www.wikidata.org/entity/Q27942639', 'kbID': 'Q27942639', 'id_rank': 17.145664359730738}, {'labelright': 'Writers', 'label': 'Writers', 'lev': 9, 'e2': 'http://www.wikidata.org/entity/Q25183171', 'kbID': 'Q25183171', 'id_rank': 17.041686511931928}]
+    True
     """
-    linkings = {(l.get("e2", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, ""), l.get("label", ""), l.get("labelright", "")) for l in linkings if l}
-    linkings = [l for l in linkings if l[0] not in entity_blacklist]
-    grouped_linkings = []
-    for linkings in [g[1] for g in group_entities_by_overlap(linkings)]:
-        linkings = [l[:2] for l in linkings]
-        linkings = [l + (lev_distance(" ".join(entity_tokens), l[1], costs=(1, 0, 2)),) for l in linkings]
-        linkings = {l + (np.log(int(l[0][1:])),) for l in linkings if l[0].startswith("Q")}
-        linkings = sorted(linkings, key=lambda k: (k[-2] + k[-1], int(k[0][1:])))
-        linkings = linkings[:entity_linking_p.get("entity.options.to.retrieve", 3)]
-        linkings = [l[:2] for l in linkings]
-        grouped_linkings.append(linkings)
-    return grouped_linkings
+    # linkings = {(l.get("e2", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, ""), l.get("label", ""), l.get("labelright", ""), l.get("fragment", "")) for l in linkings if l}
+    assert all('fragment' in l for l in linkings) or entity_fragment
+    discovered_entity_ids = set()
+    _linkings = []
+    for l in linkings:
+        l['kbID'] = l.get("e2", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, "")
+        if l['kbID'] not in discovered_entity_ids:
+            _linkings.append(l)
+            discovered_entity_ids.add(l['kbID'])
+
+    _linkings = [l for l in _linkings if l.get("kbID") not in entity_blacklist and l.get("kbID", "").startswith("Q")]
+    # linkings = [l[:2] for l in linkings]
+    for l in _linkings:
+        l['lev'] = lev_distance(entity_fragment if entity_fragment else l.get('fragment', ""), l.get('label', ""), costs=(1, 0, 2))
+        l['id_rank'] = np.log(int(l['kbID'][1:]))
+    _linkings = sorted(_linkings, key=lambda l: (l['lev'] + l['id_rank'], int(l['kbID'][1:])))
+    _linkings = _linkings[:entity_linking_p.get("entity.options.to.retrieve", 3)]
+    return _linkings
 
 
 def group_entities_by_overlap(entities):
@@ -598,19 +624,19 @@ def group_entities_by_overlap(entities):
 
     :param entities: list of entities as tokens
     :return: a list of lists of entities
-    >>> sorted(group_entities_by_overlap([('Q36180', 'writer', "writer"), ('Q25183171', 'Writers', "writer"), ('Q28389', 'screenwriter', "writer")])) == \
-    [({'writer'}, [('Q28389', 'screenwriter', 'writer'), ('Q25183171', 'Writers', 'writer'), ('Q36180', 'writer', 'writer')])]
+    >>> sorted(group_entities_by_overlap([{'e2':'Q36180', 'label':'writer', 'labelright':"writer"}, {'e2':'Q25183171', 'label':'Writers', 'labelright':"writer"}, {'e2':'Q28389', 'label':'screenwriter', 'labelright':"writer"}])) == \
+    [({'writer'}, [{'e2': 'Q28389', 'labelright': 'writer', 'label': 'screenwriter'}, {'e2': 'Q25183171', 'labelright': 'writer', 'label': 'Writers'}, {'e2': 'Q36180', 'labelright': 'writer', 'label': 'writer'}])]
     True
-    >>> sorted(group_entities_by_overlap([('Q36180', 'star', "star"), ('Q25183171', 'Star Wars', "star wars"), ('Q28389', 'Star Wars saga', "star wars")])) == \
-    [({'star', 'wars', 'war'}, [('Q28389', 'Star Wars saga', 'star wars'), ('Q25183171', 'Star Wars', 'star wars'), ('Q36180', 'star', 'star')])]
+    >>> sorted(group_entities_by_overlap([{'e2': 'Q36180', 'label':'star', 'labelright':"star"}, {'e2':'Q25183171', 'label':'Star Wars', 'labelright':"star wars"}, {'e2':'Q28389', 'label':'Star Wars saga', 'labelright':"star wars"}])) == \
+     [({'wars', 'star', 'war'}, [{'labelright': 'star wars', 'e2': 'Q28389', 'label': 'Star Wars saga'}, {'labelright': 'star wars', 'e2': 'Q25183171', 'label': 'Star Wars'}, {'labelright': 'star', 'e2': 'Q36180', 'label': 'star'}])]
     True
-    >>> sorted(group_entities_by_overlap([('Q36180', 'star', "star"), ('Q25183171', 'war', "war"), ('Q28389', 'The Wars', "wars")])) == \
-    [({'war', 'wars'}, [('Q28389', 'The Wars', 'wars'), ('Q25183171', 'war', 'war')]), ({'star'}, [('Q36180', 'star', 'star')])]
+    >>> sorted(group_entities_by_overlap([{'e2':'Q36180', 'label':'star', 'labelright':"star"}, {'e2':'Q25183171', 'label':'war', 'labelright':"war"}, {'e2':'Q28389', 'label':'The Wars', 'labelright':"wars"}])) == \
+    [({'war', 'wars'}, [{'e2':'Q28389', 'label':'The Wars', 'labelright':"wars"}, {'e2':'Q25183171', 'label':'war', 'labelright':"war"}]), ({'star'}, [{'e2':'Q36180', 'label':'star', 'labelright':"star"}])]
     True
     """
     groupings = []
-    for e in sorted(entities, key=lambda el: len(el[1]), reverse=True):
-        tokens = {t for t in e[2].lower().split()}
+    for e in sorted(entities, key=lambda el: len(el.get('label','')), reverse=True):
+        tokens = {t for t in e.get('labelright', '').lower().split()}
         tokens.update(set(_lemmatize_tokens(list(tokens))))
         i = 0
         while len(groupings) > i >= 0:
