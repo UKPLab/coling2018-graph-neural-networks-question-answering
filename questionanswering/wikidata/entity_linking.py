@@ -27,9 +27,7 @@ entity_map = utils.load_entity_map(utils.RESOURCES_FOLDER + "manual_entity_map.t
 
 np_grammar = r"""
     NP:
-    {(<NN|NNS>+|<NNP|NNPS>+)<IN|CC>(<PRP\$|DT><NN|NNS|NNP|NNPS>+|<NNP|NNPS>+)}
-    {<JJ|RB|CD|VBG|VBN>*(<NNP|NN|NNS|NNPS>+)<RB|CD|VBG|VBN>?}
-    {<NNP|NN|NNS|NNPS>+}
+    {<JJ|RB|CD|VBG|VBN|DT>*(<NNP|NN|NNS|NNPS>+)(<RB|CD>|<VBG|VBN|VBZ><RB>?)?(<IN|CC>(<PRP\$|DT><NN|NNS|NNP|NNPS>+|<NNP|NNPS>+))?}
     """
 np_parser = nltk.RegexpParser(np_grammar)
 
@@ -69,11 +67,11 @@ def extract_entities(tokens_ne_pos):
     :param tokens_ne_pos: list of POS and NE tags.
     :return: list of entities in the order: NE>NNP>NN
     >>> extract_entities([('who', 'O', 'WP'), ('are', 'O', 'VBP'), ('the', 'O', 'DT'), ('current', 'O', 'JJ'), ('senators', 'O', 'NNS'), ('from', 'O', 'IN'), ('missouri', 'LOCATION', 'NNP'), ('?', 'O', '.')])
-    [(['Missouri'], 'LOCATION'), (['current', 'senators'], 'NN')]
+    [(['Missouri'], 'LOCATION'), (['the', 'current', 'senators'], 'NN')]
     >>> extract_entities([('what', 'O', 'WDT'), ('awards', 'O', 'NNS'), ('has', 'O', 'VBZ'), ('louis', 'PERSON', 'NNP'), ('sachar', 'PERSON', 'NNP'), ('won', 'O', 'NNP'), ('?', 'O', '.')])
-    [(['Louis', 'Sachar'], 'PERSON'), (['Won'], 'NNP'), (['awards'], 'NN')]
+    [(['Louis', 'Sachar'], 'PERSON'), (['Won'], 'NNP'), (['awards', 'has'], 'NN')]
     >>> extract_entities([('who', 'O', 'WP'), ('was', 'O', 'VBD'), ('the', 'O', 'DT'), ('president', 'O', 'NN'), ('after', 'O', 'IN'), ('jfk', 'O', 'NNP'), ('died', 'O', 'VBD'), ('?', 'O', '.')])
-    [(['president', 'after', 'jfk'], 'NN')]
+    [(['the', 'president', 'after', 'jfk'], 'NN')]
     >>> extract_entities([('who', 'O', 'WP'), ('natalie', 'PERSON', 'NN'), ('likes', 'O', 'VBP')])
     [(['Natalie'], 'PERSON')]
     >>> extract_entities([('what', 'O', 'WDT'), ('character', 'O', 'NN'), ('did', 'O', 'VBD'), ('john', 'O', 'NNP'), \
@@ -82,22 +80,24 @@ def extract_entities(tokens_ne_pos):
     >>> extract_entities([['who', 'O', 'WP'], ['plays', 'O', 'VBZ'], ['lois', 'PERSON', 'NNP'], ['lane', 'PERSON', 'NNP'], ['in', 'O', 'IN'], ['superman', 'O', 'NNP'], ['returns', 'O', 'NNS'], ['?', 'O', '.']])
     [(['Lois', 'Lane'], 'PERSON'), (['superman', 'returns'], 'NN')]
     >>> extract_entities([('the', 'O', 'DT'), ('empire', 'O', 'NN'), ('strikes', 'O', 'VBZ'), ('back', 'O', 'RB'), ('is', 'O', 'VBZ'), ('the', 'O', 'DT'), ('second', 'O', 'JJ'), ('movie', 'O', 'NN'), ('in', 'O', 'IN'), ('the', 'O', 'DT'), ('star', 'O', 'NN'), ('wars', 'O', 'NNS'), ('franchise', 'O', 'VBP')])
-    [(['empire'], 'NN'), (['movie', 'in', 'the', 'star', 'wars'], 'NN')]
+    [(['the', 'empire', 'strikes', 'back'], 'NN'), (['the', 'second', 'movie', 'in', 'the', 'star', 'wars'], 'NN')]
     >>> extract_entities([['who', 'O', 'WP'], ['played', 'O', 'VBD'], ['cruella', 'LOCATION', 'NNP'], ['deville', 'LOCATION', 'NNP'], ['in', 'O', 'IN'], ['102', 'O', 'CD'], ['dalmatians', 'O', 'NNS'], ['?', 'O', '.']])
     [(['Cruella', 'Deville'], 'LOCATION'), (['102', 'dalmatians'], 'NN')]
     >>> extract_entities([['who', 'O', 'WP'], ['was', 'O', 'VBD'], ['the', 'O', 'DT'], ['winner', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'], ['2009', 'O', 'CD'], ['nobel', 'O', 'NNP'], ['peace', 'O', 'NNP'], ['prize', 'O', 'NNP'], ['?', 'O', '.']])
-    [(['2009', 'Nobel', 'Peace', 'Prize'], 'NNP'), (['winner'], 'NN'), (['2009'], 'CD')]
+    [(['The', '2009', 'Nobel', 'Peace', 'Prize'], 'NNP'), (['the', 'winner'], 'NN'), (['2009'], 'CD')]
     >>> extract_entities([['who', 'O', 'WP'], ['is', 'O', 'VBZ'], ['the', 'O', 'DT'], ['senator', 'O', 'NN'], ['of', 'O', 'IN'], ['connecticut', 'LOCATION', 'NNP'], ['2010', 'O', 'CD'], ['?', 'O', '.']])
-    [(['Connecticut'], 'LOCATION'), (['senator'], 'NN'), (['2010'], 'CD')]
+    [(['Connecticut'], 'LOCATION'), (['the', 'senator'], 'NN'), (['2010'], 'CD')]
     >>> extract_entities([['Which', 'O', 'WDT'],['actors', 'O', 'NNS'],['play', 'O', 'VBP'],['in', 'O', 'IN'],['Big', 'O', 'JJ'],['Bang', 'O', 'NNP'],['Theory', 'O', 'NNP'],['?', 'O', '.']])
     [(['Big', 'Bang', 'Theory'], 'NNP'), (['actors'], 'NN')]
     >>> extract_entities([('Who', 'O', 'WP'), ('was', 'O', 'VBD'), ('on', 'O', 'IN'), ('the', 'O', 'DT'), ('Apollo', 'O', 'NNP'), ('11', 'O', 'CD'), ('mission', 'O', 'NN'), ('?', 'O', '.')])
-    [(['Apollo', '11'], 'NNP'), (['mission'], 'NN')]
+    [(['The', 'Apollo', '11'], 'NNP'), (['mission'], 'NN')]
     >>> entity_linking_p['overlaping.nn.ne'] = True
     >>> extract_entities([['Who', 'O', 'WP'], ['is', 'O', 'VBZ'], ['the', 'O', 'DT'], ['king', 'O', 'NN'], ['of', 'O', 'IN'], ['the', 'O', 'DT'],['Netherlands', 'LOCATION', 'NNP'], ['?', 'O', '.']])
-    [(['Netherlands'], 'LOCATION'), (['king', 'of', 'the', 'Netherlands'], 'NN')]
+    [(['Netherlands'], 'LOCATION'), (['the', 'king', 'of', 'the', 'Netherlands'], 'NN')]
     >>> extract_entities([['Who', 'O', 'WP'], ['wrote', 'O', 'VBD'], ['the', 'O', 'DT'], ['song', 'O', 'NN'], ['Hotel', 'O', 'NNP'], ['California', 'LOCATION', 'NNP'], ['?', 'O', '.']])
-    [(['California'], 'LOCATION'), (['song', 'Hotel', 'California'], 'NN')]
+    [(['California'], 'LOCATION'), (['the', 'song', 'Hotel', 'California'], 'NN')]
+    >>> extract_entities((['Give', 'O', 'VB'], ['me', 'O', 'PRP'], ['all', 'O', 'DT'], ['federal', 'O', 'JJ'], ['chancellors', 'O', 'NNS'], ['of', 'O', 'IN'], ['Germany', 'LOCATION', 'NNP'], ['.', 'O', '.']))
+    [(['Germany'], 'LOCATION'), (['all', 'federal', 'chancellors', 'of', 'Germany'], 'NN')]
     """
     persons = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['PERSON'])
     locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])
@@ -230,7 +230,7 @@ def possible_variants(entity_tokens, entity_type):
         if any(t.startswith("Mc") for t in entity_tokens):
             new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
     else:
-        proper_title = [ne.title() if ne.lower() not in stop_words_en or i == 0 else ne.lower() for i, ne in enumerate(entity_tokens)]
+        proper_title = _get_proper_casing(entity_tokens)
         if not entity_linking_p.get("respect.case", False):
             upper_cased = [ne.upper() if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en else ne for ne in entity_tokens]
             if upper_cased != entity_tokens:
@@ -245,7 +245,7 @@ def possible_variants(entity_tokens, entity_type):
             if [l.lower() for l in entity_lemmas] != [t.lower() for t in entity_tokens]:
                 new_entities.append(tuple(entity_lemmas))
                 if not entity_linking_p.get("respect.case", False) and (len(entity_lemmas) > 1 or entity_type is "NNP"):
-                    proper_title = [ne.title() if ne.lower() not in stop_words_en or i == 0 else ne.lower() for i, ne in enumerate(entity_lemmas)]
+                    proper_title = _get_proper_casing(entity_lemmas)
                     if proper_title != entity_tokens and proper_title != entity_lemmas:
                         new_entities.append(tuple(proper_title))
             no_stop_title = [ne for ne in entity_tokens if ne.lower() not in stop_words_en]
@@ -256,6 +256,10 @@ def possible_variants(entity_tokens, entity_type):
     if not entity_linking_p.get("respect.case", False) and any(roman_nums_pattern.match(ne.upper()) for ne in entity_tokens):
         new_entities.append(tuple([ne.upper() if roman_nums_pattern.match(ne.upper()) else ne for ne in entity_tokens]))
     return new_entities
+
+
+def _get_proper_casing(tokens):
+    return [ne.title() if ne.lower() not in stop_words_en or i == 0 else ne.lower() for i, ne in enumerate(tokens)]
 
 
 def possible_subentities(entity_tokens, entity_type):
@@ -270,7 +274,7 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(["senators"], "NN")
     []
     >>> possible_subentities(['the', 'current', 'senators'], 'NN')
-    [('the', 'current'), ('current', 'senators'), ('current',), ('senators',), ('senator',), ('Current',), ('Senators',)]
+    [('the', 'current'), ('The', 'Current'), ('current', 'senators'), ('Current', 'Senators'), ('current', 'senator'), ('Current', 'Senator'), ('current',), ('senators',), ('senator',), ('Current',), ('Senators',)]
     >>> possible_subentities(["awards"], "NN")
     []
     >>> possible_subentities(["star", "wars"], "NN")
@@ -286,7 +290,7 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(["Jfk"], "NNP")
     []
     >>> possible_subentities(['the', 'president', 'after', 'jfk'], 'NN')
-    [('the', 'president', 'after'), ('president', 'after', 'jfk'), ('the', 'president'), ('president', 'after'), ('after', 'jfk'), ('JFK',), ('president',), ('jfk',), ('President',), ('Jfk',)]
+    [('the', 'president', 'after'), ('The', 'President', 'after'), ('president', 'after', 'jfk'), ('President', 'after', 'Jfk'), ('the', 'president'), ('The', 'President'), ('president', 'after'), ('President', 'after'), ('after', 'jfk'), ('After', 'Jfk'), ('JFK',), ('president',), ('jfk',), ('President',), ('Jfk',)]
     >>> possible_subentities(['Jj', 'Thomson'], 'PERSON')
     [('Thomson',), ('Jj',)]
     >>> possible_subentities(['J', 'J', 'Thomson'], 'URL')
@@ -302,7 +306,7 @@ def possible_subentities(entity_tokens, entity_type):
     >>> possible_subentities(['Atlanta', 'United', 'States'], "LOCATION")
     [('Atlanta', 'United'), ('United', 'States'), ('Atlanta',), ('United',), ('States',)]
     >>> possible_subentities(['Names', 'Of', 'Walt', 'Disney'], 'ORGANIZATION')
-    [('Names', 'Of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('Names',), ('Walt',), ('Disney',)]
+    [('Names', 'Of', 'Walt'), ('Names', 'of', 'Walt'), ('Of', 'Walt', 'Disney'), ('Names', 'Of'), ('Names', 'of'), ('Of', 'Walt'), ('Walt', 'Disney'), ('Names',), ('Walt',), ('Disney',)]
     >>> possible_subentities(['Timothy', 'Mcveigh'], 'PERSON')
     [('Mcveigh',), ('Timothy',)]
     >>> possible_subentities(['Mcdonalds'], 'URL')
@@ -317,6 +321,8 @@ def possible_subentities(entity_tokens, entity_type):
     [('Martin', 'Luther', 'King'), ('Martin',)]
     >>> possible_subentities(['romanian', 'people'], 'NN')
     [('romanian',), ('people',), ('Romanian',), ('People',)]
+    >>> possible_subentities(['all', 'federal', 'chancellors', 'of', 'Germany'], 'NN')
+    [('all', 'federal', 'chancellors', 'of'), ('All', 'Federal', 'Chancellors', 'of'), ('all', 'federal', 'chancellor', 'of'), ('All', 'Federal', 'Chancellor', 'of'), ('federal', 'chancellors', 'of', 'Germany'), ('Federal', 'Chancellors', 'of', 'Germany'), ('federal', 'chancellor', 'of', 'Germany'), ('Federal', 'Chancellor', 'of', 'Germany'), ('all', 'federal', 'chancellors'), ('All', 'Federal', 'Chancellors'), ('all', 'federal', 'chancellor'), ('All', 'Federal', 'Chancellor'), ('federal', 'chancellors', 'of'), ('Federal', 'Chancellors', 'of'), ('federal', 'chancellor', 'of'), ('Federal', 'Chancellor', 'of'), ('chancellors', 'of', 'Germany'), ('Chancellors', 'of', 'Germany'), ('chancellor', 'of', 'Germany'), ('Chancellor', 'of', 'Germany'), ('all', 'federal'), ('All', 'Federal'), ('federal', 'chancellors'), ('Federal', 'Chancellors'), ('federal', 'chancellor'), ('Federal', 'Chancellor'), ('chancellors', 'of'), ('Chancellors', 'of'), ('chancellor', 'of'), ('Chancellor', 'of'), ('of', 'Germany'), ('Of', 'Germany'), ('federal',), ('chancellors',), ('Germany',), ('chancellor',), ('Federal',), ('Chancellors',), ('Germany',)]
     >>> entity_linking_p["respect.case"] = True
     >>> possible_subentities(['Romanian', 'people'], 'NN');
     [('Romanian',), ('people',)]
@@ -325,7 +331,7 @@ def possible_subentities(entity_tokens, entity_type):
         return []
     new_entities = []
     entity_lemmas = []
-    if entity_type is "NN":
+    if entity_type in {"NN", "NNP"}:
         entity_lemmas = _lemmatize_tokens(entity_tokens)
 
     if entity_type is "PERSON":
@@ -343,8 +349,17 @@ def possible_subentities(entity_tokens, entity_type):
     elif entity_type != "URL":
         for i in range(len(entity_tokens) - 1, 1, -1):
             ngrams = nltk.ngrams(entity_tokens, i)
-            for new_entity in ngrams:
+            lemma_ngrams = list(nltk.ngrams(entity_lemmas, i))
+            for j, new_entity in enumerate(ngrams):
                 new_entities.append(new_entity)
+                proper_title = _get_proper_casing(new_entity)
+                if not entity_linking_p.get("respect.case", False) and proper_title != entity_tokens and proper_title != list(new_entity):
+                    new_entities.append(tuple(proper_title))
+                if len(entity_lemmas) > 0 and lemma_ngrams[j] != new_entity:
+                    new_entities.append(lemma_ngrams[j])
+                    proper_title = _get_proper_casing(lemma_ngrams[j])
+                    if not entity_linking_p.get("respect.case", False) and proper_title != entity_tokens and proper_title != list(lemma_ngrams[j]):
+                        new_entities.append(tuple(proper_title))
         if not entity_linking_p.get("respect.case", False) and entity_type in ['LOCATION', 'ORGANIZATION', 'NNP', 'NN']:
             new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en | labels_blacklist])
         if len(entity_tokens) > 1:
@@ -356,6 +371,13 @@ def possible_subentities(entity_tokens, entity_type):
 
 
 def _lemmatize_tokens(entity_tokens):
+    """
+
+    :param entity_tokens:
+    :return:
+    >>> _lemmatize_tokens(['House', 'Of', 'Representatives'])
+    ['House', 'Of', 'Representative']
+    """
     lemmas = [lemmatizer.lemmatize(n.lower()) for n in entity_tokens]
     lemmas = [l.title() if entity_tokens[i].istitle() else l for i, l in enumerate(lemmas)]
     return lemmas
@@ -519,6 +541,8 @@ def link_entity(entity, try_subentities=True):
     [[('Q16', 'Canada'), ('Q44676', 'Canadian English'), ('Q1196645', 'Canadians')]]
     >>> link_entity((['president'], 'NN'))
     [[('Q30461', 'president'), ('Q11696', 'President of the United States of America'), ('Q1255921', 'president')]]
+    >>> link_entity((['all', 'federal', 'chancellors', 'of', 'Germany'], 'NN'))
+    [[('Q4970706', 'Federal Chancellor of Germany'), ('Q56022', 'Chancellor of Germany'), ('Q183', 'Germany')]]
     """
     linkings = _link_entity(entity, try_subentities)
     linkings = post_process_entity_linkings(entity[0], linkings)
@@ -534,7 +558,7 @@ def _link_entity(entity, try_subentities=True):
     linkings = wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(entity_tokens)]), starts_with=None)
     map_keys = {" ".join(t).lower() for t in [entity_tokens] + entity_variants + subentities}
     if any(t in entity_map for t in map_keys):
-        linkings += [{'e2': e, 'label': l, 'labelright': t} for t in map_keys for e, l in entity_map.get(t, [])][:entity_linking_p.get("max.entity.options", 3)]
+        linkings += [{'e2': e, 'label': l, 'labelright': t} for t in map_keys for e, l in entity_map.get(t, [])][:entity_linking_p.get("entity.options.to.retrieve", 3)]
     # if entity_type not in {"NN"} or not linkings:
     entity_variants = {" ".join(s) for s in entity_variants}
     linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants), starts_with=None)
