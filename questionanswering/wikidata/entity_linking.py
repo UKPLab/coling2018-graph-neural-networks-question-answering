@@ -383,7 +383,7 @@ def _lemmatize_tokens(entity_tokens):
     return lemmas
 
 
-def link_entities_in_graph(ungrounded_graph):
+def link_entities_in_graph(ungrounded_graph, joint_diambiguation=True):
     """
     Link all free entities in the graph.
 
@@ -414,8 +414,9 @@ def link_entities_in_graph(ungrounded_graph):
                 grouped_linkings = link_entity(entity)
                 for linkings in grouped_linkings:
                     linkings = [l for l in linkings if l[0] not in discovered_entity_ids]
-                    entities.append({"linkings": linkings, "type": entity[1], 'tokens': entity[0]})
-                    discovered_entity_ids.update({kbID for kbID, _ in linkings})
+                    if len(linkings) > 0:
+                        entities.append({"linkings": linkings, "type": entity[1], 'tokens': entity[0]})
+                        discovered_entity_ids.update({kbID for kbID, _ in linkings})
         elif len(entity) == 3:
             entities.append(entity)
     if any(w in set(ungrounded_graph.get('tokens', [])) for w in v_structure_markers):
@@ -424,7 +425,8 @@ def link_entities_in_graph(ungrounded_graph):
                 character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity.get('tokens',[])), film_id), starts_with=None)
                 character_linkings = post_process_entity_linkings(entity.get("tokens"), character_linkings)
                 entity['linkings'] = [l for linking in character_linkings for l in linking] + entity.get("linkings", [])
-    entities = jointly_disambiguate_entities(entities, entity_linking_p.get("min.num.links", 0))
+    if joint_diambiguation:
+        entities = jointly_disambiguate_entities(entities, entity_linking_p.get("min.num.links", 0))
     for e in entities:
         # If there are many linkings we take the top N, since they are still ordered by ids/lexical_overlap
         e['linkings'] = e['linkings'][:entity_linking_p.get("max.entity.options", 3)]
