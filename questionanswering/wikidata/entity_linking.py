@@ -493,10 +493,11 @@ def jointly_disambiguate_entities(entities, min_num_links=0):
     """
     _count_links_between_entities(entities)
     filtered_entities = []
+    global_max_links = np.max([0] + [l.get('links') for e in entities for l in e.get('linkings', [])])
     for e in entities:
-        if e.get("type") != "CD" and len(e['linkings']) > 0:
+        if e.get("type") != "CD" and len(e.get('linkings', [])) > 0:
             max_links = np.max([l.get('links') for l in e['linkings']])
-            if max_links >= min_num_links:
+            if max_links >= min_num_links or global_max_links == 0:
                 e['linkings'] = [l for l in e['linkings'] if l.get('links') == max_links]
                 filtered_entities.append(e)
         else:

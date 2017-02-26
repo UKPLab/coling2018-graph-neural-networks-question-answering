@@ -232,7 +232,6 @@ def query_graph_denotations(g):
                         post_processed.append({b: p})
         return post_processed
     denotations = query_wikidata(graph_to_query(g, return_var_values=True))
-    question_text = " ".join(g.get('tokens', []))
     if not graph.graph_question_is_temporal(g):
         denotations = [r for r in denotations if any('-' not in r[b] and r[b][0] in 'pqPQ' for b in r)]  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
     if 'filter' in g and g['filter'] == 'importance':
