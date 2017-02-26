@@ -404,12 +404,24 @@ def link_entities_in_graph(ungrounded_graph, joint_diambiguation=True):
     [{'type': 'NNP', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q15862', 'Queen'), ('Q193490', 'Queen')]}, {'type': 'NNP', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q482994', 'album')]}]
     True
     """
+    entities = _link_entities_in_sentence(ungrounded_graph.get('entities', []), ungrounded_graph.get('tokens', []))
+    if joint_diambiguation:
+        entities = jointly_disambiguate_entities(entities, entity_linking_p.get("min.num.links", 0))
+    for e in entities:
+        # If there are many linkings we take the top N, since they are still ordered by ids/lexical_overlap
+        e['linkings'] = [(l.get('kbID'), l.get('label')) for l in e.get('linkings', [])]
+        e['linkings'] = e['linkings'][:entity_linking_p.get("max.entity.options", 3)]
+    ungrounded_graph['entities'] = entities
+    return ungrounded_graph
+
+
+def _link_entities_in_sentence(fragments, sentence_tokens):
     linkings = []
     entities = []
     discovered_entity_ids = set()
-    if all(len(e) == 3 for e in ungrounded_graph.get('entities', [])):
-        return ungrounded_graph
-    for fragment in ungrounded_graph.get('entities', []):
+    if all(len(e) == 3 for e in fragments):
+        return fragments
+    for fragment in fragments:
         if len(fragment) == 2:
             if fragment[1] == "CD":
                 entities.append({"tokens": fragment[0], "type": fragment[1]})
@@ -429,20 +441,13 @@ def link_entities_in_graph(ungrounded_graph, joint_diambiguation=True):
             _linkings = post_process_entity_linkings(_linkings)
             entities.append({"linkings": _linkings, "type": 'NNP', 'tokens': _linkings[0]['fragment']})
 
-    if any(w in set(ungrounded_graph.get('tokens', [])) for w in v_structure_markers):
+    if any(w in set(sentence_tokens) for w in v_structure_markers):
         for entity in [e for e in entities if e.get("type") != "CD" and len(e.get('tokens', [])) == 1 and "linkings" in e]:
             for film_id in [l.get('kbID') for e in entities for l in e.get("linkings", []) if e != entity]:
                 character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity.get('tokens',[])), film_id), starts_with=None)
                 character_linkings = post_process_entity_linkings(character_linkings, entity.get("tokens"))
                 entity['linkings'] = [l for l in character_linkings if l.get("e2") not in discovered_entity_ids] + entity.get("linkings", [])
-    if joint_diambiguation:
-        entities = jointly_disambiguate_entities(entities, entity_linking_p.get("min.num.links", 0))
-    for e in entities:
-        # If there are many linkings we take the top N, since they are still ordered by ids/lexical_overlap
-        e['linkings'] = [(l.get('kbID'), l.get('label')) for l in e.get('linkings', [])]
-        e['linkings'] = e['linkings'][:entity_linking_p.get("max.entity.options", 3)]
-    ungrounded_graph['entities'] = entities
-    return ungrounded_graph
+    return entities
 
 
 def jointly_disambiguate_entities(entities, min_num_links=0):
