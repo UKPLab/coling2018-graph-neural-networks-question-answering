@@ -78,14 +78,18 @@ sparql_entity_label = """
               GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate ?labelright  }}
               UNION
               {GRAPH <http://wikidata.org/statements> { ?e2 e:P1549s/e:P1549v ?labelright}}
-              UNION
-              {GRAPH <http://wikidata.org/statements> { ?e2 e:P735s/e:P735v ?name} GRAPH <http://wikidata.org/terms> { ?name rdfs:label ?labelright} }
-              UNION
-              {GRAPH <http://wikidata.org/statements> { ?e2 e:P734s/e:P734v ?name} GRAPH <http://wikidata.org/terms> { ?name rdfs:label ?labelright} }
+              %linkbyname%
             }
         } FILTER NOT EXISTS {
             VALUES ?topic {e:Q4167410 e:Q21286738 e:Q11266439 e:Q13406463 e:Q4167836}
             GRAPH <http://wikidata.org/instances> {?e2 rdf:type ?topic}}
+        """
+
+sparql_link_by_name = """
+            UNION
+            {GRAPH <http://wikidata.org/statements> { ?e2 e:P735s/e:P735v ?name} GRAPH <http://wikidata.org/terms> { ?name rdfs:label ?labelright} }
+            UNION
+            {GRAPH <http://wikidata.org/statements> { ?e2 e:P734s/e:P734v ?name} GRAPH <http://wikidata.org/terms> { ?name rdfs:label ?labelright} }
         """
 
 sparql_label_entity = """
@@ -360,6 +364,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
             sparql_relation_inst = sparql_relation_inst.replace("?e2", "?e2" + str(i))
             right_label = " ".join(edge['right'])
             sparql_entity_label_inst = sparql_entity_label.replace("VALUES ?labelright { %entitylabels }", "")
+            sparql_entity_label_inst = sparql_entity_label_inst.replace("%linkbyname%", "")
             sparql_entity_label_inst = sparql_entity_label_inst.replace("?e2", "?e2" + str(i))
             sparql_entity_label_inst = sparql_entity_label_inst.replace("?labelright", "\"{}\"@en".format(right_label))
             local_variables.append("?e2" + str(i))
@@ -425,6 +430,7 @@ def entity_query(label, limit=100):
     query += sparql_select
     query += "{"
     sparql_entity_label_inst = sparql_entity_label.replace("VALUES ?labelright { %entitylabels }", "")
+    sparql_entity_label_inst = sparql_entity_label_inst.replace("%linkbyname%", "")
     sparql_entity_label_inst = sparql_entity_label_inst.replace("?e2", "?e2" + str(0))
     sparql_entity_label_inst = sparql_entity_label_inst.replace("?labelright", "\"{}\"@en".format(label, label))
     variables.append("?e2" + str(0))
@@ -468,7 +474,7 @@ def character_query(label, film_id, limit=3):
     return query
 
 
-def multi_entity_query(labels, limit=200):
+def multi_entity_query(labels, link_by_name=False, limit=200):
     """
     A method to look up a WikiData entities given a set of labels
 
@@ -478,7 +484,7 @@ def multi_entity_query(labels, limit=200):
     >>> query_wikidata(multi_entity_query(["Barack Obama"]), starts_with=None)[0] == \
     {'label': 'Barack Obama', 'e2': 'http://www.wikidata.org/entity/Q76', 'labelright': 'Barack Obama'}
     True
-    >>> "Q223757" in {l.get('e2').replace(WIKIDATA_ENTITY_PREFIX, "") for l in query_wikidata(multi_entity_query(["Bella"]), starts_with=None)}
+    >>> "Q223757" in {l.get('e2').replace(WIKIDATA_ENTITY_PREFIX, "") for l in query_wikidata(multi_entity_query(["Bella"], link_by_name=True), starts_with=None)}
     True
     """
     query = sparql_prefix
@@ -491,6 +497,10 @@ def multi_entity_query(labels, limit=200):
     else:
         labels = ["\"{}\"@en".format(l) for l in labels]
     sparql_entity_label_inst = sparql_entity_label_inst.replace("%entitylabels", " ".join(labels))
+    if link_by_name:
+        sparql_entity_label_inst = sparql_entity_label_inst.replace("%linkbyname%", sparql_link_by_name)
+    else:
+        sparql_entity_label_inst = sparql_entity_label_inst.replace("%linkbyname%", "")
     variables.append("?e2")
     variables.append("?labelright")
     variables.append("?label")

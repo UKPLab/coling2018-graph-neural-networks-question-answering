@@ -417,6 +417,8 @@ def link_entities_in_graph(ungrounded_graph, joint_diambiguation=True):
     True
     >>> 'Q15862' in [e['linkings'][0][0] for e in link_entities_in_graph({'entities': [(['first', 'Queen', 'album'], 'NN')], 'tokens': "What was the first Queen album ?".split()})['entities']]
     True
+    >>> link_entities_in_graph({'entities': [(['Bill', 'Gates'], 'PERSON'), (['Bill', 'Gates', 'born'], 'NNP'), (['country'], 'NN')], 'tokens': []})['entities']
+
     """
     entities = _link_entities_in_sentence(ungrounded_graph.get('entities', []), ungrounded_graph.get('tokens', []))
     if joint_diambiguation:
@@ -547,7 +549,7 @@ def link_entity(entity):
     >>> link_entity((["thai"], 'NN'))
     [[('Q869', 'Thailand'), ('Q9217', 'Thai'), ('Q42732', 'Thai')]]
     >>> link_entity((['romanian', 'people'], 'NN'))
-    [[('Q33659', 'People'), ('Q3238275', 'Homo sapiens sapiens'), ('Q2472587', 'people')], [('Q218', 'Romania'), ('Q7913', 'Romanian')]]
+    [[('Q218', 'Romania'), ('Q7913', 'Romanian')], [('Q33659', 'People'), ('Q3238275', 'Homo sapiens sapiens'), ('Q2472587', 'people')]]
     >>> link_entity((['college'], 'NN'))
     [[('Q189004', 'college'), ('Q1459186', 'college'), ('Q728520', 'College')]]
     >>> link_entity((['House', 'Of', 'Representatives'], 'ORGANIZATION'))
@@ -598,13 +600,13 @@ def _link_entity(entity):
         return []
     entity_variants = possible_variants(entity_tokens, entity_type)
     subentities = possible_subentities(entity_tokens, entity_type)
-    linkings = wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(entity_tokens)]), starts_with=None)
+    linkings = wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(entity_tokens)], link_by_name=len(entity_tokens) == 1), starts_with=None)
     map_keys = {" ".join(t).lower() for t in [entity_tokens] + entity_variants + subentities}
     if any(t in entity_map for t in map_keys):
         linkings += [{'e2': e, 'label': l, 'labelright': t} for t in map_keys for e, l in entity_map.get(t, [])][:entity_linking_p.get("entity.options.to.retrieve", 3)]
     # if entity_type not in {"NN"} or not linkings:
     entity_variants = {" ".join(s) for s in entity_variants}
-    linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants), starts_with=None)
+    linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants, link_by_name=len(entity_tokens) == 1), starts_with=None)
     if entity_linking_p.get("always.include.subentities", False) or not linkings: # or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
         subentities = {" ".join(s) for s in subentities}
         linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(subentities), starts_with=None)
@@ -647,17 +649,17 @@ def group_entities_by_overlap(entities):
     :param entities: list of entities as tokens
     :return: a list of lists of entities
     >>> sorted(group_entities_by_overlap([{'e2':'Q36180', 'label':'writer', 'labelright':"writer"}, {'e2':'Q25183171', 'label':'Writers', 'labelright':"writer"}, {'e2':'Q28389', 'label':'screenwriter', 'labelright':"writer"}])) == \
-    [({'writer'}, [{'e2': 'Q28389', 'labelright': 'writer', 'label': 'screenwriter'}, {'e2': 'Q25183171', 'labelright': 'writer', 'label': 'Writers'}, {'e2': 'Q36180', 'labelright': 'writer', 'label': 'writer'}])]
+    [({'writer'}, [{'labelright': 'writer', 'label': 'writer', 'e2': 'Q36180'}, {'labelright': 'writer', 'label': 'Writers', 'e2': 'Q25183171'}, {'labelright': 'writer', 'label': 'screenwriter', 'e2': 'Q28389'}])]
     True
     >>> sorted(group_entities_by_overlap([{'e2': 'Q36180', 'label':'star', 'labelright':"star"}, {'e2':'Q25183171', 'label':'Star Wars', 'labelright':"star wars"}, {'e2':'Q28389', 'label':'Star Wars saga', 'labelright':"star wars"}])) == \
-     [({'wars', 'star', 'war'}, [{'labelright': 'star wars', 'e2': 'Q28389', 'label': 'Star Wars saga'}, {'labelright': 'star wars', 'e2': 'Q25183171', 'label': 'Star Wars'}, {'labelright': 'star', 'e2': 'Q36180', 'label': 'star'}])]
+    [({'wars', 'star', 'war'}, [{'labelright': 'star wars', 'e2': 'Q25183171', 'label': 'Star Wars'}, {'labelright': 'star wars', 'e2': 'Q28389', 'label': 'Star Wars saga'}, {'labelright': 'star', 'e2': 'Q36180', 'label': 'star'}])]
     True
     >>> sorted(group_entities_by_overlap([{'e2':'Q36180', 'label':'star', 'labelright':"star"}, {'e2':'Q25183171', 'label':'war', 'labelright':"war"}, {'e2':'Q28389', 'label':'The Wars', 'labelright':"wars"}])) == \
-    [({'war', 'wars'}, [{'e2':'Q28389', 'label':'The Wars', 'labelright':"wars"}, {'e2':'Q25183171', 'label':'war', 'labelright':"war"}]), ({'star'}, [{'e2':'Q36180', 'label':'star', 'labelright':"star"}])]
+    [({'star'}, [{'labelright': 'star', 'e2': 'Q36180', 'label': 'star'}]), ({'wars', 'war'}, [{'labelright': 'wars', 'e2': 'Q28389', 'label': 'The Wars'}, {'labelright': 'war', 'e2': 'Q25183171', 'label': 'war'}])]
     True
     """
     groupings = []
-    for e in sorted(entities, key=lambda el: len(el.get('label','')), reverse=True):
+    for e in sorted(entities, key=lambda el: len(el.get('labelright','')), reverse=True):
         tokens = {t for t in e.get('labelright', '').lower().split()}
         tokens.update(set(_lemmatize_tokens(list(tokens))))
         i = 0
