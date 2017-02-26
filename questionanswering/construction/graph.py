@@ -16,6 +16,15 @@ def graph_has_temporal(g):
     return any(any(edge.get(p) == 'time' for p in {'argmax', 'argmin', 'type'}) or 'num' in edge for edge in g.get('edgeSet', []))
 
 
+def graph_question_is_temporal(g):
+    """
+    :param g: graph as a dictionary
+    :return: True if the expected answer for this question is a year or a date
+    """
+    question_text = " ".join(g.get('tokens', []))
+    return question_text.startswith("when") or question_text.startswith("what year")
+
+
 def if_graph_adheres(g, allowed_extensions=set()):
     """
     Test if the given graphs only uses the allowed extensions.

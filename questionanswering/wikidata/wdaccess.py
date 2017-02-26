@@ -186,14 +186,15 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exce
     23
     >>> len(query_graph_groundings({'edgeSet': [{'rightkbID': 'Q37876', 'type':'v-structure'}], 'entities': []}))
     2
+    >>> "P571v" in [v for r in query_graph_groundings({'entities': [], 'tokens': ['when', 'were'], 'edgeSet': [{'rightkbID': 'Q329816', 'right': ['Texas', 'Rangers'], 'canonical_right': 'Texas Rangers'}]}) for v in r.values()]
+    True
     """
     if get_free_variables(g):
         groundings = query_wikidata(graph_to_query(g, limit=GLOBAL_RESULT_LIMIT*(10 if with_denotations else 1), return_var_values=with_denotations), use_cache=use_cache)
         if groundings is None:  # If there was an exception
             return None if pass_exception else []
         groundings = [r for r in groundings if not any(r[b][:-1] in property_blacklist or r[b][-1] in FILTER_RELATION_CLASSES for b in r)]
-        question_text = " ".join(g.get('tokens', []))
-        if not question_text.startswith("when") and not question_text.startswith("what year"):
+        if not graph.graph_question_is_temporal(g):
             groundings = [r for r in groundings if not any(r[b] in TEMPORAL_RELATIONS for b in r)]
         return groundings
     return [{}]
@@ -232,7 +233,7 @@ def query_graph_denotations(g):
         return post_processed
     denotations = query_wikidata(graph_to_query(g, return_var_values=True))
     question_text = " ".join(g.get('tokens', []))
-    if not question_text.startswith("when") and not question_text.startswith("what year"):
+    if not graph.graph_question_is_temporal(g):
         denotations = [r for r in denotations if any('-' not in r[b] and r[b][0] in 'pqPQ' for b in r)]  # Filter out WikiData auxiliary variables, e.g. Q24523h-87gf8y48
     if 'filter' in g and g['filter'] == 'importance':
         denotations = filter_denotation_by_importance(denotations)
@@ -374,7 +375,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
         # query = query.replace("%queryvariables%", " ".join(local_variables))
 
     query = sparql_prefix + (sparql_select if not ask else sparql_ask) + query
-    if all('leftkbID' not in edge for edge in g.get('edgeSet', [])):
+    if all('leftkbID' not in edge for edge in g.get('edgeSet', [])) and not graph.graph_question_is_temporal(g):
         query += sparql_filter_main_entity
 
     if return_var_values and not ask:
