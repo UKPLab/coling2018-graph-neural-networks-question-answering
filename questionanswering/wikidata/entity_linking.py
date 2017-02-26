@@ -15,7 +15,8 @@ entity_linking_p = {
     "min.num.links": 0,
     "respect.case": False,
     "overlaping.nn.ne": False,
-    "lev.costs": (1, 0, 2)
+    "lev.costs": (1, 0, 2),
+    "always.include.subentities": False
 }
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
@@ -524,13 +525,12 @@ def _count_links_between_entities(entities):
                         l2['links'] = l2.get('links', 0) + 1
 
 
-def link_entity(entity, try_subentities=True):
+def link_entity(entity):
     """
     Link the given list of tokens to an entity in a knowledge base. If none linkings is found try all combinations of
     subtokens of the given entity.
 
     :param entity: list of entity tokens
-    :param try_subentities:
     :return: list of KB ids
     >>> entity_linking_p["entity.options.to.retrieve"] = 3
     >>> link_entity((['Martin', 'Luther', 'King', 'Junior'], 'PERSON'))
@@ -580,7 +580,7 @@ def link_entity(entity, try_subentities=True):
     >>> link_entity((['all', 'federal', 'chancellors', 'of', 'Germany'], 'NN'))
     [[('Q4970706', 'Federal Chancellor of Germany'), ('Q56022', 'Chancellor of Germany'), ('Q183', 'Germany')]]
     """
-    linkings = _link_entity(entity, try_subentities)
+    linkings = _link_entity(entity)
     grouped_linkings = []
     for _, _linkings in group_entities_by_overlap(linkings):
         _linkings = post_process_entity_linkings(_linkings, entity[0])
@@ -588,10 +588,9 @@ def link_entity(entity, try_subentities=True):
     return grouped_linkings
 
 
-def _link_entity(entity, try_subentities=True):
+def _link_entity(entity):
     """
     :param entity: a tuple where the first element is a list of tokens and the second element is either a part of speech tag or a NE tag
-    :param try_subentities: if substrings of the list of the given tokens should be built to find matches
     :return: a list of linkings as dictionaries where the "e2" field contains the entity id
     :rtype list
     """
@@ -607,7 +606,7 @@ def _link_entity(entity, try_subentities=True):
     # if entity_type not in {"NN"} or not linkings:
     entity_variants = {" ".join(s) for s in entity_variants}
     linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants), starts_with=None)
-    if try_subentities and not linkings: # or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
+    if entity_linking_p.get("always.include.subentities", False) or not linkings: # or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
         subentities = {" ".join(s) for s in subentities}
         linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(subentities), starts_with=None)
     return linkings
