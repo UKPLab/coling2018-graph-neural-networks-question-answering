@@ -341,6 +341,8 @@ def possible_subentities(entity_tokens, entity_type):
     [('romanian',), ('people',), ('Romanian',), ('People',)]
     >>> possible_subentities(['all', 'federal', 'chancellors', 'of', 'Germany'], 'NN')
     [('all', 'federal', 'chancellors', 'of'), ('All', 'Federal', 'Chancellors', 'of'), ('all', 'federal', 'chancellor', 'of'), ('All', 'Federal', 'Chancellor', 'of'), ('federal', 'chancellors', 'of', 'Germany'), ('Federal', 'Chancellors', 'of', 'Germany'), ('federal', 'chancellor', 'of', 'Germany'), ('Federal', 'Chancellor', 'of', 'Germany'), ('all', 'federal', 'chancellors'), ('All', 'Federal', 'Chancellors'), ('all', 'federal', 'chancellor'), ('All', 'Federal', 'Chancellor'), ('federal', 'chancellors', 'of'), ('Federal', 'Chancellors', 'of'), ('federal', 'chancellor', 'of'), ('Federal', 'Chancellor', 'of'), ('chancellors', 'of', 'Germany'), ('Chancellors', 'of', 'Germany'), ('chancellor', 'of', 'Germany'), ('Chancellor', 'of', 'Germany'), ('all', 'federal'), ('All', 'Federal'), ('federal', 'chancellors'), ('Federal', 'Chancellors'), ('federal', 'chancellor'), ('Federal', 'Chancellor'), ('chancellors', 'of'), ('Chancellors', 'of'), ('chancellor', 'of'), ('Chancellor', 'of'), ('of', 'Germany'), ('Of', 'Germany'), ('federal',), ('chancellors',), ('Germany',), ('chancellor',), ('Federal',), ('Chancellors',), ('Germany',)]
+    >>> possible_subentities(['five', 'Queen', 'album'], 'NN')
+    [('five', 'Queen'), ('Five', 'Queen'), ('Queen', 'album'), ('Queen', 'Album'), ('Queen',), ('album',), ('Queen',), ('Album',)]
     >>> entity_linking_p["respect.case"] = True
     >>> possible_subentities(['Romanian', 'people'], 'NN');
     [('Romanian',), ('people',)]
@@ -382,10 +384,11 @@ def possible_subentities(entity_tokens, entity_type):
         if not entity_linking_p.get("respect.case", False) and entity_type in ['LOCATION', 'ORGANIZATION', 'NNP', 'NN']:
             new_entities.extend([(ne.upper(),) for ne in entity_tokens if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en | labels_blacklist])
         if len(entity_tokens) > 1:
-            new_entities.extend([(ne,) for ne in entity_tokens if not ne.isnumeric() and ne.lower() not in stop_words_en | labels_blacklist])
-            new_entities.extend([(ne,) for ne in entity_lemmas if ne not in entity_tokens and not ne.isnumeric() and ne.lower() not in stop_words_en | labels_blacklist])
+            tagged = nltk.pos_tag(entity_tokens)
+            new_entities.extend([(ne,) for ne, t in tagged if not ne.isnumeric() and ne.lower() not in stop_words_en | labels_blacklist and t != "CD"])
+            new_entities.extend([(ne,) for j, ne in enumerate(entity_lemmas) if ne not in entity_tokens and not ne.isnumeric() and ne.lower() not in stop_words_en | labels_blacklist and tagged[j][1] != 'CD'])
             if not entity_linking_p.get("respect.case", False) and entity_type in {'NN'}:
-                new_entities.extend([(ne.title(),) for ne in entity_tokens if not ne.isnumeric() and ne.lower() not in stop_words_en | labels_blacklist])
+                new_entities.extend([(ne.title(),) for ne, t in tagged if not ne.isnumeric() and ne.lower() not in stop_words_en | labels_blacklist and t != "CD"])
     return new_entities
 
 
