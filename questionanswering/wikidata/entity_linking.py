@@ -16,7 +16,8 @@ entity_linking_p = {
     "respect.case": False,
     "overlaping.nn.ne": False,
     "lev.costs": (1, 0, 2),
-    "always.include.subentities": False
+    "always.include.subentities": False,
+    "lev.compare.to": "label"
 }
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
@@ -635,7 +636,7 @@ def post_process_entity_linkings(linkings, entity_fragment=None):
     _linkings = [l for l in _linkings if l.get("kbID") not in entity_blacklist and l.get("kbID", "").startswith("Q")]
     # linkings = [l[:2] for l in linkings]
     for l in _linkings:
-        l['lev'] = lev_distance(" ".join(entity_fragment if entity_fragment else l.get('fragment', [])), l.get('label', ""), costs=entity_linking_p.get("lev.costs", (1,1,2)))
+        l['lev'] = lev_distance(" ".join(entity_fragment if entity_fragment else l.get('fragment', [])), l.get(entity_linking_p.get("lev.compare.to", 'label'), ""), costs=entity_linking_p.get("lev.costs", (1,1,2)))
         l['id_rank'] = np.log(int(l['kbID'][1:]))
     _linkings = sorted(_linkings, key=lambda l: (l['lev'] + l['id_rank'], int(l['kbID'][1:])))
     _linkings = _linkings[:entity_linking_p.get("entity.options.to.retrieve", 3)]
