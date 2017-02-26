@@ -137,7 +137,7 @@ def possible_variants(entity_tokens, entity_type):
     :param entity_type:  type of the entity
     :return: a list of entity variants
     >>> possible_variants(['the', 'current', 'senators'], 'NN')
-    [('The', 'Current', 'Senators'), ('the', 'current', 'senator'), ('The', 'Current', 'Senator'), ('current', 'senators'), ('Current', 'Senators'), ('US', 'Current', 'Senators')]
+    [('The', 'Current', 'Senators'), ('the', 'current', 'senator'), ('The', 'Current', 'Senator'), ('current', 'senators'), ('Current', 'Senators'), ('current', 'senator'), ('Current', 'Senator'), ('US', 'Current', 'Senators')]
     >>> possible_variants(['the', 'senator'], 'NN')
     [('The', 'Senator'), ('senator',), ('Senator',), ('US', 'Senator')]
     >>> possible_variants(["awards"], "NN")
@@ -197,9 +197,11 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(['M.C.', 'Escher'], 'PERSON')
     [('M. C.', 'Escher')]
     >>> possible_variants(['chancellors', 'of', 'Germany'], 'NN')
-    [('Chancellors', 'of', 'Germany'), ('chancellor', 'of', 'Germany'), ('Chancellor', 'of', 'Germany'), ('chancellors', 'Germany'), ('Chancellors', 'Germany'), ('US', 'Chancellors', 'of', 'Germany')]
+    [('Chancellors', 'of', 'Germany'), ('chancellor', 'of', 'Germany'), ('Chancellor', 'of', 'Germany'), ('chancellors', 'Germany'), ('Chancellors', 'Germany'), ('chancellor', 'Germany'), ('Chancellor', 'Germany'), ('US', 'Chancellors', 'of', 'Germany')]
     >>> possible_variants(['Canadians'], 'NNP')
     [('Canadian',), ('US', 'Canadians')]
+    >>> possible_variants(['movies', 'does'], 'NN')
+    [('Movies', 'does'), ('movie', 'doe'), ('Movie', 'Doe'), ('movies',), ('Movies',), ('movie',), ('Movie',), ('US', 'Movies', 'does')]
     >>> entity_linking_p["respect.case"] = True
     >>> possible_variants(['Canadians'], 'NNP')
     [('Canadian',), ('US', 'Canadians')]
@@ -256,6 +258,13 @@ def possible_variants(entity_tokens, entity_type):
                 if not entity_linking_p.get("respect.case", False):
                     proper_title = _get_proper_casing(no_stop_title)
                     if proper_title != entity_tokens and proper_title != no_stop_title:
+                        new_entities.append(tuple(proper_title))
+            no_stop_title_lemmas = _lemmatize_tokens(no_stop_title)
+            if no_stop_title_lemmas != no_stop_title and no_stop_title_lemmas != entity_tokens and no_stop_title_lemmas != entity_lemmas:
+                new_entities.append(tuple(no_stop_title_lemmas))
+                if not entity_linking_p.get("respect.case", False):
+                    proper_title = _get_proper_casing(no_stop_title_lemmas)
+                    if proper_title != entity_tokens and proper_title != no_stop_title_lemmas:
                         new_entities.append(tuple(proper_title))
         if entity_type not in {'PERSON', 'URL', 'CD'} and all(w not in {t.lower() for t in entity_tokens} for w in {'us', 'united', 'america', 'usa', 'u.s.'}):
             proper_title = _get_proper_casing([ne for i, ne in enumerate(entity_tokens) if ne.lower() not in stop_words_en or i > 0])
@@ -574,7 +583,7 @@ def link_entity(entity, try_subentities=True):
     linkings = _link_entity(entity, try_subentities)
     grouped_linkings = []
     for _, _linkings in group_entities_by_overlap(linkings):
-        _linkings = post_process_entity_linkings(_linkings, " ".join(entity[0]))
+        _linkings = post_process_entity_linkings(_linkings, entity[0])
         grouped_linkings.append([(l.get('kbID'), l.get('label')) for l in _linkings])
     return grouped_linkings
 
@@ -609,7 +618,7 @@ def post_process_entity_linkings(linkings, entity_fragment=None):
     :param linkings: possible linkings as a list of dictionaries
     :param entity_fragment: list of entity tokens as appear in the sentence (optional, either that or linkings should have a key element "fragment")
     :return: sorted linkings
-    >>> post_process_entity_linkings(wdaccess.query_wikidata(wdaccess.multi_entity_query({" ".join(s) for s in possible_subentities(['writers', 'studied'], "NN")}), starts_with=None), " ".join(['writers', 'studied'])) == \
+    >>> post_process_entity_linkings(wdaccess.query_wikidata(wdaccess.multi_entity_query({" ".join(s) for s in possible_subentities(['writers', 'studied'], "NN")}), starts_with=None), ['writers', 'studied']) == \
     [{'labelright': 'writer', 'label': 'screenwriter', 'lev': 9, 'e2': 'http://www.wikidata.org/entity/Q28389', 'kbID': 'Q28389', 'id_rank': 10.253757025176343}, {'labelright': 'writer', 'label': 'writer', 'lev': 9, 'e2': 'http://www.wikidata.org/entity/Q36180', 'kbID': 'Q36180', 'id_rank': 10.496261758949286}, {'labelright': 'writer', 'label': 'Déborah Puig-Pey Stiefel', 'lev': 8, 'e2': 'http://www.wikidata.org/entity/Q27942639', 'kbID': 'Q27942639', 'id_rank': 17.145664359730738}, {'labelright': 'Writers', 'label': 'Writers', 'lev': 9, 'e2': 'http://www.wikidata.org/entity/Q25183171', 'kbID': 'Q25183171', 'id_rank': 17.041686511931928}]
     True
     """
@@ -626,7 +635,7 @@ def post_process_entity_linkings(linkings, entity_fragment=None):
     _linkings = [l for l in _linkings if l.get("kbID") not in entity_blacklist and l.get("kbID", "").startswith("Q")]
     # linkings = [l[:2] for l in linkings]
     for l in _linkings:
-        l['lev'] = lev_distance(entity_fragment if entity_fragment else l.get('fragment', ""), l.get('label', ""), costs=entity_linking_p.get("lev.costs", (1,1,2)))
+        l['lev'] = lev_distance(" ".join(entity_fragment if entity_fragment else l.get('fragment', [])), l.get('label', ""), costs=entity_linking_p.get("lev.costs", (1,1,2)))
         l['id_rank'] = np.log(int(l['kbID'][1:]))
     _linkings = sorted(_linkings, key=lambda l: (l['lev'] + l['id_rank'], int(l['kbID'][1:])))
     _linkings = _linkings[:entity_linking_p.get("entity.options.to.retrieve", 3)]
