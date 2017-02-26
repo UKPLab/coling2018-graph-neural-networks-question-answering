@@ -401,7 +401,7 @@ def link_entities_in_graph(ungrounded_graph, joint_diambiguation=True):
     [{'type': 'CD', 'tokens': ['2012'], 'linkings':[]}, {'type': 'NNP', 'tokens': ['Bella'], 'linkings': [('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella'), ('Q231665', 'Belladonna')]}]
     True
     >>> link_entities_in_graph({'entities': [(['first', 'Queen', 'album'], 'NN')], 'tokens': "What was the first Queen album ?".split()})['entities'] == \
-    [{'type': 'NNP', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q15862', 'Queen'), ('Q193490', 'Queen')]}, {'type': 'NNP', 'tokens': ['first', 'Queen', 'album'], 'linkings': [('Q482994', 'album')]}]
+    [{'type': 'NNP', 'linkings': [('Q15862', 'Queen'), ('Q193490', 'Queen')], 'tokens': ['first', 'Queen', 'album']}, {'type': 'NNP', 'linkings': [('Q154898', 'First')], 'tokens': ['first', 'Queen', 'album']}, {'type': 'NNP', 'linkings': [('Q482994', 'album')], 'tokens': ['first', 'Queen', 'album']}]
     True
     """
     entities = _link_entities_in_sentence(ungrounded_graph.get('entities', []), ungrounded_graph.get('tokens', []))
@@ -428,17 +428,21 @@ def _link_entities_in_sentence(fragments, sentence_tokens):
             else:
                 _linkings = _link_entity(fragment)
                 _linkings = [l for l in _linkings if l.get("e2") not in discovered_entity_ids]
+                discovered_entity_ids.update({l.get("e2") for l in _linkings})
                 if len(_linkings) > 0:
                     for l in _linkings:
                         l['fragment'] = fragment[0]
-                    linkings.extend(_linkings)
-                    discovered_entity_ids.update({l.get("e2") for l in linkings})
+                    _grouped_linkings = group_entities_by_overlap(_linkings)
+                    for _, _linkings in _grouped_linkings:
+                        _linkings = post_process_entity_linkings(_linkings)
+                        linkings.extend(_linkings)
         elif len(fragment) == 3:
             entities.append(fragment)
     grouped_linkings = group_entities_by_overlap(linkings)
     for tokens, _linkings in grouped_linkings:
         if len(_linkings) > 0:
-            _linkings = post_process_entity_linkings(_linkings)
+            # _linkings = post_process_entity_linkings(_linkings)
+            _linkings = sorted(_linkings, key=lambda l: (l.get('lev', 0) + l.get('id_rank', 0), int(l.get('kbID', "")[1:])))
             entities.append({"linkings": _linkings, "type": 'NNP', 'tokens': _linkings[0]['fragment']})
 
     if any(w in set(sentence_tokens) for w in v_structure_markers):
@@ -473,9 +477,6 @@ def jointly_disambiguate_entities(entities, min_num_links=0):
     [{'linkings': [{'links': 1, 'kbID': 'Q15862', 'label': 'Queen'}], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}, {'linkings': [{'links': 2, 'kbID': 'Q482994', 'label': 'album'}], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}, {'linkings': [{'links': 1, 'kbID': 'Q3746013', 'label': 'First'}], 'type': 'NN', 'tokens': ['first', 'Queen', 'album']}]
     True
     """
-    for e in entities:
-        for l in e.get('linkings', []):
-            l['links'] = 0
     _count_links_between_entities(entities)
     filtered_entities = []
     for e in entities:
@@ -490,6 +491,9 @@ def jointly_disambiguate_entities(entities, min_num_links=0):
 
 
 def _count_links_between_entities(entities):
+    for e in entities:
+        for l in e.get('linkings', []):
+            l['links'] = 0
     entity_pairs = list(itertools.combinations([e for e in entities if e.get("type") != "CD"], 2))
     if not (len(entity_pairs) == 0 or all(len(e.get("linkings", [])) < 2 for e in entities)):
         for e1, e2 in entity_pairs:
