@@ -15,7 +15,8 @@ wdaccess_p = {
     'timeout': 20,
     'global_result_limit': 2000,
     'logger': logging.getLogger(__name__),
-    'restrict.hop': False
+    'restrict.hop': False,
+    'query.with.de': True
 }
 
 logger = wdaccess_p['logger']
@@ -73,11 +74,15 @@ sparql_relation_complex = """
 
 sparql_entity_label = """
         { {VALUES ?labelright { %entitylabels }
-          VALUES ?labelpredicate {rdfs:label skos:altLabel}
-          GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate ?labelright  }}
-          UNION
-          {  VALUES ?labelright { %entitylabels }
-          GRAPH <http://wikidata.org/statements> { ?e2 e:P1549s [ e:P1549v ?labelright ] } }
+              {VALUES ?labelpredicate {rdfs:label skos:altLabel}
+              GRAPH <http://wikidata.org/terms> { ?e2 ?labelpredicate ?labelright  }}
+              UNION
+              {GRAPH <http://wikidata.org/statements> { ?e2 e:P1549s/e:P1549v ?labelright}}
+              UNION
+              {GRAPH <http://wikidata.org/statements> { ?e2 e:P735s/e:P735v ?name} GRAPH <http://wikidata.org/terms> { ?name rdfs:label ?labelright} }
+              UNION
+              {GRAPH <http://wikidata.org/statements> { ?e2 e:P734s/e:P734v ?name} GRAPH <http://wikidata.org/terms> { ?name rdfs:label ?labelright} }
+            }
         } FILTER NOT EXISTS {
             VALUES ?topic {e:Q4167410 e:Q21286738 e:Q11266439 e:Q13406463 e:Q4167836}
             GRAPH <http://wikidata.org/instances> {?e2 rdf:type ?topic}}
@@ -463,15 +468,17 @@ def character_query(label, film_id, limit=3):
     return query
 
 
-def multi_entity_query(labels, limit=100):
+def multi_entity_query(labels, limit=200):
     """
     A method to look up a WikiData entities given a set of labels
 
     :param labels: entity labels as a list of str
     :param limit: limit on the result list size
     :return: a query that can be executed against WikiData
-    >>> query_wikidata(multi_entity_query(["Barack Obama"]), starts_with=None) == \
-    [{'label': 'Barack Obama', 'e2': 'http://www.wikidata.org/entity/Q76', 'labelright': 'Barack Obama'}, {'label': 'Barack Obama', 'e2': 'http://www.wikidata.org/entity/Q76', 'labelright': 'Barack Obama'}]
+    >>> query_wikidata(multi_entity_query(["Barack Obama"]), starts_with=None)[0] == \
+    {'label': 'Barack Obama', 'e2': 'http://www.wikidata.org/entity/Q76', 'labelright': 'Barack Obama'}
+    True
+    >>> "Q223757" in {l.get('e2').replace(WIKIDATA_ENTITY_PREFIX, "") for l in query_wikidata(multi_entity_query(["Bella"]), starts_with=None)}
     True
     """
     query = sparql_prefix
@@ -479,7 +486,10 @@ def multi_entity_query(labels, limit=100):
     query += sparql_select
     query += "{"
     sparql_entity_label_inst = sparql_entity_label + sparql_canoncial_label_entity
-    labels = ["\"{}\"@en \"{}\"@de".format(l, l) for l in labels]
+    if wdaccess_p.get('query.with.de', False):
+        labels = ["\"{}\"@en \"{}\"@de".format(l, l) for l in labels]
+    else:
+        labels = ["\"{}\"@en".format(l) for l in labels]
     sparql_entity_label_inst = sparql_entity_label_inst.replace("%entitylabels", " ".join(labels))
     variables.append("?e2")
     variables.append("?labelright")

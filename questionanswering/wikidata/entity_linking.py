@@ -11,7 +11,7 @@ v_structure_markers = utils.load_blacklist(utils.RESOURCES_FOLDER + "v_structure
 
 entity_linking_p = {
     "max.entity.options": 3,
-    "entity.options.to.retrieve": 5,
+    "entity.options.to.retrieve": 10,
     "min.num.links": 0,
     "respect.case": False,
     "overlaping.nn.ne": False,
@@ -410,14 +410,12 @@ def link_entities_in_graph(ungrounded_graph, joint_diambiguation=True):
     # >>> link_entities_in_graph({'entities': [(['Norway'], 'LOCATION'), (['oil'], 'NN')], 'tokens': ['where', 'does', 'norway', 'get', 'their', 'oil', '?']})['entities'] == \
     # [{'linkings': [('Q2480177', 'Norway')], 'type': 'LOCATION', 'tokens': ['Norway']}, {'linkings': [('Q1130872', 'Oil')], 'type': 'NN', 'tokens': ['oil']}]
     # True
-    >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] ==\
-    [{'type': 'NNP', 'tokens': ['Bella'], 'linkings': [('Q223757', 'Bella Swan')]}, {'type': 'NNP', 'tokens': ['Twilight'], 'linkings': [('Q160071', 'Twilight'), ('Q189378', 'Twilight')]}]
+    >>> 'Q223757' in [e['linkings'][0][0] for e in  link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities']]
     True
-    >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['2012'], 'CD')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] == \
-    [{'type': 'CD', 'tokens': ['2012'], 'linkings':[]}, {'type': 'NNP', 'tokens': ['Bella'], 'linkings': [('Q52533', 'Bella, Basilicata'), ('Q156571', '695 Bella'), ('Q231665', 'Belladonna')]}]
+    >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['2012'], 'CD')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] ==\
+    [{'tokens': ['2012'], 'linkings': [], 'type': 'CD'}, {'tokens': ['Bella'], 'linkings': [('Q52533', 'Bella, Basilicata'), ('Q97065', 'Bella Fromm'), ('Q112242', 'Bella Alten')], 'type': 'NNP'}]
     True
-    >>> link_entities_in_graph({'entities': [(['first', 'Queen', 'album'], 'NN')], 'tokens': "What was the first Queen album ?".split()})['entities'] == \
-    [{'type': 'NNP', 'linkings': [('Q15862', 'Queen'), ('Q193490', 'Queen')], 'tokens': ['first', 'Queen', 'album']}, {'type': 'NNP', 'linkings': [('Q154898', 'First')], 'tokens': ['first', 'Queen', 'album']}, {'type': 'NNP', 'linkings': [('Q482994', 'album')], 'tokens': ['first', 'Queen', 'album']}]
+    >>> 'Q15862' in [e['linkings'][0][0] for e in link_entities_in_graph({'entities': [(['first', 'Queen', 'album'], 'NN')], 'tokens': "What was the first Queen album ?".split()})['entities']]
     True
     """
     entities = _link_entities_in_sentence(ungrounded_graph.get('entities', []), ungrounded_graph.get('tokens', []))
@@ -461,12 +459,12 @@ def _link_entities_in_sentence(fragments, sentence_tokens):
             _linkings = sorted(_linkings, key=lambda l: (l.get('lev', 0) + l.get('id_rank', 0), int(l.get('kbID', "")[1:])))
             entities.append({"linkings": _linkings, "type": 'NNP', 'tokens': _linkings[0]['fragment']})
 
-    if any(w in set(sentence_tokens) for w in v_structure_markers):
-        for entity in [e for e in entities if e.get("type") != "CD" and len(e.get('tokens', [])) == 1 and "linkings" in e]:
-            for film_id in [l.get('kbID') for e in entities for l in e.get("linkings", []) if e != entity]:
-                character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity.get('tokens',[])), film_id), starts_with=None)
-                character_linkings = post_process_entity_linkings(character_linkings, entity.get("tokens"))
-                entity['linkings'] = [l for l in character_linkings if l.get("e2") not in discovered_entity_ids] + entity.get("linkings", [])
+    # if any(w in set(sentence_tokens) for w in v_structure_markers):
+    #     for entity in [e for e in entities if e.get("type") != "CD" and len(e.get('tokens', [])) == 1 and "linkings" in e]:
+    #         for film_id in [l.get('kbID') for e in entities for l in e.get("linkings", []) if e != entity]:
+    #             character_linkings = wdaccess.query_wikidata(wdaccess.character_query(" ".join(entity.get('tokens',[])), film_id), starts_with=None)
+    #             character_linkings = post_process_entity_linkings(character_linkings, entity.get("tokens"))
+    #             entity['linkings'] = [l for l in character_linkings if l.get("e2") not in discovered_entity_ids] + entity.get("linkings", [])
     return entities
 
 
@@ -558,21 +556,21 @@ def link_entity(entity):
     >>> link_entity((['Michael', 'J', 'Fox'], 'PERSON'))
     [[('Q395274', 'Michael J. Fox')]]
     >>> link_entity((['Eowyn'], 'PERSON'))
-    [[('Q716565', 'Éowyn'), ('Q10727030', 'Eowyn')]]
+    [[('Q716565', 'Éowyn'), ('Q10727030', 'Eowyn'), ('Q16910118', 'Eowyn Ivey')]]
     >>> link_entity((['Jackie','Kennedy'], 'PERSON'))
     [[('Q165421', 'Jacqueline Kennedy Onassis'), ('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family')]]
     >>> link_entity((['JFK'], 'NNP'))
     [[('Q8685', 'John F. Kennedy International Airport'), ('Q9696', 'John F. Kennedy'), ('Q741823', 'JFK')]]
-    >>> link_entity((['Kennedy'], 'PERSON'))
-    [[('Q9696', 'John F. Kennedy'), ('Q34821', 'Kennedy family'), ('Q67761', 'Kennedy')]]
+    >>> link_entity((['Kennedy'], 'PERSON'))[0][0]
+    ('Q9696', 'John F. Kennedy')
     >>> link_entity((['Indian', 'company'], 'NN'))
     [[('Q102538', 'company'), ('Q225093', 'Company'), ('Q681815', 'The Company')], [('Q668', 'India'), ('Q1091034', 'Indian'), ('Q3111799', 'Indian')]]
     >>> link_entity((['Indian'], 'LOCATION'))
     [[('Q668', 'India'), ('Q1091034', 'Indian'), ('Q3111799', 'Indian')]]
-    >>> link_entity((['supervisor', 'of', 'Albert', 'Einstein'], 'NN'))
-    [[('Q937', 'Albert Einstein'), ('Q1168822', 'house of Albert of Luynes'), ('Q152245', 'Albert, Prince Consort')], [('Q903385', 'clinical supervision'), ('Q1240788', 'Supervisor'), ('Q363802', 'doctoral advisor')]]
+    >>> [linking[0] for linking in link_entity((['supervisor', 'of', 'Albert', 'Einstein'], 'NN'))]
+    [('Q937', 'Albert Einstein'), ('Q903385', 'clinical supervision')]
     >>> link_entity((['Obama'], "PERSON"))
-    [[('Q76', 'Barack Obama'), ('Q41773', 'Obama'), ('Q5280414', 'Obama')]]
+    [[('Q76', 'Barack Obama'), ('Q13133', 'Michelle Obama'), ('Q41773', 'Obama')]]
     >>> link_entity((['Canadians'], 'NNP'))
     [[('Q16', 'Canada'), ('Q44676', 'Canadian English'), ('Q1196645', 'Canadians')]]
     >>> link_entity((['president'], 'NN'))
