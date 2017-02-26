@@ -136,21 +136,21 @@ def possible_variants(entity_tokens, entity_type):
     :param entity_type:  type of the entity
     :return: a list of entity variants
     >>> possible_variants(['the', 'current', 'senators'], 'NN')
-    [('The', 'Current', 'Senators'), ('the', 'current', 'senator'), ('The', 'Current', 'Senator'), ('current', 'senators'), ('US', 'The', 'Current', 'Senator')]
+    [('The', 'Current', 'Senators'), ('the', 'current', 'senator'), ('The', 'Current', 'Senator'), ('current', 'senators'), ('Current', 'Senators'), ('US', 'Current', 'Senators')]
     >>> possible_variants(['the', 'senator'], 'NN')
-    [('The', 'Senator'), ('senator',), ('US', 'The', 'Senator')]
+    [('The', 'Senator'), ('senator',), ('Senator',), ('US', 'Senator')]
     >>> possible_variants(["awards"], "NN")
     [('Awards',), ('award',), ('US', 'Awards')]
     >>> possible_variants(["senators"], "NN")
     [('Senators',), ('senator',), ('US', 'Senators')]
     >>> possible_variants(["star", "wars"], "NN")
-    [('Star', 'Wars'), ('star', 'war'), ('Star', 'War'), ('US', 'Star', 'War')]
+    [('Star', 'Wars'), ('star', 'war'), ('Star', 'War'), ('US', 'Star', 'Wars')]
     >>> possible_variants(["rings"], "NN")
     [('Rings',), ('ring',), ('US', 'Rings')]
     >>> possible_variants(["Jfk"], "NNP")
     [('JFK',), ('US', 'Jfk')]
     >>> possible_variants(['the', 'president', 'after', 'jfk'], 'NN')
-    [('the', 'president', 'after', 'JFK'), ('The', 'President', 'after', 'Jfk'), ('president', 'jfk'), ('US', 'The', 'President', 'after', 'Jfk')]
+    [('the', 'president', 'after', 'JFK'), ('The', 'President', 'after', 'Jfk'), ('president', 'jfk'), ('President', 'Jfk'), ('US', 'President', 'after', 'Jfk')]
     >>> possible_variants(['Jj', 'Thomson'], 'PERSON')
     [('J. J.', 'Thomson')]
     >>> possible_variants(['J', 'J', 'Thomson'], 'URL')
@@ -170,7 +170,7 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(['2009'], 'CD')
     []
     >>> possible_variants(['102', 'dalmatians'], 'NN')
-    [('102', 'Dalmatians'), ('102', 'dalmatian'), ('102', 'Dalmatian'), ('US', '102', 'Dalmatian')]
+    [('102', 'Dalmatians'), ('102', 'dalmatian'), ('102', 'Dalmatian'), ('US', '102', 'Dalmatians')]
     >>> possible_variants(['Martin', 'Luther', 'King', 'Jr'], 'PERSON')
     [('Martin', 'Luther', 'King', 'Jr.'), ('Martin', 'Luther', 'King,', 'Jr.')]
     >>> possible_variants(['St', 'Louis', 'Rams'], 'ORGANIZATION')
@@ -180,7 +180,7 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(['united', 'states', 'of', 'america'], 'LOCATION')
     [('United', 'States', 'of', 'America')]
     >>> possible_variants(['character', 'did'], 'NN')
-    [('Character', 'did'), ('character',), ('US', 'Character', 'did')]
+    [('Character', 'did'), ('character',), ('Character',), ('US', 'Character', 'did')]
     >>> possible_variants(['Wright', 'Brothers'], 'ORGANIZATION')
     [('Wright', 'brothers'), ('US', 'Wright', 'Brothers')]
     >>> possible_variants(['University', 'Of', 'Leeds'], 'ORGANIZATION')
@@ -196,9 +196,9 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(['M.C.', 'Escher'], 'PERSON')
     [('M. C.', 'Escher')]
     >>> possible_variants(['chancellors', 'of', 'Germany'], 'NN')
-    [('Chancellors', 'of', 'Germany'), ('chancellor', 'of', 'Germany'), ('Chancellor', 'of', 'Germany'), ('chancellors', 'Germany'), ('US', 'Chancellor', 'of', 'Germany')]
+    [('Chancellors', 'of', 'Germany'), ('chancellor', 'of', 'Germany'), ('Chancellor', 'of', 'Germany'), ('chancellors', 'Germany'), ('Chancellors', 'Germany'), ('US', 'Chancellors', 'of', 'Germany')]
     >>> possible_variants(['Canadians'], 'NNP')
-    [('Canadian',), ('US', 'Canadian')]
+    [('Canadian',), ('US', 'Canadians')]
     >>> entity_linking_p["respect.case"] = True
     >>> possible_variants(['Canadians'], 'NNP')
     [('Canadian',), ('US', 'Canadians')]
@@ -231,11 +231,11 @@ def possible_variants(entity_tokens, entity_type):
         if any(t.startswith("Mc") for t in entity_tokens):
             new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
     else:
-        proper_title = _get_proper_casing(entity_tokens)
         if not entity_linking_p.get("respect.case", False):
             upper_cased = [ne.upper() if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en else ne for ne in entity_tokens]
             if upper_cased != entity_tokens:
                 new_entities.append(tuple(upper_cased))
+            proper_title = _get_proper_casing(entity_tokens)
             if proper_title != entity_tokens:
                 new_entities.append(tuple(proper_title))
         if "St" in entity_tokens or "st" in entity_tokens:
@@ -252,7 +252,12 @@ def possible_variants(entity_tokens, entity_type):
             no_stop_title = [ne for ne in entity_tokens if ne.lower() not in stop_words_en]
             if no_stop_title != entity_tokens:
                 new_entities.append(tuple(no_stop_title))
+                if not entity_linking_p.get("respect.case", False):
+                    proper_title = _get_proper_casing(no_stop_title)
+                    if proper_title != entity_tokens and proper_title != no_stop_title:
+                        new_entities.append(tuple(proper_title))
         if entity_type not in {'PERSON', 'URL', 'CD'} and all(w not in {t.lower() for t in entity_tokens} for w in {'us', 'united', 'america', 'usa', 'u.s.'}):
+            proper_title = _get_proper_casing([ne for i, ne in enumerate(entity_tokens) if ne.lower() not in stop_words_en or i > 0])
             new_entities.append(("US", ) + tuple(proper_title if not entity_linking_p.get("respect.case", False) else entity_tokens))
     if not entity_linking_p.get("respect.case", False) and any(roman_nums_pattern.match(ne.upper()) for ne in entity_tokens):
         new_entities.append(tuple([ne.upper() if roman_nums_pattern.match(ne.upper()) else ne for ne in entity_tokens]))
