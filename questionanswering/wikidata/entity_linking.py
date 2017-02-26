@@ -440,7 +440,7 @@ def _link_entities_in_sentence(fragments, sentence_tokens):
     for fragment in fragments:
         if len(fragment) == 2:
             if fragment[1] == "CD":
-                entities.append({"tokens": fragment[0], "type": fragment[1]})
+                entities.append({"tokens": fragment[0], "type": fragment[1], "linkings":[]})
             else:
                 _linkings = _link_entity(fragment)
                 _linkings = [l for l in _linkings if l.get("e2") not in discovered_entity_ids]
