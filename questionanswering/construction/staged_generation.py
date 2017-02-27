@@ -12,7 +12,8 @@ generation_p = {
     'replace.entities': True,
     'use.whitelist': False,
     'v.structure': True,
-    'min.fscore.to.stop': 0.9
+    'min.fscore.to.stop': 0.9,
+    'join.entity.disambiguation': False
 }
 
 logger = generation_p['logger']
@@ -36,7 +37,7 @@ def generate_with_gold(ungrounded_graph, gold_answers):
     'tokens': ['what','is','the','zip','code','of','chicago','?']}, gold_answers=['60605', '60604', '60607', '60606', '60601', '60610', '60603', '60602', '60290', '60608'])) > 0.05
     True
     """
-    ungrounded_graph = link_entities_in_graph(ungrounded_graph)
+    ungrounded_graph = link_entities_in_graph(ungrounded_graph, generation_p.get('join.entity.disambiguation', False))
     pool = [(ungrounded_graph, (0.0, 0.0, 0.0), [])]  # pool of possible parses
     positive_graphs, negative_graphs = [], []
     iterations = 0
@@ -214,7 +215,7 @@ def ground_with_model(input_graphs, qa_model, min_score, beam_size=10):
 
 
 def generate_with_model(ungrounded_graph, qa_model, beam_size=10):
-    ungrounded_graph = link_entities_in_graph(ungrounded_graph)
+    ungrounded_graph = link_entities_in_graph(ungrounded_graph, generation_p.get('join.entity.disambiguation', False))
     pool = [(ungrounded_graph, -1.0)]  # pool of possible parses
     generated_graphs = []
     iterations = 0

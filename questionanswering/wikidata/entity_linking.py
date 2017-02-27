@@ -11,10 +11,10 @@ v_structure_markers = utils.load_blacklist(utils.RESOURCES_FOLDER + "v_structure
 
 entity_linking_p = {
     "max.entity.options": 3,
-    "entity.options.to.retrieve": 10,
-    "min.num.links": 0,
+    "entity.options.to.retrieve": 5,
+    "min.num.links": 1,
     "respect.case": False,
-    "overlaping.nn.ne": False,
+    "overlaping.nn.ne": True,
     "lev.costs": (1, 0, 2),
     "always.include.subentities": False,
     "lev.compare.to": "label"
@@ -424,7 +424,7 @@ def link_entities_in_graph(ungrounded_graph, joint_diambiguation=True):
     >>> link_entities_in_graph({'entities': [(['Bill', 'Gates'], 'PERSON'), (['Bill', 'Gates', 'born'], 'NNP'), (['country'], 'NN')], 'tokens': []})['entities']
 
     """
-    entities = _link_entities_in_sentence(ungrounded_graph.get('entities', []), ungrounded_graph.get('tokens', []))
+    entities = _link_entities_in_sentence(ungrounded_graph.get('entities', []))
     if joint_diambiguation:
         entities = jointly_disambiguate_entities(entities, entity_linking_p.get("min.num.links", 0))
     for e in entities:
@@ -435,7 +435,7 @@ def link_entities_in_graph(ungrounded_graph, joint_diambiguation=True):
     return ungrounded_graph
 
 
-def _link_entities_in_sentence(fragments, sentence_tokens):
+def _link_entities_in_sentence(fragments):
     linkings = []
     entities = []
     discovered_entity_ids = set()
@@ -604,13 +604,14 @@ def _link_entity(entity):
         return []
     entity_variants = possible_variants(entity_tokens, entity_type)
     subentities = possible_subentities(entity_tokens, entity_type)
-    linkings = wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(entity_tokens)], link_by_name=len(entity_tokens) == 1), starts_with=None)
+    link_by_name = len(entity_tokens) == 1
+    linkings = wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(entity_tokens)], link_by_name=link_by_name, limit=1000 if link_by_name else 100), starts_with=None)
     map_keys = {" ".join(t).lower() for t in [entity_tokens] + entity_variants + subentities}
     if any(t in entity_map for t in map_keys):
         linkings += [{'e2': e, 'label': l, 'labelright': t} for t in map_keys for e, l in entity_map.get(t, [])][:entity_linking_p.get("entity.options.to.retrieve", 3)]
     # if entity_type not in {"NN"} or not linkings:
     entity_variants = {" ".join(s) for s in entity_variants}
-    linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants, link_by_name=len(entity_tokens) == 1), starts_with=None)
+    linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants, link_by_name=link_by_name,  limit=1000 if link_by_name else 100), starts_with=None)
     if entity_linking_p.get("always.include.subentities", False) or not linkings: # or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
         subentities = {" ".join(s) for s in subentities}
         linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(subentities), starts_with=None)
