@@ -17,7 +17,8 @@ entity_linking_p = {
     "overlaping.nn.ne": True,
     "lev.costs": (1, 0, 2),
     "always.include.subentities": False,
-    "lev.compare.to": "label"
+    "lev.compare.to": "label",
+    "longest.match.priority": False
 }
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
@@ -32,7 +33,11 @@ np_grammar = r"""
     NP:
     {<JJ|RB|CD|VBG|VBN|DT>*(<NNP|NN|NNS|NNPS>+)(<RB|CD>|<VBG|VBN|VBZ><RB>?)?(<IN|CC>(<PRP\$|DT><NN|NNS|NNP|NNPS>+|<NNP|NNPS>+))?}
     """
-np_parser = nltk.RegexpParser(np_grammar)
+np_grammar_simplified = r"""
+    NP:
+    {<JJ|RB|CD|VBG|VBN|DT|PRP\$>*<NN|NNS|NNP|NNPS>+(<RB|CD>|<VBG|VBN><RB>?)?}
+    """
+np_parser = nltk.RegexpParser(np_grammar_simplified)
 
 
 def extract_entities_from_tagged(annotated_tokens, tags):
@@ -613,8 +618,15 @@ def _link_entity(entity):
     entity_variants = {" ".join(s) for s in entity_variants}
     linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants, link_by_name=link_by_name,  limit=1000 if link_by_name else 100), starts_with=None)
     if entity_linking_p.get("always.include.subentities", False) or not linkings: # or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
-        subentities = {" ".join(s) for s in subentities}
-        linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(subentities), starts_with=None)
+        subentities = {s for s in subentities}
+        if not entity_linking_p.get("longest.match.priority", False):
+            linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(s) for s in subentities]), starts_with=None)
+        else:
+            sorted_subentities = nltk.Index([(len(s), s) for s in subentities])
+            sorted_subentities = []
+            while not linkings:
+                pass
+
     return linkings
 
 
