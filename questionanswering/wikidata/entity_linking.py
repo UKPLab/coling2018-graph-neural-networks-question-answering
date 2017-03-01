@@ -35,7 +35,7 @@ np_grammar = r"""
     """
 np_grammar_simplified = r"""
     NP:
-    {<JJ|RB|CD|VBG|VBN|DT|PRP\$>*<NN|NNS|NNP|NNPS>+(<RB|CD>|<VBG|VBN><RB>?)?}
+    {<JJ|RB|CD|VBG|VBN>*<NN|NNS|NNP|NNPS>+(<RB|CD>|<VBG|VBN><RB>?)?}
     """
 np_parser = nltk.RegexpParser(np_grammar_simplified)
 
@@ -545,7 +545,7 @@ def link_entity(entity):
     >>> entity_linking_p["entity.options.to.retrieve"] = 3
     >>> link_entity((['Martin', 'Luther', 'King', 'Junior'], 'PERSON'))
     [[('Q8027', 'Martin Luther King, Jr.'), ('Q6776048', 'Martin Luther King, Jr.')]]
-    >>> link_entity((['movies', 'does'], 'NN'))
+    >>> link_entity((['movies'], 'NN'))
     [[('Q11424', 'film'), ('Q1179487', 'Movies'), ('Q6926907', 'Movies')]]
     >>> link_entity((['lord', 'of', 'the', 'rings'], 'NN'))
     [[('Q15228', 'The Lord of the Rings'), ('Q127367', 'The Lord of the Rings: The Fellowship of the Ring'), ('Q131074', 'The Lord of the Rings')]]
@@ -589,8 +589,10 @@ def link_entity(entity):
     [[('Q30461', 'president'), ('Q11696', 'President of the United States of America'), ('Q1255921', 'president')]]
     >>> link_entity((['all', 'federal', 'chancellors', 'of', 'Germany'], 'NN'))
     [[('Q4970706', 'Federal Chancellor of Germany'), ('Q56022', 'Chancellor of Germany'), ('Q183', 'Germany')]]
-    >>> link_entity((['the', 'song', 'Hotel', 'California'], 'NN'))
-    [[('Q4970706', 'Federal Chancellor of Germany'), ('Q56022', 'Chancellor of Germany'), ('Q183', 'Germany')]]
+    >>> link_entity((['song', 'Hotel', 'California'], 'NN'))
+    [[('Q99', 'California'), ('Q752172', 'Hotel California'), ('Q780394', 'Hotel California')], [('Q7366', 'song'), ('Q1198635', 'Song County'), ('Q1237811', 'Consort Song')]]
+    >>> link_entity((['first', 'Queen', 'album'], 'NN'))
+    [[('Q15862', 'Queen'), ('Q5453735', 'First Queen'), ('Q252044', 'Queen Grimhilde')], [('Q146378', 'Album'), ('Q482994', 'album'), ('Q1173065', 'album')]]
     """
     linkings = _link_entity(entity)
     grouped_linkings = []
@@ -657,13 +659,15 @@ def post_process_entity_linkings(linkings, entity_fragment=None):
     _linkings = [l for l in _linkings if l.get("kbID") not in entity_blacklist and l.get("kbID", "").startswith("Q")]
     # linkings = [l[:2] for l in linkings]
 
-    if entity_linking_p.get("longest.match.priority", False):
-        sorted_linkings = nltk.Index([(len(l.get("labelright", "").split()), l) for l in _linkings])
-        _linkings = sorted_linkings[max(sorted_linkings.keys())]
+    # if entity_linking_p.get("longest.match.priority", False):
+    #     sorted_linkings = nltk.Index([(len(l.get("labelright", "").split()), l) for l in _linkings])
+    #     _linkings = sorted_linkings[max(sorted_linkings.keys())]
     for l in _linkings:
-        l['lev'] = lev_distance(" ".join(entity_fragment if entity_fragment else l.get('fragment', [])), l.get(entity_linking_p.get("lev.compare.to", 'label'), ""), costs=entity_linking_p.get("lev.costs", (1,1,2)))
+        fragment = entity_fragment if entity_fragment else l.get('fragment', [])
+        l['lev'] = lev_distance(" ".join(fragment), l.get(entity_linking_p.get("lev.compare.to", 'label'), ""), costs=entity_linking_p.get("lev.costs", (1,1,2)))
         l['id_rank'] = np.log(int(l['kbID'][1:]))
-    _linkings = sorted(_linkings, key=lambda l: (l['lev'] + l['id_rank'], int(l['kbID'][1:])))
+        l['match_diff'] = max(1 - len(l.get("labelright", "").split()) / len(fragment), 0)*2 if entity_linking_p.get("longest.match.priority", False) else 0
+    _linkings = sorted(_linkings, key=lambda l: (l['lev'] + l['id_rank'] + l['match_diff'], int(l['kbID'][1:])))
     _linkings = _linkings[:entity_linking_p.get("entity.options.to.retrieve", 3)]
     return _linkings
 
