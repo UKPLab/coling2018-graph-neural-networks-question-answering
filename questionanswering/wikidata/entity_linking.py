@@ -18,7 +18,8 @@ entity_linking_p = {
     "lev.costs": (1, 0, 2),
     "always.include.subentities": False,
     "lev.compare.to": "label",
-    "longest.match.priority": True
+    "longest.match.priority": True,
+    "global.entity.grouping": True
 }
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
@@ -421,12 +422,14 @@ def link_entities_in_graph(ungrounded_graph, joint_diambiguation=True):
     # True
     >>> 'Q223757' in [e['linkings'][0][0] for e in  link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities']]
     True
+    >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['Twilight'], 'NNP')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities']
+
     >>> link_entities_in_graph({'entities': [(['Bella'], 'PERSON'), (['2012'], 'CD')], 'tokens': ['who', 'plays', 'bella', 'on', 'twilight', '?']})['entities'] ==\
     [{'tokens': ['2012'], 'linkings': [], 'type': 'CD'}, {'tokens': ['Bella'], 'linkings': [('Q52533', 'Bella, Basilicata'), ('Q97065', 'Bella Fromm'), ('Q112242', 'Bella Alten')], 'type': 'NNP'}]
     True
     >>> 'Q15862' in [e['linkings'][0][0] for e in link_entities_in_graph({'entities': [(['first', 'Queen', 'album'], 'NN')], 'tokens': "What was the first Queen album ?".split()})['entities']]
     True
-    >>> link_entities_in_graph({'entities': [(['Bill', 'Gates'], 'PERSON'), (['Bill', 'Gates', 'born'], 'NNP'), (['country'], 'NN')], 'tokens': []})['entities']
+    >>> link_entities_in_graph({'entities': [(['Bill', 'Gates', 'born'], 'NNP'), (['country'], 'NN')], 'tokens': []}, False)['entities']
 
     """
     entities = _link_entities_in_sentence(ungrounded_graph.get('entities', []))
@@ -460,11 +463,15 @@ def _link_entities_in_sentence(fragments):
                     _grouped_linkings = group_entities_by_overlap(_linkings)
                     for _, _linkings in _grouped_linkings:
                         _linkings = post_process_entity_linkings(_linkings)
-                        linkings.extend(_linkings)
+                        linkings.append(_linkings)
         elif len(fragment) == 3:
             entities.append(fragment)
-    grouped_linkings = group_entities_by_overlap(linkings)
-    for tokens, _linkings in grouped_linkings:
+    if entity_linking_p.get("global.entity.grouping", True):
+        linkings = [l for linkings_group in linkings for l in linkings_group]
+        grouped_linkings = group_entities_by_overlap(linkings)
+    else:
+        grouped_linkings = [({}, linkings_group) for linkings_group in linkings]
+    for _, _linkings in grouped_linkings:
         if len(_linkings) > 0:
             # _linkings = post_process_entity_linkings(_linkings)
             _linkings = sorted(_linkings, key=lambda l: (l.get('lev', 0) + l.get('id_rank', 0), int(l.get('kbID', "")[1:])))
