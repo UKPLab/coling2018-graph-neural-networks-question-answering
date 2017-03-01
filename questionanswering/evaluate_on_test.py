@@ -36,7 +36,9 @@ def generate(path_to_model, config_file_path):
     wdaccess.wdaccess_p['wikidata_url'] = config['wikidata'].get("backend", "http://knowledgebase:8890/sparql")
     wdaccess.sparql_init()
 
+    assert not(config['webquestions']["no.ne.tags"] and config['evaluation']["only.named.entities"])
     entity_linking.entity_linking_p["max.entity.options"] = config['evaluation']["max.entity.options"]
+    entity_linking.entity_linking_p["global.entity.grouping"] = not config['webquestions']["no.ne.tags"]
     wdaccess.wdaccess_p["restrict.hop"] = config['wikidata'].get("restrict.hop", False)
     wdaccess.update_sparql_clauses()
     staged_generation.generation_p["use.whitelist"] = config['evaluation'].get("use.whitelist", False)
@@ -48,7 +50,7 @@ def generate(path_to_model, config_file_path):
         stages.ARG_TYPES = set(config['wikidata']['arg.types'])
     if 'filter.out.relation.classes' in config['wikidata']:
         wdaccess.FILTER_RELATION_CLASSES = set(config['wikidata']['filter.out.relation.classes'])
-
+    logger.debug("entity_linking: {}".format(entity_linking.entity_linking_p))
     with open(config['evaluation']['questions']) as f:
         webquestions_questions = json.load(f)
     webquestions = webquestions_io.WebQuestions(config['webquestions'], logger=logger)

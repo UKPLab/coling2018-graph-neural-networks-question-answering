@@ -35,12 +35,14 @@ def generate(config_file_path):
     staged_generation.generation_p['label.query.results'] = config['generation'].get('label.query.results', False)
     staged_generation.generation_p["use.whitelist"] = config['generation'].get("use.whitelist", False)
     staged_generation.generation_p["min.fscore.to.stop"] = config['generation'].get("min.fscore.to.stop", 0.9)
+    entity_linking.entity_linking_p["global.entity.grouping"] = not config['webquestions']["no.ne.tags"]
     entity_linking.entity_linking_p["max.entity.options"] = config['generation']["max.entity.options"]
     wdaccess.wdaccess_p['wikidata_url'] = config['wikidata'].get("backend", "http://knowledgebase:8890/sparql")
     wdaccess.wdaccess_p["restrict.hop"] = config['wikidata'].get("restrict.hop", False)
     wdaccess.wdaccess_p["timeout"] = config['wikidata'].get("timeout", 20)
     wdaccess.sparql_init()
     wdaccess.update_sparql_clauses()
+    logger.debug("entity_linking: {}".format(entity_linking.entity_linking_p))
     if 'hop.types' in config['wikidata']:
         stages.HOP_TYPES = set(config['wikidata']['hop.types'])
     logger.debug("Hop types set to: {}".format(stages.HOP_TYPES))

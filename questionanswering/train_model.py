@@ -5,12 +5,9 @@ import click
 import numpy as np
 import utils
 import sys
-import os
 
 from datasets import webquestions_io
 import models
-from wikidata import wdaccess
-from models.kerasmodel import KerasModel
 
 
 @click.command()
