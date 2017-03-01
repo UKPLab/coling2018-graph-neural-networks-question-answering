@@ -18,7 +18,7 @@ entity_linking_p = {
     "lev.costs": (1, 0, 2),
     "always.include.subentities": False,
     "lev.compare.to": "label",
-    "longest.match.priority": False
+    "longest.match.priority": True
 }
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
@@ -589,6 +589,8 @@ def link_entity(entity):
     [[('Q30461', 'president'), ('Q11696', 'President of the United States of America'), ('Q1255921', 'president')]]
     >>> link_entity((['all', 'federal', 'chancellors', 'of', 'Germany'], 'NN'))
     [[('Q4970706', 'Federal Chancellor of Germany'), ('Q56022', 'Chancellor of Germany'), ('Q183', 'Germany')]]
+    >>> link_entity((['the', 'song', 'Hotel', 'California'], 'NN'))
+    [[('Q4970706', 'Federal Chancellor of Germany'), ('Q56022', 'Chancellor of Germany'), ('Q183', 'Germany')]]
     """
     linkings = _link_entity(entity)
     grouped_linkings = []
@@ -619,14 +621,15 @@ def _link_entity(entity):
     linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query(entity_variants, link_by_name=link_by_name,  limit=1000 if link_by_name else 100), starts_with=None)
     if entity_linking_p.get("always.include.subentities", False) or not linkings: # or (len(entity_tokens) == 1 and entity_type not in {"NN"}):
         subentities = {s for s in subentities}
-        if not entity_linking_p.get("longest.match.priority", False):
-            linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(s) for s in subentities]), starts_with=None)
-        else:
-            sorted_subentities = nltk.Index([(len(s), s) for s in subentities])
-            sorted_subentities = []
-            while not linkings:
-                pass
-
+        # if not entity_linking_p.get("longest.match.priority", False):
+        linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(s) for s in subentities]), starts_with=None)
+        # else:
+        #     sorted_subentities = nltk.Index([(len(s), s) for s in subentities])
+        #     subentity_length = len(entity_tokens)
+        #     while not linkings and subentity_length > 0:
+        #         linkings += wdaccess.query_wikidata(wdaccess.multi_entity_query([" ".join(s) for s in sorted_subentities[subentity_length]]), starts_with=None)
+        #         subentity_length -= 1
+        #
     return linkings
 
 
@@ -640,6 +643,8 @@ def post_process_entity_linkings(linkings, entity_fragment=None):
     True
     """
     # linkings = {(l.get("e2", "").replace(wdaccess.WIKIDATA_ENTITY_PREFIX, ""), l.get("label", ""), l.get("labelright", ""), l.get("fragment", "")) for l in linkings if l}
+    if len(linkings) == 0:
+        return linkings
     assert all('fragment' in l for l in linkings) or entity_fragment
     discovered_entity_ids = set()
     _linkings = []
@@ -651,6 +656,10 @@ def post_process_entity_linkings(linkings, entity_fragment=None):
 
     _linkings = [l for l in _linkings if l.get("kbID") not in entity_blacklist and l.get("kbID", "").startswith("Q")]
     # linkings = [l[:2] for l in linkings]
+
+    if entity_linking_p.get("longest.match.priority", False):
+        sorted_linkings = nltk.Index([(len(l.get("labelright", "").split()), l) for l in _linkings])
+        _linkings = sorted_linkings[max(sorted_linkings.keys())]
     for l in _linkings:
         l['lev'] = lev_distance(" ".join(entity_fragment if entity_fragment else l.get('fragment', [])), l.get(entity_linking_p.get("lev.compare.to", 'label'), ""), costs=entity_linking_p.get("lev.costs", (1,1,2)))
         l['id_rank'] = np.log(int(l['kbID'][1:]))
