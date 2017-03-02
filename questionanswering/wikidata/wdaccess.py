@@ -193,6 +193,10 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exce
     2
     >>> "P571v" in [v for r in query_graph_groundings({'entities': [], 'tokens': ['when', 'were'], 'edgeSet': [{'rightkbID': 'Q329816', 'right': ['Texas', 'Rangers'], 'canonical_right': 'Texas Rangers'}]}) for v in r.values()]
     True
+    >>> query_graph_groundings({'edgeSet': [{'rightkbID': 'Q76', 'type':'reverse', 'kbID':'P21v'}], 'entities': []})
+    [{}]
+    >>> query_graph_groundings({'edgeSet': [{'rightkbID': 'Q76', 'type':'reverse', 'kbID':'P131v'}], 'entities': []})
+    []
     """
     if get_free_variables(g):
         groundings = query_wikidata(graph_to_query(g, limit=GLOBAL_RESULT_LIMIT*(10 if with_denotations else 1), return_var_values=with_denotations), use_cache=use_cache)
@@ -202,7 +206,11 @@ def query_graph_groundings(g, use_cache=False, with_denotations=False, pass_exce
         if not graph.graph_question_is_temporal(g):
             groundings = [r for r in groundings if not any(r[b] in TEMPORAL_RELATIONS for b in r)]
         return groundings
-    return [{}]
+    else:
+        if verify_grounding(g):
+            return [{}]
+        else:
+            return []
 
 
 def query_graph_denotations(g):
