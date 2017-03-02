@@ -460,6 +460,7 @@ def _link_entities_in_sentence(fragments):
                 if len(_linkings) > 0:
                     for l in _linkings:
                         l['fragment'] = fragment[0]
+                        l['type'] = fragment[1]
                     _grouped_linkings = group_entities_by_overlap(_linkings)
                     for _, _linkings in _grouped_linkings:
                         _linkings = post_process_entity_linkings(_linkings)
@@ -474,8 +475,9 @@ def _link_entities_in_sentence(fragments):
     for _, _linkings in grouped_linkings:
         if len(_linkings) > 0:
             # _linkings = post_process_entity_linkings(_linkings)
+            entity_type = "NNP" if "NNP" in {l.get("type") for l in _linkings} else "NN"
             _linkings = sorted(_linkings, key=lambda l: (l.get('lev', 0) + l.get('id_rank', 0), int(l.get('kbID', "")[1:])))
-            entities.append({"linkings": _linkings, "type": 'NNP', 'tokens': _linkings[0]['fragment']})
+            entities.append({"linkings": _linkings, "type": entity_type, 'tokens': _linkings[0]['fragment']})
 
     # if any(w in set(sentence_tokens) for w in v_structure_markers):
     #     for entity in [e for e in entities if e.get("type") != "CD" and len(e.get('tokens', [])) == 1 and "linkings" in e]:
