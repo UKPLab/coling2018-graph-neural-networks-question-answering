@@ -37,10 +37,50 @@ def last_relation_hop(g):
     return new_graphs
 
 
+def add_class(g):
+    """
+    Takes a graph with a non-empty list of free entities and adds a new class relation with the one of the free entities,
+    thus removing it from the list.
+
+    :param g: a graph with a non-empty 'entities' list
+    :return: a list of suggested graphs
+    >>> add_class({'edgeSet': [], 'entities': []})
+    []
+    >>> add_class({'edgeSet': [], 'entities': [{'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'NNP'}]})
+    []
+    >>> add_class({'edgeSet': [], 'entities': [{'linkings':[("Q37876", "album")], 'tokens':["album"], 'type':'NN'}]}) == \
+    [{'entities': [], 'edgeSet': [{'canonical_right': 'album', 'type': 'class', 'rightkbID': 'Q37876', 'right': ['album']}]}]
+    True
+    >>> add_class({'edgeSet': [], 'entities': [{"linkings": [(None, ["2012"])] ,"tokens": ['2012'], "type": 'CD'}, {'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'PERSON'}, {'linkings':[("Q37876", "city")], 'tokens':["city"], 'type':'NN'}]}) == \
+    [{'entities': [{'type': 'CD', 'tokens': ['2012'], 'linkings': [(None, ['2012'])]}, {'type': 'PERSON', 'tokens': ['Portman'], 'linkings': [('Q37876', 'Natalie Portman')]}], 'edgeSet': [{'canonical_right': 'city', 'type': 'class', 'rightkbID': 'Q37876', 'right': ['city']}]}]
+    True
+    """
+    if any(edge.get("type") == 'class' for edge in g.get('edgeSet', [])):
+        return []
+    if len(g.get('entities', [])) == 0 or not any(e.get("type") == 'NN' for e in g['entities'] if len(e) > 1):
+        return []
+    entities = copy.copy(g.get('entities', []))
+    skipped = []
+    new_graphs = []
+    while entities:
+        entity = entities.pop(0)
+        if entity.get("type") == 'NN':
+            if len(entity.get("linkings",[])) > 0:
+                linkings = entity['linkings']
+                for kbID, label in linkings:
+                    new_g = graph.copy_graph(g)
+                    new_g['entities'] = entities[:] + skipped
+                    new_g['edgeSet'].append({'right': entity.get("tokens", []), 'rightkbID': kbID, 'canonical_right': label, 'type': "class"})
+                    new_graphs.append(new_g)
+        else:
+            skipped.append(entity)
+    return new_graphs
+
+
 def add_entity_and_relation(g):
     """
-    Takes a graph with a non-empty list of free entities and adds a new relations with the one of the free entities, thus
-    removing it from the list.
+    Takes a graph with a non-empty list of free entities and adds a new relations with the one of the free named entities,
+    thus removing it from the list.
 
     :param g: a graph with a non-empty 'entities' list
     :return: a list of suggested graphs
@@ -49,10 +89,15 @@ def add_entity_and_relation(g):
     >>> add_entity_and_relation({'edgeSet': [], 'entities': [{'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'PERSON'}]}) == \
     [{'entities': [], 'edgeSet': [{'rightkbID': 'Q37876', 'canonical_right': 'Natalie Portman', 'right': ['Portman']}]}]
     True
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [{'linkings':[("Q37876", "city")], 'tokens':["city"], 'type':'NN'}, {'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'PERSON'}]}) == \
+    [{'entities': [{'linkings':[("Q37876", "city")], 'tokens':["city"], 'type':'NN'}], 'edgeSet': [{'rightkbID': 'Q37876', 'canonical_right': 'Natalie Portman', 'right': ['Portman']}]}]
+    True
     >>> add_entity_and_relation({'edgeSet': [], 'entities': [{"linkings": [(None, ["2012"])] ,"tokens": ['2012'], "type": 'CD'}, {'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'PERSON'}]}) == \
     [{'entities': [{'linkings': [(None, ['2012'])], 'type': 'CD', 'tokens': ['2012']}], 'edgeSet': [{'rightkbID': 'Q37876', 'canonical_right': 'Natalie Portman', 'right': ['Portman']}]}]
     True
     >>> add_entity_and_relation({'edgeSet': [], 'entities': [{"linkings": [(None, ["2012"])] ,"tokens": ['2012'], "type": 'CD'}]})
+    []
+    >>> add_entity_and_relation({'edgeSet': [], 'entities': [{'linkings':[("Q37876", "city")], 'tokens':["city"], 'type':'NN'}]})
     []
     """
     if len(g.get('entities', [])) == 0:
@@ -62,7 +107,7 @@ def add_entity_and_relation(g):
     new_graphs = []
     while entities:
         entity = entities.pop(0)
-        if entity.get("type") == 'CD':
+        if entity.get("type") in {'CD', 'NN'}:
             skipped.append(entity)
         else:
             if len(entity.get("linkings",[])) > 0:
@@ -70,10 +115,7 @@ def add_entity_and_relation(g):
                 for kbID, label in linkings:
                     new_g = graph.copy_graph(g)
                     new_g['entities'] = entities[:] + skipped
-                    if entity.get("type") == 'NN':
-                        new_g['edgeSet'].append({'right': entity.get("tokens", []), 'rightkbID': kbID, 'canonical_right': label, 'type': "class"})
-                    else:
-                        new_g['edgeSet'].append({'right': entity.get("tokens", []), 'rightkbID': kbID, 'canonical_right': label})
+                    new_g['edgeSet'].append({'right': entity.get("tokens", []), 'rightkbID': kbID, 'canonical_right': label})
                     new_graphs.append(new_g)
     return new_graphs
 
