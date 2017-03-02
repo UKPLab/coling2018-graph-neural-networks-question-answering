@@ -16,7 +16,8 @@ wdaccess_p = {
     'global_result_limit': 2000,
     'logger': logging.getLogger(__name__),
     'restrict.hop': False,
-    'query.with.de': True
+    'query.with.de': True,
+    'expand.transitive.relations': False  # Right now it is only about located in (P131)
 }
 
 logger = wdaccess_p['logger']
@@ -314,8 +315,7 @@ def graph_to_query(g, ask=False, return_var_values=False, limit=GLOBAL_RESULT_LI
             if edge.get('type') == 'v-structure':
                 sparql_relation_inst = sparql_relation_inst.replace("VALUES ?rv { e:P161v e:P453q e:P175q}", "")
 
-            # This is a very special case but there is no other place to put it
-            if edge['kbID'] == "P131v":
+            if wdaccess_p.get('expand.transitive.relations', False) and edge['kbID'] == "P131v" and edge.get('type') == "reverse":
                 sparql_relation_inst = sparql_relation_inst.replace("?p ?m . ?m ?rr", "(e:P131s/e:P131v)+")
             else:
                 sparql_relation_inst = re.sub(r"\?r[drv]", "e:" + edge['kbID'], sparql_relation_inst)
