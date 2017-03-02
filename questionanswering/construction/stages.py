@@ -70,7 +70,10 @@ def add_entity_and_relation(g):
                 for kbID, label in linkings:
                     new_g = graph.copy_graph(g)
                     new_g['entities'] = entities[:] + skipped
-                    new_g['edgeSet'].append({'right': entity.get("tokens", []), 'rightkbID': kbID, 'canonical_right': label})
+                    if entity.get("type") == 'NN':
+                        new_g['edgeSet'].append({'right': entity.get("tokens", []), 'rightkbID': kbID, 'canonical_right': label, 'type': "class"})
+                    else:
+                        new_g['edgeSet'].append({'right': entity.get("tokens", []), 'rightkbID': kbID, 'canonical_right': label})
                     new_graphs.append(new_g)
     return new_graphs
 
