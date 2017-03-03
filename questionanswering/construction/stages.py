@@ -98,25 +98,29 @@ def add_entity_and_relation(g):
     >>> add_entity_and_relation({'edgeSet': [], 'entities': [{"linkings": [(None, ["2012"])] ,"tokens": ['2012'], "type": 'CD'}]})
     []
     >>> add_entity_and_relation({'edgeSet': [], 'entities': [{'linkings':[("Q37876", "city")], 'tokens':["city"], 'type':'NN'}]})
+    [{'entities': [], 'edgeSet': [{'right': ['city'], 'rightkbID': 'Q37876', 'canonical_right': 'city'}]}]
+    >>> add_entity_and_relation({'edgeSet': [{'rightkbID': 'Q37876', 'canonical_right': 'Natalie Portman', 'right': ['Portman']}], 'entities': [{'linkings':[("Q37876", "city")], 'tokens':["city"], 'type':'NN'}]})
     []
     """
     if len(g.get('entities', [])) == 0:
         return []
     entities = copy.copy(g.get('entities', []))
-    skipped = []
     new_graphs = []
-    while entities:
-        entity = entities.pop(0)
-        if entity.get("type") in {'CD', 'NN'}:
-            skipped.append(entity)
-        else:
-            if len(entity.get("linkings",[])) > 0:
-                linkings = entity['linkings']
-                for kbID, label in linkings:
-                    new_g = graph.copy_graph(g)
-                    new_g['entities'] = entities[:] + skipped
-                    new_g['edgeSet'].append({'right': entity.get("tokens", []), 'rightkbID': kbID, 'canonical_right': label})
-                    new_graphs.append(new_g)
+    entities_to_consider = [e for e in entities if e.get("type") not in {'CD', 'NN'}]
+    if len(entities_to_consider) == 0 and len(g.get('edgeSet', [])) == 0:
+        entities_to_consider = [e for e in entities if e.get("type") in {'NN'}]
+        skipped = [e for e in entities if e.get("type") in {'CD'}]
+    else:
+        skipped = [e for e in entities if e.get("type") in {'CD', 'NN'}]
+    while entities_to_consider:
+        entity = entities_to_consider.pop(0)
+        if len(entity.get("linkings",[])) > 0:
+            linkings = entity['linkings']
+            for kbID, label in linkings:
+                new_g = graph.copy_graph(g)
+                new_g['entities'] = entities_to_consider[:] + skipped
+                new_g['edgeSet'].append({'right': entity.get("tokens", []), 'rightkbID': kbID, 'canonical_right': label})
+                new_graphs.append(new_g)
     return new_graphs
 
 
