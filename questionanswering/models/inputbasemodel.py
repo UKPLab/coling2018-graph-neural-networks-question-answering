@@ -122,12 +122,14 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
                 json.dump(self._trigram_vocabulary, out, indent=2)
         super(TrigramBasedModel, self).prepare_model(train_tokens, properties_set)
 
+    def _encode_tokens(self, tokens):
+        sentence_trigrams = [set(string_to_trigrams(token)) for token in tokens]
+        return [[int(t in trigrams) for t in self._trigram_vocabulary] for trigrams in sentence_trigrams]
+
     def encode_question(self, instance):
         sentence_tokens, graph_set = instance
         sentence_tokens = self._preprocess_sentence_tokens(sentence_tokens, graph_set)
-        sentence_trigrams = [set(string_to_trigrams(token)) for token in sentence_tokens]
-        sentence_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
-                            for trigrams in sentence_trigrams]
+        sentence_encoded = self._encode_tokens(sentence_tokens)
         return sentence_encoded
 
     def encode_graphs(self, instance):
@@ -139,9 +141,7 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
                 property_label = graph.get_property_str_representation(edge, wdaccess.property2label, self._p.get("replace.entities", False))
                 if self._p.get("mark.sent.boundaries", False):
                     property_label = "<S> " + property_label + " <E>"
-                edge_trigrams = [set(string_to_trigrams(token)) for token in property_label.split()]
-                edge_encoded = [[int(t in trigrams) for t in self._trigram_vocabulary]
-                                for trigrams in edge_trigrams]
+                edge_encoded = self._encode_tokens(property_label.split())
                 edges_encoded.append(edge_encoded)
             graphs_encoded.append(edges_encoded)
         return graphs_encoded
@@ -182,7 +182,7 @@ class TrigramBasedModel(TrainableQAModel, metaclass=abc.ABCMeta):
         self.logger.debug("Loading vocabulary from: trigram_vocabulary_{}.json".format(self._model_number))
         with open(self._save_model_to + "trigram_vocabulary_{}.json".format(self._model_number)) as f:
             self._trigram_vocabulary = json.load(f)
-        self._trigram_vocabulary = [tuple(t) for t in self._trigram_vocabulary]
+        self._trigram_vocabulary = [t for t in self._trigram_vocabulary]
         self._p['vocab.size'] = len(self._trigram_vocabulary)
         self.logger.debug("Vocabulary size: {}.".format(len(self._trigram_vocabulary)))
 
