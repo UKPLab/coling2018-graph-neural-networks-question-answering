@@ -166,7 +166,7 @@ def possible_variants(entity_tokens, entity_type):
     >>> possible_variants(["Jfk"], "NNP")
     [('JFK',), ('US', 'Jfk')]
     >>> possible_variants(['the', 'president', 'after', 'jfk'], 'NN')
-    [('the', 'president', 'after', 'JFK'), ('The', 'President', 'after', 'Jfk'), ('president', 'jfk'), ('President', 'Jfk'), ('US', 'President', 'after', 'Jfk')]
+    [('the', 'president', 'after', 'JFK'), ('The', 'President', 'after', 'Jfk'), ('The', 'President', 'after', 'JFK'), ('president', 'jfk'), ('President', 'Jfk'), ('US', 'President', 'after', 'Jfk')]
     >>> possible_variants(['Jj', 'Thomson'], 'PERSON')
     [('J. J.', 'Thomson')]
     >>> possible_variants(['J', 'J', 'Thomson'], 'URL')
@@ -250,12 +250,15 @@ def possible_variants(entity_tokens, entity_type):
             new_entities.append(tuple([t if not t.startswith("Mc") or len(t) < 3 else t[:2] + t[2].upper() + t[3:] for t in entity_tokens]))
     else:
         if not entity_linking_p.get("respect.case", False):
-            upper_cased = [ne.upper() if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en else ne for ne in entity_tokens]
+            upper_cased = _get_abbreviations_upper_cased(entity_tokens)
             if upper_cased != entity_tokens:
                 new_entities.append(tuple(upper_cased))
             proper_title = _get_proper_casing(entity_tokens)
             if proper_title != entity_tokens:
                 new_entities.append(tuple(proper_title))
+                upper_cased = _get_abbreviations_upper_cased(proper_title)
+                if upper_cased != entity_tokens and upper_cased != proper_title:
+                    new_entities.append(tuple(upper_cased))
         if "St" in entity_tokens or "st" in entity_tokens:
             new_entities.append(tuple([ne + "." if ne in {'St', 'st'} else ne for ne in entity_tokens]))
         if entity_type in {'ORGANIZATION'} and len(entity_tokens) > 1:
@@ -291,6 +294,10 @@ def possible_variants(entity_tokens, entity_type):
 
 def _get_proper_casing(tokens):
     return [ne.title() if ne.lower() not in stop_words_en or i == 0 else ne.lower() for i, ne in enumerate(tokens)]
+
+
+def _get_abbreviations_upper_cased(tokens):
+    return [ne.upper() if len(ne) < 4 and ne.upper() != ne and ne.lower() not in stop_words_en else ne for ne in tokens]
 
 
 def possible_subentities(entity_tokens, entity_type):
