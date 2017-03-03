@@ -19,7 +19,9 @@ entity_linking_p = {
     "always.include.subentities": False,
     "lev.compare.to": "label",
     "longest.match.priority": True,
-    "global.entity.grouping": True
+    "global.entity.grouping": False,
+    "no.ne.tags": True,
+    "include.cd.separately": False
 }
 
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
@@ -108,22 +110,25 @@ def extract_entities(tokens_ne_pos):
     >>> extract_entities((['Give', 'O', 'VB'], ['me', 'O', 'PRP'], ['all', 'O', 'DT'], ['federal', 'O', 'JJ'], ['chancellors', 'O', 'NNS'], ['of', 'O', 'IN'], ['Germany', 'LOCATION', 'NNP'], ['.', 'O', '.']))
     [(['Germany'], 'LOCATION'), (['all', 'federal', 'chancellors', 'of', 'Germany'], 'NN')]
     """
-    persons = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['PERSON'])
-    locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])
-    orgs = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['ORGANIZATION'])
+    ne_vertices = []
+    if not entity_linking_p.get("no.ne.tags", False):
+        persons = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['PERSON'])
+        locations = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['LOCATION'])
+        orgs = extract_entities_from_tagged([(w, t) for w, t, _ in tokens_ne_pos], ['ORGANIZATION'])
+        ne_vertices = [(ne, 'PERSON') for ne in persons] + [(ne, 'LOCATION') for ne in locations] + [(ne, 'ORGANIZATION') for ne in orgs]
 
-    chunks = np_parser.parse([(w, t) for w, _, t in tokens_ne_pos] if entity_linking_p.get("overlaping.nn.ne", False) else [(w, t if p == "O" else "O") for w, p, t in tokens_ne_pos])
+    tokens_pos = [(w, t) for w, _, t in tokens_ne_pos] if entity_linking_p.get("overlaping.nn.ne", False) or entity_linking_p.get("no.ne.tags", False) else [(w, t if p == "O" else "O") for w, p, t in tokens_ne_pos]
+    chunks = np_parser.parse(tokens_pos)
     nps = [el for el in chunks if type(el) == nltk.tree.Tree and el.label() == "NP"]
     # nns = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NN', 'NNS'])
     # nnps = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NNP', 'NNPS'])
     nnps = [[w for w, _ in el.leaves()] for el in nps if any(t in {'NNP', 'NNPS'} for _, t in el.leaves())]
     nns = [[w for w, _ in el.leaves()] for el in nps if all(t not in {'NNP', 'NNPS'} for _, t in el.leaves())]
-    cds = [cd for cd in extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['CD']) if len(cd[0]) == 4]
     # cds = [[w for w, _ in el.leaves()] for el in chunks if type(el) == nltk.tree.Tree and el.label() == "CD"]
 
     # sentence = " ".join([w for w, _, _ in tokens_ne_pos])
     # ne_vertices = [(k.split(), 'URL') for k in manual_entities if k in sentence]
-    ne_vertices = [(ne, 'PERSON') for ne in persons] + [(ne, 'LOCATION') for ne in locations] + [(ne, 'ORGANIZATION') for ne in orgs]
+
     vertices = []
     for nn in nnps:
         if not ne_vertices or not all(n in v for n in nn for v, _ in ne_vertices):
@@ -131,7 +136,9 @@ def extract_entities(tokens_ne_pos):
     for nn in nns:
         if not ne_vertices or not all(n in v for n in nn for v, _ in ne_vertices):
             vertices.append((nn, 'NN'))
-    vertices.extend([(cd, 'CD') for cd in cds])
+    if entity_linking_p.get("include.cd.separately", False):
+        cds = [cd for cd in extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['CD']) if len(cd[0]) == 4]
+        vertices.extend([(cd, 'CD') for cd in cds])
     if not entity_linking_p.get("respect.case", False):
         ne_vertices = [([w.title() if w.islower() else w for w in ne], pos) for ne, pos in ne_vertices]
     return ne_vertices + vertices
