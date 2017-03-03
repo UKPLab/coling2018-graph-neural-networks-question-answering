@@ -82,7 +82,7 @@ sparql_entity_label = """
               %linkbyname%
             }
         } FILTER NOT EXISTS {
-            VALUES ?topic {e:Q4167410 e:Q21286738 e:Q11266439 e:Q13406463 e:Q4167836}
+            VALUES ?topic {e:Q4167410 e:Q21286738 e:Q11266439 e:Q13406463 e:Q4167836 e:Q16521 e:Q427626}
             GRAPH <http://wikidata.org/instances> {?e2 rdf:type ?topic}}
         """
 
