@@ -139,8 +139,8 @@ def extract_entities(tokens_ne_pos):
     if entity_linking_p.get("include.cd.separately", False):
         cds = [cd for cd in extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['CD']) if len(cd[0]) == 4]
         vertices.extend([(cd, 'CD') for cd in cds])
-    if not entity_linking_p.get("respect.case", False):
-        ne_vertices = [([w.title() if w.islower() else w for w in ne], pos) for ne, pos in ne_vertices]
+    # if not entity_linking_p.get("respect.case", False):
+    #     ne_vertices = [([w.title() if w.islower() else w for w in ne], pos) for ne, pos in ne_vertices]
     return ne_vertices + vertices
 
 
