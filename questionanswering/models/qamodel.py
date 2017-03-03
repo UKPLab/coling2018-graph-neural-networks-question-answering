@@ -111,7 +111,7 @@ class TrainableQAModel(QAModel, metaclass=abc.ABCMeta):
     def encode_data_for_training(self, data_with_targets):
         input_set, targets = data_with_targets
         if self._p.get("loss", 'categorical_crossentropy') == 'categorical_crossentropy':
-            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0]))
+            targets = keras.utils.np_utils.to_categorical(targets, len(input_set[0][1]))
 
         sentences_matrix, graph_matrix = self.encode_batch(input_set, verbose=False)
         assert len(sentences_matrix) == len(graph_matrix) == len(targets)
