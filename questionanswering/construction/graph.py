@@ -168,6 +168,8 @@ def replace_entities(g):
     ['what', 'was', '<e>', 'original', 'purpose', 'of', 'his', 'journey', '?']
     >>> replace_entities({'edgeSet': [{'right': ['House', 'Of', "Representatives"]}], 'tokens': "what is the upper house of the house of representatives ?".split()})['tokens']
     ['what', 'is', 'the', 'upper', 'house', 'of', 'the', '<e>', '?']
+    >>> replace_entities({"edgeSet": [{"right": ["Mount","McKinley"],"rightkbID": "Q130018"}], 'tokens': "Where is Mount McKinley ?".split()})['tokens']
+    ['Where', 'is', '<e>', '?']
     """
     tokens = g.get('tokens', [])
     edge = get_graph_first_edge(g)
@@ -175,7 +177,7 @@ def replace_entities(g):
     new_tokens = []
     entity_pos = 0
     for i, t in enumerate(tokens):
-        if entity_pos == len(entity) or t != entity[entity_pos]:
+        if entity_pos == len(entity) or t.lower() != entity[entity_pos]:
             if entity_pos > 0:
                 if entity_pos == len(entity):
                     new_tokens.append("<e>")
