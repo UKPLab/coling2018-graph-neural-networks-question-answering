@@ -116,8 +116,8 @@ def extract_entities(tokens_ne_pos):
     nps = [el for el in chunks if type(el) == nltk.tree.Tree and el.label() == "NP"]
     # nns = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NN', 'NNS'])
     # nnps = extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['NNP', 'NNPS'])
-    nnps = [[w for w, _ in el.leaves()] for el in nps if all(t not in {'NN', 'NNS'} for _, t in el.leaves())]
-    nns = [[w for w, _ in el.leaves()] for el in nps if any(t in {'NN', 'NNS'} for _, t in el.leaves())]
+    nnps = [[w for w, _ in el.leaves()] for el in nps if any(t in {'NNP', 'NNPS'} for _, t in el.leaves())]
+    nns = [[w for w, _ in el.leaves()] for el in nps if all(t not in {'NNP', 'NNPS'} for _, t in el.leaves())]
     cds = [cd for cd in extract_entities_from_tagged([(w, t) for w, _, t in tokens_ne_pos], ['CD']) if len(cd[0]) == 4]
     # cds = [[w for w, _ in el.leaves()] for el in chunks if type(el) == nltk.tree.Tree and el.label() == "CD"]
 
