@@ -48,16 +48,20 @@ def add_class(g):
     []
     >>> add_class({'edgeSet': [], 'entities': [{'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'NNP'}]})
     []
-    >>> add_class({'edgeSet': [], 'entities': [{'linkings':[("Q37876", "album")], 'tokens':["album"], 'type':'NN'}]}) == \
-    [{'entities': [], 'edgeSet': [{'canonical_right': 'album', 'type': 'class', 'rightkbID': 'Q37876', 'right': ['album']}]}]
+    >>> add_class({'edgeSet': [], 'entities': [{'linkings':[("Q37876", "album")], 'tokens':["album"], 'type':'NN'}, {'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'NNP'}]}) == \
+    [{'entities': [{'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'NNP'}], 'edgeSet': [{'canonical_right': 'album', 'type': 'class', 'rightkbID': 'Q37876', 'right': ['album']}]}]
     True
     >>> add_class({'edgeSet': [], 'entities': [{"linkings": [(None, ["2012"])] ,"tokens": ['2012'], "type": 'CD'}, {'linkings':[("Q37876", "Natalie Portman")], 'tokens':["Portman"], 'type':'PERSON'}, {'linkings':[("Q37876", "city")], 'tokens':["city"], 'type':'NN'}]}) == \
     [{'entities': [{'type': 'CD', 'tokens': ['2012'], 'linkings': [(None, ['2012'])]}, {'type': 'PERSON', 'tokens': ['Portman'], 'linkings': [('Q37876', 'Natalie Portman')]}], 'edgeSet': [{'canonical_right': 'city', 'type': 'class', 'rightkbID': 'Q37876', 'right': ['city']}]}]
     True
+    >>> add_class({'edgeSet': [], 'entities': [{'linkings':[("Q37876", "city")], 'tokens':["city"], 'type':'NN'}]})
+    []
     """
     if any(edge.get("type") == 'class' for edge in g.get('edgeSet', [])):
         return []
     if len(g.get('entities', [])) == 0 or not any(e.get("type") == 'NN' for e in g['entities'] if len(e) > 1):
+        return []
+    if not any(e.get("type") != 'NN' for e in g.get('entities', [])):
         return []
     entities = copy.copy(g.get('entities', []))
     skipped = []
