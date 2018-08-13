@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<!--
+  ~  # coding: utf-8
+  ~  # Copyright (C) 2017.  UKP lab
+  ~  #
+  ~  # Author: Daniil Sorokin (ukp.tu-darmstadt.de/ukp-home/)
+  ~  # Licensed under the MIT license
+  -->
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <link rel="stylesheet" href="lib/bootstrap.min.css">
+    <link rel="stylesheet" href="main.css">
+
+    <script src="lib/jquery-3.2.1.min.js"></script>
+    <script src="lib/bootstrap.min.js"></script>
+    <script src="lib/d3.min.js"></script>
+
+    <script src="main.js"></script>
+    <title>KB QA Application</title>
+
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-md-offset-1 col-md-10 col-sm-12 col-xs-12">
+            <div class="page-header">
+                <h1>Knowledge base question answering</h1>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-offset-1 col-md-10 col-sm-12 col-xs-12">
+            <div class="form-group">
+                <label for="questionField">Your question</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="questionField" name="question" placeholder="Question" value="Who played Darth Vader?">
+                    <span class="input-group-btn">
+                        <input id="getanswerbutton" class="btn btn-default" type="button" value="Answer">
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row" id="progressRow">
+        <div class="col-md-offset-1 col-md-10 col-sm-12 col-xs-12">
+            <div class="progress collapse">
+                <div class="progress-bar progress-bar-striped active" role="progressbar"
+                     aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 10%">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row resultsrow" id="answerRow">
+        <div class="col-md-offset-1 col-md-10 col-sm-12 col-xs-12">
+            <div class="panel panel-success collapse">
+                <div class="panel-heading">
+                    <h3 class="panel-title" style="display: inline">Answer</h3>
+                    <span class="glyphicon glyphicon-ok pull-right collapse" aria-hidden="true" title="Thank you!"></span>
+                    <a id="report-wrong" class="pull-right" data-toggle="tooltip" data-placement="top" title="We will store the question and the incorrect answers for debugging.">Report a wrong result</a>
+                </div>
+                <div class="panel-body" id="answerfield">
+                </div>
+            </div>
+            <div class="panel panel-danger collapse">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Failed</h3>
+                </div>
+                <div class="panel-body">
+                    Something went wrong
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Processing Info -->
+    <div class="row resultsrow" id="statisticsRow">
+        <div class="col-md-offset-1 col-md-10 col-sm-12 col-xs-12">
+            <div class="panel panel-default collapse">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Statistics</h3>
+                </div>
+                <div class="panel-body" id="statsField">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row resultsrow" id="taggedRow">
+        <div class="col-md-offset-1 col-md-10 col-sm-12 col-xs-12">
+            <div class="panel panel-default collapse">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Recognized Entities</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="checkbox pull-right hidden" id="npparserSwitcher">
+                        <label>
+                            <input type="checkbox" checked> Simplified entity parser
+                        </label>
+                    </div>
+                    <div id="taggedField"></div>
+                    <div id="entitiesField"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row resultsrow" id="linksRow">
+        <div class="col-md-offset-1 col-md-10 col-sm-12 col-xs-12">
+            <div class="panel panel-default collapse">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Entity linkings</h3>
+                </div>
+                <div class="panel-body" id="linksField">
+                    <div class="inline-block tmpl hidden">
+                        <div><h4 class="etitle"><span class="elabel">Entity label</span></h4></div>
+                        <div class="list-group">
+                            <a class="list-group-item tmpl hidden">
+                                <span class="elabel">Entity label</span> <span class="qid">QID</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row resultsrow" id="graphsRow">
+        <div class="col-md-offset-1 col-md-10 col-sm-12 col-xs-12">
+            <div class="panel panel-default collapse">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Semantic graphs</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="row" id="graphsField">
+                        <div class="col-md-4 col-sm-6 col-xs-12 tmpl hidden">
+                            <div class="thumbnail graph-thumbnail">
+                                <div class="caption"><h4><span>1.</span> <small>0.67</small></h4></div>
+                                <svg width="100%" height="300"></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row resultsrow" id="cnnWeightsRow">
+        <div class="col-md-offset-1 col-md-10 col-sm-12 col-xs-12">
+            <div class="panel panel-default collapse">
+                <div class="panel-heading">
+                    <h3 class="panel-title">CNN Weights</h3>
+                </div>
+                <div class="panel-body" id="cnnWeightsField">
+                    <svg width="100%" height="400"></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row resultsrow" id="vectorsRow">
+        <div class="col-md-offset-1 col-md-10 col-sm-12 col-xs-12">
+            <div class="panel panel-default collapse">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Vector representations</h3>
+                </div>
+                <div class="panel-body" id="vectorsField">
+                    <input id="getsemanticvectorsbutton" class="btn btn-default" type="button" value="Load semantic vectors">
+                    <svg width="100%" height="400"></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<div class="footer">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-offset-1 col-md-10 col-sm-12 col-xs-12">
+                Daniil Sorokin | <a href="https://www.ukp.tu-darmstadt.de/fileadmin/user_upload/Group_UKP/publikationen/2017/Sorokin_Gurevych_QALD7_SharedTask_CameraReady.pdf.pdf">Reference paper</a>
+                | <a href="https://www.ukp.tu-darmstadt.de/">UKP Lab</a>, Technische Universität Darmstadt, 2017 | Prof. Dr. Iryna Gurevych
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+
+    $( document ).ready(TheApp.init());
+
+</script>
+</body>
+</html>

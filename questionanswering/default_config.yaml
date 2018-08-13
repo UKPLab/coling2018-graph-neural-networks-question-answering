@@ -1,0 +1,160 @@
+logger:
+  level: DEBUG
+
+global:
+  random.seed: 1
+
+training:
+  train.mode:
+  log.results: "../data/training.log"
+
+evaluation:
+  max.num.entities: 2
+  questions: "../data/input/webquestions.examples.test.json"
+  save.answers.to: "../data/generated/webquestions.examples.test.answers.json"
+  beam.size: 10
+  use.whitelist: False
+  v.structure: True
+  label.answers: True
+  strict.structure: False
+  topics.at.test: False
+
+generation:
+  min.fscore.to.stop: 1.0
+  max.num.entities: 2 # Only affects choice graphs generation
+  max.entity.options: 3
+  questions: "../data/input/webquestions.examples.train.json"
+  previous: "../data/generated/webquestions.examples.train.silvergraphs.01_29.full.json"
+  save.silver.to: "../data/generated/webquestions.examples.train.silvergraphs.200.2.json"
+  take_first: 200
+  start.with: 0
+  use.whitelist: False
+  include_url_entities: True
+  label.query.results: True
+
+entitylinkingdata:
+  path.to.dataset:
+    gold: "../data/entitylinking/WebQSP.entities.gold.train.json"
+    candidates: "../data/entitylinking/WebQSP.entities.train.output.signatures.json"
+    sentences: "../data/input/WebQSP/data/WebQSP.train.json"
+  max.negative.samples: 30
+  negative.per.dataset.subsample: 1.0
+
+wikipedia:
+  path.to.dataset: "../data/input/semantic-graphs-filtered-training.unittesting.json"
+  max.negative.samples: 20
+  instances.per.epoch: 10000
+  normalize.tokens: False
+  replace.entities: False
+
+simplequestions:
+  path.to.dataset: "../data/input/SimpleQuestions_v2/annotated_fb_data_valid.txt"
+  max.negative.samples: 20
+  instances.per.epoch: 10000
+  normalize.tokens: False
+  replace.entities: False
+  trim.context: 0
+  trim.tokens: False
+
+webquestions:
+  f1.samples.threshold: 0.1
+  mult.f1.by: 1.0
+  target.value: f1
+  train.each.separate: False
+  max.silver.samples: 15
+  max.negative.samples: 30
+  normalize.tokens: False
+  extensions: ['hopUp', 'hopDown', 'temporal', 'multi_rel', 'qualifier_rel', 'v-structure', 'filter']
+  use.whitelist: False
+  no.ne.tags: False
+  only.with.iclass: False
+  replace.entities: False
+  optimize.storage: True
+  max.entity.options: 3
+  path.to.dataset:
+    train_train: "../data/input/webquestions.examples.train.train_validation.unittests.json"
+    train_validation: "../data/input/webquestions.examples.train.train_validation.unittests.json"
+    train_tagged: "../data/generated/webquestions.examples.train.utterances.tagged.unittests.json"
+    train_silvergraphs: "../data/generated/webquestions.examples.train.silvergraphs.02_04.unittests.json"
+
+model:
+  class: BagOfWordsModel
+  models.save.path: "../trainedmodels/"
+
+  sampling.interval: 3
+  early.stopping: 5
+  monitor: acc
+  model.checkpoint: False
+  loss: kld
+  epochs: 40
+  batch.size: 128
+  vocab.size: 0 #set automatically
+  graph.choices: 10 #set automatically
+  samples.per.epoch: 1000 #set automatically
+  negative.class.weight: 0.001 # for the entity linking model
+
+  sem.layer.depth: 1
+  sem.layer.size: 300
+  graph.mode: att
+#  graph.dense.layer: False # not supported in pytorch version now
+#  sibling.weight.init: glorot_uniform # not supported in pytorch version now
+  conv.size: 100
+  conv.width: 3
+  conv.nonlinearity: True
+  conv.layers: False
+#  parallel.conv: False # Deprecated for now this should go into separate nets
+#  base.model: cnn # Deprecated for now this should go into separate nets
+  dropout.sibling: 0.3
+  sibling.similarity: cos
+  sibling.activation: relu
+  sibling.singleton: True
+  sibling.pool.mode: max
+  twin.similarity: cos
+  extractors.global:
+    replace.entities: True
+    mark.sent.boundaries: True
+    direction.marker: False
+    modifiers.in.edge.str.repr: True
+    hops.in.edge.str.repr: True
+    encode.iclass: False
+    max.sent.len: 10
+    pretraining.max.sent.len: 10
+    max.rel.label.len: 10
+    max.graph.size: 3
+    threshold: 3
+#   emb.weight.init: uniform  # Not implemented yet
+  extractors:
+    TrigramHashExtractor:
+    WordBasedExtractor:
+      emb.size: 100
+      update.emb: False
+    CharBasedExtractor:
+      max.sent.len: 70
+      max.rel.label.len: 70
+      emb.size: 50
+      ngram.len: 1
+    PropertyBasedExtractor:
+      emb.size: 50
+#     hopUp: True # Not implemented yet
+#     hopDown: True # Not implemented yet
+    PositionExtractor:
+      emb.size: 5
+
+
+
+wikidata:
+  backend: "http://knowledgebase:8890/sparql"
+  restrict.hop: True
+  hop.types: ['hopUp', 'hopDown']
+  arg.types: ['argmax', 'argmin']
+  addclass.action: True
+  timeout: 20
+  filter.out.relation.classes: "rq"
+  
+entity.linking:
+  model: "../trainedmodels/ELModel_10.torchweights"
+  max.entity.options: 3
+  entity.options.to.retrieve: 5
+  lev.costs: [1, 1, 2]
+  tag.types: ["NN", "NNP"]
+  max.ngram.len: 4
