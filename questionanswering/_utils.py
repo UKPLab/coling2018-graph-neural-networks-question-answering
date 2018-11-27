@@ -64,7 +64,7 @@ def get_tagged_from_server(input_text, caseless=False):
     corenlp_output = corenlp.annotate(input_text,
                                       properties={**corenlp_properties, **corenlp_caseless} if caseless else corenlp_properties
                                       ).get("sentences", [])
-    tagged = [{k: t[k] for k in {"index", "word", "pos", "ner", "lemma", "characterOffsetBegin", "characterOffsetEnd"}}
+    tagged = [{k: t[k] for k in {"index", "originalText", "pos", "ner", "lemma", "characterOffsetBegin", "characterOffsetEnd"}}
               for sent in corenlp_output for t in sent['tokens']]
     return tagged
 
@@ -134,7 +134,7 @@ def _tagged2tuples(tagged_dicts):
     >>> _tagged2tuples(get_tagged_from_server("Light explodes over Pep Guardiola's head in Bernabeu press room. Will Mourinho stop at nothing?! Heh heh"))
     [('Light', 'O', 'JJ'), ('explodes', 'O', 'VBZ'), ('over', 'O', 'IN'), ('Pep', 'PERSON', 'NNP'), ('Guardiola', 'PERSON', 'NNP'), ("'s", 'O', 'POS'), ('head', 'O', 'NN'), ('in', 'O', 'IN'), ('Bernabeu', 'LOCATION', 'NNP'), ('press', 'O', 'NN'), ('room', 'O', 'NN'), ('.', 'O', '.'), ('Will', 'O', 'MD'), ('Mourinho', 'PERSON', 'NNP'), ('stop', 'O', 'VB'), ('at', 'O', 'IN'), ('nothing', 'O', 'NN'), ('?!', 'NUMBER', 'CD'), ('Heh', 'O', 'NNP'), ('heh', 'O', 'RB')]
     """
-    tagged = [(t['word'], t['ner'], t['pos']) for t in tagged_dicts]
+    tagged = [(t['originalText'], t['ner'], t['pos']) for t in tagged_dicts]
     return tagged
 
 

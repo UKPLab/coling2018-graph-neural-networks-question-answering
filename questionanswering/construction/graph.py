@@ -24,6 +24,7 @@ class Edge:
         self.rightentityid = rightentityid
         self.qualifierrelationid = qualifierrelationid
         self.qualifierentityid = qualifierentityid
+        self._relationstr = ""
         if self.relationid != 'iclass':
             assert len({self.leftentityid, self.rightentityid, self.qualifierentityid}) == 3
 

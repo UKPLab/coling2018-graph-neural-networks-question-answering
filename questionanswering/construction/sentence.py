@@ -22,9 +22,9 @@ class Sentence:
         """
         self.input_text = input_text if input_text else ""
         self.tagged = tagged if tagged else []
-        self.tokens = [t['word'] for t in self.tagged]
+        self.tokens = [t['originalText'] for t in self.tagged]
         self.entities = [{k: e[k] for k in {'type', 'linkings', 'token_ids'}} for e in entities] if entities else []
-        self.entities += [{'type': 'YEAR', 'linkings': [(t['word'], t['word'])], 'token_ids': [t['index']-1]}
+        self.entities += [{'type': 'YEAR', 'linkings': [(t['originalText'], t['originalText'])], 'token_ids': [t['index']-1]}
                           for t in self.tagged if t['pos'] == 'CD' and t['ner'] == 'DATE']
         if get_question_type(self.input_text) == "person":
             self.entities.append({'type': 'NN', 'linkings': [("Q5", 'human')], 'token_ids': [0]})

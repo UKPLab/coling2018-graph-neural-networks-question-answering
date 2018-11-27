@@ -118,13 +118,13 @@ def _get_sentence_tokens(s: Sentence, replace_entities=True, mark_boundaries=Fal
     :param replace_entities: optionally replace the entities with a placeholder.
     :param mark_boundaries: optionally add sentence start and end markers.
     :return: a list of tokens
-    >>> _get_sentence_tokens(Sentence(tagged=[{'word': k, 'pos': 'O', 'ner': 'O'} for k in "Who killed Lora Palmer ?".split()], entities=[{"type": "NNP", 'linkings': [], 'token_ids': [2,3]}]))
+    >>> _get_sentence_tokens(Sentence(tagged=[{'originalText': k, 'pos': 'O', 'ner': 'O'} for k in "Who killed Lora Palmer ?".split()], entities=[{"type": "NNP", 'linkings': [], 'token_ids': [2,3]}]))
     ['Who', 'killed', '<e>', '?']
-    >>> _get_sentence_tokens(Sentence(tagged=[{'word': k, 'pos': 'O', 'ner': 'O'} for k in "Who killed Lora Palmer ?".split()], entities=[{"type": "NN", 'linkings': [], 'token_ids': [0]}]))
+    >>> _get_sentence_tokens(Sentence(tagged=[{'originalText': k, 'pos': 'O', 'ner': 'O'} for k in "Who killed Lora Palmer ?".split()], entities=[{"type": "NN", 'linkings': [], 'token_ids': [0]}]))
     ['Who', 'killed', 'Lora', 'Palmer', '?']
-    >>> _get_sentence_tokens(Sentence(tagged=[{'word': k, 'pos': 'O', 'ner': 'O'} for k in "where are the nfl redskins from ?".split()], entities=[{'linkings': [['Q212654', None]], 'token_ids': [4], 'type': 'NNP'}, {'linkings': [['Q1215884', None]], 'token_ids': [3], 'type': 'NNP'}, {'linkings': [['Q618123', 'geographical object']], 'token_ids': [0], 'type': 'NN'}]))
+    >>> _get_sentence_tokens(Sentence(tagged=[{'originalText': k, 'pos': 'O', 'ner': 'O'} for k in "where are the nfl redskins from ?".split()], entities=[{'linkings': [['Q212654', None]], 'token_ids': [4], 'type': 'NNP'}, {'linkings': [['Q1215884', None]], 'token_ids': [3], 'type': 'NNP'}, {'linkings': [['Q618123', 'geographical object']], 'token_ids': [0], 'type': 'NN'}]))
     ['where', 'are', 'the', '<e>', '<e>', 'from', '?']
-    >>> _get_sentence_tokens(Sentence(tagged=[{'word': k, 'pos': 'O', 'ner': 'O'} for k in "who won the prise 2009 ?".split()], entities=[{'linkings': [['2009', '2009']], 'token_ids': [4], 'type': 'YEAR'}]))
+    >>> _get_sentence_tokens(Sentence(tagged=[{'originalText': k, 'pos': 'O', 'ner': 'O'} for k in "who won the prise 2009 ?".split()], entities=[{'linkings': [['2009', '2009']], 'token_ids': [4], 'type': 'YEAR'}]))
     ['who', 'won', 'the', 'prise', '<year>', '?']
     """
     sentence_tokens = s.tokens
