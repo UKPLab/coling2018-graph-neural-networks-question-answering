@@ -2,6 +2,8 @@ import json
 import logging
 import sys
 import random
+import datetime
+import os
 from typing import List
 
 import click
@@ -100,6 +102,15 @@ def train(config_file_path, seed, gpuid):
             cur_f1 /= predicted_targets.size(0)
         return {'acc': cur_acc.data[0], 'f1': cur_f1, 'predictions': predicted_targets.data.unsqueeze(0)}
 
+    # Save models into model specific directory
+    if "save_to_dir" in config['training']:
+        now = datetime.datetime.now()
+        model_gated = net._gnn.hp_gated if model_type == "GNNModel" else False
+        config['training']['save_to_dir'] = config['training']['save_to_dir'] + \
+                                            f"{'g' if model_gated else ''}" \
+                                            f"{model_type.lower()}s_{now.year}Q{now.month // 4 + 1}/"
+        if not os.path.exists(config['training']['save_to_dir']):
+            os.makedirs(config['training']['save_to_dir'])
     container = fackel.TorchContainer(
         torch_model=net,
         criterion=losses.VariableMarginLoss(),
@@ -132,7 +143,8 @@ def train(config_file_path, seed, gpuid):
     results = metrics(*container._torchify_data(True, val_targets), predictions, validation=True)
     _, predictions = torch.topk(predictions, 1, dim=-1)
     print(f"Acc: {results['acc']}, F1: {results['f1']}")
-    print(f"Predictions: {predictions.data[:10].view(1,-1)}")
+    print(f"Predictions head: {predictions.data[:10].view(1,-1)}")
+    print(container._save_model_to)
 
 
 def pack_data(selected_questions: List[Sentence],
