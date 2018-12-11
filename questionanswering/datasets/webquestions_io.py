@@ -9,7 +9,7 @@ import itertools
 
 from wikidata import scheme
 
-from questionanswering import _utils
+from questionanswering import base_objects
 from questionanswering.construction import graph
 from questionanswering.datasets.dataset import Dataset
 
@@ -355,7 +355,7 @@ class WebQuestions(Dataset):
 
         :return: a list of lists of property tokens
         """
-        return [scheme.property2label.get(e.get("kbID", "")[:-1], {}).get("label", _utils.unknown_el).split()
+        return [scheme.property2label.get(e.get("kbID", "")[:-1], {}).get("label", base_objects.unknown_el).split()
                 # + " ".join(wdaccess.property2label.get(e.get("kbID", "")[:-1],{}).get("altlabel", [])).split()
                 for index in self._get_sample_indices(self._questions_train)
                 for g in self._silver_graphs[index] for e in g[0].get('edgeSet', []) if 'kbID' in e]

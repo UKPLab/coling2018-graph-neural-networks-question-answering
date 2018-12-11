@@ -11,12 +11,10 @@ import numpy as np
 from pycorenlp import StanfordCoreNLP
 from typing import Set
 
+from questionanswering.base_objects import all_zeroes, unknown_el
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
-
-all_zeroes = "ALL_ZERO"
-unknown_el = "_UNKNOWN"
-epsilon = 10e-8
 
 special_tokens = {"&ndash;": "–",
                   "&mdash;": "—",

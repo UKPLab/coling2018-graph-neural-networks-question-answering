@@ -5,8 +5,7 @@ from copy import copy
 import re
 from typing import List, Dict
 
-from questionanswering import _utils
-from questionanswering.base_objects import Loggable
+from questionanswering import base_objects
 
 WithScore = namedtuple("WithScore", ['graph', 'scores'])
 
@@ -24,7 +23,6 @@ class Edge:
         self.rightentityid = rightentityid
         self.qualifierrelationid = qualifierrelationid
         self.qualifierentityid = qualifierentityid
-        self._relationstr = ""
         if self.relationid != 'iclass':
             assert len({self.leftentityid, self.rightentityid, self.qualifierentityid}) == 3
 
@@ -327,7 +325,7 @@ def get_property_str_representation(edge, property2label,
         property_label = edge["label"]
     else:
         p_meta = property2label.get(edge.get('kbID', " ")[:-1], {})
-        property_label = _utils.unknown_el
+        property_label = base_objects.unknown_el
         if type(p_meta) == dict and len(p_meta) != 0:
             property_label = p_meta.get("label", "") # + " " + " ".join(p_meta.get("altlabel", "")[:5])
             property_label = property_label.strip()
@@ -346,9 +344,11 @@ def get_property_str_representation(edge, property2label,
         #     e_arg += "<f> "
     hopUp_label, hopDown_label = '', ''
     if include_all_hop_labels and 'hopUp' in edge and edge['hopUp']:
-        hopUp_label = "<x> {} ".format(property2label.get(edge['hopUp'][:-1], _utils.unknown_el))
+        hopUp_label = "<x> {} ".format(property2label.get(edge['hopUp'][:-1],
+                                                          base_objects.unknown_el))
     elif include_all_hop_labels and 'hopDown' in edge and edge['hopDown']:
-        hopDown_label = " {} <x>".format(property2label.get(edge['hopDown'][:-1], _utils.unknown_el))
+        hopDown_label = " {} <x>".format(property2label.get(edge['hopDown'][:-1],
+                                                            base_objects.unknown_el))
     if e_type.endswith("class"):
         property_label = ""
     if use_placeholder and not e_type.endswith("class"):
