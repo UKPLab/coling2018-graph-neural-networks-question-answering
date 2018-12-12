@@ -23,8 +23,9 @@ from questionanswering import models
 @click.command()
 @click.argument('path_to_model')
 @click.argument('config_file_path', default="default_config.yaml")
+@click.argument('seed', default=-1)
 @click.argument('gpuid', default=-1)
-def generate(path_to_model, config_file_path, gpuid):
+def generate(path_to_model, config_file_path, seed, gpuid):
     config, logger = config_utils.load_config(config_file_path, gpuid=gpuid)
     if "evaluation" not in config:
         print("Evaluation parameters not in the config file!")
@@ -82,7 +83,7 @@ def generate(path_to_model, config_file_path, gpuid):
         save_answer_to = dir_name + f"{dataset_name}_predictions_{'g' if model_gated else ''}{model_name.lower()}.json"
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
-    print(f"Save output to  to {save_answer_to}")
+    print(f"Save output to {save_answer_to}")
 
     # Init the variables to store the results
     logger.debug('Testing')
@@ -140,7 +141,8 @@ def generate(path_to_model, config_file_path, gpuid):
             with open(save_answer_to, 'w') as answers_out:
                 json.dump(global_answers, answers_out, sort_keys=True, indent=4, cls=sentence.SentenceEncoder)
 
-    print("Average metrics: {}".format((avg_metrics/(len(webquestions_questions)))))
+    avg_metrics = avg_metrics / (len(webquestions_questions))
+    print("Average metrics: {}".format(avg_metrics))
 
     # Fine-grained results, if there is a mapping of questions to the number of relation to find the correct answer
     results_by_hops = {}
@@ -165,9 +167,10 @@ def generate(path_to_model, config_file_path, gpuid):
             results_out.write(",".join([model_name,
                                         model_type,
                                         "Gated" if model_gated else "Simple",
+                                        str(seed),
                                         dataset_name,
                                         "full",
-                                        str(config['evaluation'].get('entities.list', False))]
+                                        "EntityList" if freebase_entity_set else "NoEntityList"]
                                        + [str(el) for el in avg_metrics[:3]])
                               )
             results_out.write("\n")
@@ -177,10 +180,10 @@ def generate(path_to_model, config_file_path, gpuid):
                     results_out.write(",".join([model_name,
                                                 model_type,
                                                 "Gated" if model_gated else "Simple",
+                                                str(seed),
                                                 dataset_name,
-
                                                 str(i),
-                                                str(config['evaluation'].get('entities.list', False))]
+                                                "EntityList" if freebase_entity_set else "NoEntityList"]
                                                + [str(el) for el in results_by_hops[i]])
                                       )
                     results_out.write("\n")
