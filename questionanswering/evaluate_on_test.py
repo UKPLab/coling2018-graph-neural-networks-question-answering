@@ -26,7 +26,7 @@ from questionanswering import models
 @click.argument('seed', default=-1)
 @click.argument('gpuid', default=-1)
 def generate(path_to_model, config_file_path, seed, gpuid):
-    config, logger = config_utils.load_config(config_file_path, gpuid=gpuid)
+    config, logger = config_utils.load_config(config_file_path, gpuid=gpuid, seed=seed)
     if "evaluation" not in config:
         print("Evaluation parameters not in the config file!")
         sys.exit()
