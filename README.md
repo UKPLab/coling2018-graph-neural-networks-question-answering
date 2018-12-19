@@ -93,12 +93,12 @@ If you have any questions regarding the code, please, don't hesitate to contact 
 ##### WebQSP-WD
 * The [WebQSP data set](https://www.microsoft.com/en-us/download/details.aspx?id=52763) is a manually corrected subset of the original [WebQuestions data set](https://nlp.stanford.edu/software/sempre/). Both data sets use the Freebase knowledge base.
 * We map the WebQSP subset of WebQuestions to Wikidata and filter out questions that do not have an answer in Wikidata. See the [Readme file](WEBQSP_WD_README.md) for the data set and the [script for mapping to Wikidata](questionanswering/preprocessing/map_dataset_to_wikidata.py) for more details.
-* Download the WebQSP-WD train and test partitions [here](https://github.com/UKPLab/coling2018-graph-neural-networks-question-answering/WebQSP_WD_v1.zip). Please cite both the original and our work if you use it.
+* Download the WebQSP-WD train and test partitions [here](https://public.ukp.informatik.tu-darmstadt.de/coling2018-graph-neural-networks-question-answering/WebQSP_WD_v1.zip). Please cite both the original and our work if you use it.
 
 ##### QALD-7 
 * The original QALD-7 data set is available from the official [QALD2017 Challenge web-site](https://project-hobbit.eu/challenges/qald2017/qald2017-challenge-tasks/#task4).
 * We have used the 80 open-questions from the QALD-7 train set for evaluation. 
-You can this subset in the format accepted by our evaluation script [here]().
+You can this subset in the format accepted by our evaluation script [here](https://public.ukp.informatik.tu-darmstadt.de/coling2018-graph-neural-networks-question-answering/qald.examples.test.wikidata.json).
 * Please site the [QALD2017 Challenge](https://project-hobbit.eu/challenges/qald2017/) and follow their data policy if you use this dataset.
  
 

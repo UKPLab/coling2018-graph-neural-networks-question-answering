@@ -10,7 +10,7 @@ Please consult the corresponding [code repository](https://github.com/UKPLab/col
 and the [paper](http://aclweb.org/anthology/C18-1280) to learn more about how the data set was constructed and used.
 
 WebQSP-WD is available at following location: 
-https://github.com/UKPLab/coling2018-graph-neural-networks-question-answering/WebQSP_WD_v1.zip
+https://public.ukp.informatik.tu-darmstadt.de/coling2018-graph-neural-networks-question-answering/WebQSP_WD_v1.zip
 
 The `input` folder contains the train and test partitions with answer ids mapped to Wikidata.
 The `generated` folder contains automatically generated candidate graphs for the train partition that are needed to train a new model. Please consult the [paper](http://aclweb.org/anthology/C18-1280) for mode details.
