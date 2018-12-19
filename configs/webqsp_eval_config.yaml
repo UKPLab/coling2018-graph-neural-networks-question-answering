@@ -12,7 +12,7 @@ evaluation:
   add.results.to: "data/output/qa_experiments.csv"
   beam.size: 10
   min.relation.freq: 5000
-  entities.list: True
+  entities.list: False
 
 wikidata:
   backend: "http://knowledgebase:8890/sparql"
