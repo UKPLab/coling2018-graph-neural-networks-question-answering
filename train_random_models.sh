@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-for i in {1..30};
+for i in {1..5};
 do
     GPUID=$2
     CONFIGFILE=$1

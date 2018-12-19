@@ -1,0 +1,30 @@
+logger:
+  level: DEBUG
+
+global:
+  random.seed: 1
+
+training:
+  path_to_dataset: ["data/generated/webqsp.examples.train.silvergraphs.02-16.el.train.json", "data/generated/webqsp.examples.train.silvergraphs.02-16.el.val.json"]
+  # path_to_validation: "data/generated/webqsp.examples.train.silvergraphs.02-16.el.val.json"
+  save_to_dir: "trainedmodels/"
+
+  model_type: STAGGModel
+  model_checkpoint: True
+  batch_size: 64
+  max_epochs: 200
+  monitor: f1
+  early_stopping: 5
+  lr_decay: 5
+
+model:
+  hp_dropout: 0.2
+  hp_conv_size: 256
+  hp_conv_width: 3
+  hp_dilated_conv_depth: 0
+  hp_pooling: max
+  hp_repeat_cnn: 1
+  hp_add_top_dense_layer: True
+
+wikidata:
+  backend: "http://knowledgebase:8890/sparql"

@@ -104,5 +104,4 @@ ENV/
 .idea/
 
 data/*
-configs/*
 trainedmodels/*

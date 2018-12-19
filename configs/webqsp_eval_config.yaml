@@ -1,0 +1,18 @@
+logger:
+  level: INFO
+
+global:
+  random.seed: 1
+  gpu.id: 2
+
+evaluation:
+  questions: "data/input/webqsp.examples.test.wikidata.json"
+  qid2hop: "data/input/webqsp.examples.test.q_index2hop.json"
+  save.answers.to: "data/output/"
+  add.results.to: "data/output/qa_experiments.csv"
+  beam.size: 10
+  min.relation.freq: 5000
+  entities.list: True
+
+wikidata:
+  backend: "http://knowledgebase:8890/sparql"

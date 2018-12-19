@@ -77,19 +77,83 @@ If you have any questions regarding the code, please, don't hesitate to contact 
 </table>
 
 
-#### Requirements:
+### Requirements:
 * Python 3.6
 * PyTorch 0.3.0 - [read here about installation](http://pytorch.org/)
 * See `requirements.txt` for the full list of packages
+* Download and install the two internal packages that are not part of this project: 
+    * `wikidata-access` ([zip](https://public.ukp.informatik.tu-darmstadt.de/coling2018-graph-neural-networks-question-answering/wikidata-access-master.zip)) for sending queries to a local Wikidata endpoint
+    * `fackel` ([zip](https://public.ukp.informatik.tu-darmstadt.de/coling2018-graph-neural-networks-question-answering/fackel-master.zip)) for running the provided PyTorch models 
+* A local copy of the Wikidata knowledge base in RDF format. See [here](WikidataHowTo.md) for more info on the Wikidata installation. (This step takes a lot of time!)
 
-### Running the experiments from the paper:
+### Data sets:
 
-[Coming soon]
+#### Evaluation
 
-### Using the pre-trained model:
+##### WebQSP-WD
+* The [WebQSP data set](https://www.microsoft.com/en-us/download/details.aspx?id=52763) is a manually corrected subset of the original [WebQuestions data set](https://nlp.stanford.edu/software/sempre/). Both data sets use the Freebase knowledge base.
+* We map the WebQSP subset of WebQuestions to Wikidata and filter out questions that do not have an answer in Wikidata. See the [Readme file](WEBQSP_WD_README.md) for the data set and the [script for mapping to Wikidata](questionanswering/preprocessing/map_dataset_to_wikidata.py) for more details.
+* Download the WebQSP-WD train and test partitions [here](https://github.com/UKPLab/coling2018-graph-neural-networks-question-answering/WebQSP_WD_v1.zip). Please cite both the original and our work if you use it.
 
-[Coming soon]
+##### QALD-7 
+* The original QALD-7 data set is available from the official [QALD2017 Challenge web-site](https://project-hobbit.eu/challenges/qald2017/qald2017-challenge-tasks/#task4).
+* We have used the 80 open-questions from the QALD-7 train set for evaluation. 
+You can this subset in the format accepted by our evaluation script [here]().
+* Please site the [QALD2017 Challenge](https://project-hobbit.eu/challenges/qald2017/) and follow their data policy if you use this dataset.
+ 
 
+
+### Running the full experiments (training and testing):
+
+* Make sure you have a local Wikidata endpoint in place and the rest of the requirements are satisfied.
+* Download the training and evaluation data sets.
+* Use config files from `configs/train_*` to specify which model to train with the training script.
+* Use config files from `configs/*_eval_config.yaml` to specify which data set to use for the evaluation. 
+* `GPU_id` is always a integer that is the number of the GPU to use (The default value is 0). See PyTorch documentation for more info.  
+
+#### Training and testing multiple models
+1. Use the `train_random_models.sh` script to train a set of random models and test each of them in the WebQSP-WD data set. 
+   The script takes the following parameters: `[config_file_path] [GPU_id]`
+   
+#### Train and test one model
+1.  Run `python -m questionanswering.train_model [config_file_path] [random_seed] [GPU_id]`
+2.  Run `python -m questionanswering.evaluate_on_test [model_file_path] configs/webqsp_eval_config.yaml [random_seed] [GPU_id]` to test on WebQSP-WD 
+
+* The model output on test data is saved in `data/output/webqsp/[modeltype]/`, the aggregate macro-scores are saved into 
+`data/output/webqsp/qa_experiments.csv`.
+
+### Using the pre-trained model to reproduce the results from the paper:
+
+1. Download the pre-trained models and unpack them into `trainedmodels/` 
+2. For the experiments in the paper, choose the model using the table below. 
+3. Run  `python -m questionanswering.evaluate_on_test [model_file_path] configs/webqsp_eval_config.yaml [random_seed] [GPU_id]` to test on WebQSP-WD
+
+Model file names corresponding to the reported results.
+<table>
+    <tr>
+        <th>Model type</th><th>Model file name</th>
+    </tr>   
+    <tr>
+        <td>STAGG</td><td>STAGGModel_2018-03-14_811799.pkl</td>
+    </tr>   
+    <tr>
+        <td>OneEdge</td><td>OneEdgeModel_2018-03-14_194679.pkl</td>
+    </tr>   
+    <tr>
+        <td>PooledEdges</td><td>PooledEdgesModel_2018-03-13_519272.pkl</td>
+    </tr>   
+    <tr>
+        <td>GNN</td><td>GNNModel_2018-03-15_369757.pkl</td>
+    </tr>   
+    <tr>
+        <td>GGNN</td><td>GNNModel_2018-03-13_113541.pkl</td>
+    </tr>
+</table>
+
+
+### Generating training data (weak supervision) 
+
+[coming soon]
 
 ### License:
 * Apache License Version 2.0

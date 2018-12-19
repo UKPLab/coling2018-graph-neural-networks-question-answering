@@ -1,0 +1,15 @@
+logger:
+  level: INFO
+
+global:
+  random.seed: 1
+  gpu.id: 2
+
+evaluation:
+  questions: "data/input/qald.examples.test.wikidata.json"
+  save.answers.to: "data/qald_predictions_gnn.json"
+  beam.size: 5
+  min.relation.freq: 5000
+
+wikidata:
+  backend: "http://knowledgebase:8890/sparql"
