@@ -124,7 +124,7 @@ You can this subset in the format accepted by our evaluation script [here](https
 
 ### Using the pre-trained model to reproduce the results from the paper:
 
-1. Download the pre-trained models and unpack them into `trainedmodels/` 
+1. Download the pre-trained models ([.zip](https://public.ukp.informatik.tu-darmstadt.de/coling2018-graph-neural-networks-question-answering/DS_COLING_2018_QA_models.zip)) and unpack them into `trainedmodels/` 
 2. For the experiments in the paper, choose the model using the table below. 
 3. Run  `python -m questionanswering.evaluate_on_test [model_file_path] configs/webqsp_eval_config.yaml [random_seed] [GPU_id]` to test on WebQSP-WD
 
