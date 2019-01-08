@@ -4,6 +4,7 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 
 DEFAULT_MARGIN = 0.5
+MIN_TARGET_VALUE = 0.25
 
 
 class VariableMarginLoss(nn.Module):
@@ -22,7 +23,8 @@ class VariableMarginLoss(nn.Module):
         for sample_index in range(target_indices.size(0)):
             target_index = 0
 
-            while target_index < min(target_indices.size(1), 10) and (target_sorted[sample_index, target_index].data[0] > 0.25):
+            while target_index < min(target_indices.size(1), 10) and \
+                    (target_sorted[sample_index, target_index].data[0] > MIN_TARGET_VALUE):
                 loss += F.multi_margin_loss(predictions[sample_index, target_index:],
                                             target_index_var,
                                             margin=margins[sample_index, target_index],
