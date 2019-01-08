@@ -50,6 +50,7 @@ def train(config_file_path, seed, gpuid, model_description, experiment_tag):
         with open(path_to_train) as f:
             training_dataset += json.load(f,  object_hook=sentence_object_hook)
     logger.info(f"Train: {len(training_dataset)}")
+    train_size_available = len(training_dataset)
     dataset_name = config['training']["path_to_dataset"][0].split("/")[-1].split(".")[0]
 
     if "path_to_validation" not in config['training']:
@@ -58,6 +59,7 @@ def train(config_file_path, seed, gpuid, model_description, experiment_tag):
     with open(config['training']["path_to_validation"]) as f:
         val_dataset = json.load(f,  object_hook=sentence_object_hook)
     logger.info(f"Validation: {len(val_dataset)}")
+    val_size_available = len(val_dataset)
 
     wordembeddings, word2idx = V.extend_embeddings_with_special_tokens(
         *_utils.load_word_embeddings(_utils.RESOURCES_FOLDER + "../../resources/embeddings/glove/glove.6B.100d.txt")
@@ -68,12 +70,12 @@ def train(config_file_path, seed, gpuid, model_description, experiment_tag):
     logger.info(f"Model type: {model_type}")
 
     V.MAX_NEGATIVE_GRAPHS = 50
-    training_dataset = [s for s in training_dataset if any(scores[2] > 0.25 for g, scores in s.graphs)]
+    training_dataset = [s for s in training_dataset if any(scores[2] > losses.MIN_TARGET_VALUE for g, scores in s.graphs)]
     training_samples, training_targets = pack_data(training_dataset, word2idx, model_type)
     logger.info(f"Data encoded: {[m.shape for m in training_samples]}")
 
     V.MAX_NEGATIVE_GRAPHS = 100
-    val_dataset = [s for s in val_dataset if any(scores[2] > 0.25 for g, scores in s.graphs)]
+    val_dataset = [s for s in val_dataset if any(scores[2] > losses.MIN_TARGET_VALUE for g, scores in s.graphs)]
     print(f"Val F1 upper bound: {np.average([q.graphs[0].scores[2] for q in val_dataset])}")
     val_samples, val_targets = pack_data(val_dataset, word2idx, model_type)
     logger.info(f"Val data encoded: {[m.shape for m in val_samples]}")
@@ -159,8 +161,8 @@ def train(config_file_path, seed, gpuid, model_description, experiment_tag):
                                         model_description,
                                         str(seed),
                                         dataset_name,
-                                        f"{training_samples[0].shape[0]}/{len(training_dataset)}",
-                                        f"{val_samples[0].shape[0]}/{len(val_dataset)}",
+                                        f"{len(training_dataset)}/{train_size_available}",
+                                        f"{len(val_dataset)}/{val_size_available}",
                                         str(len(log_history)),
                                         str(results['acc']),
                                         str(results['f1']),
