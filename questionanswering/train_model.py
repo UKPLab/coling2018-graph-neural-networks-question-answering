@@ -9,11 +9,9 @@ from typing import List
 import click
 import numpy as np
 import torch
-from torch import nn as nn
 
 import fackel
 
-import questionanswering.models.modules
 from questionanswering import config_utils, _utils
 from questionanswering import models
 from questionanswering.models import vectorization as V
@@ -27,7 +25,9 @@ from questionanswering.construction.sentence import sentence_object_hook, Senten
 @click.argument('config_file_path', default="default_config.yaml")
 @click.argument('seed', default=-1)
 @click.argument('gpuid', default=-1)
-def train(config_file_path, seed, gpuid):
+@click.argument('model_description', default="")
+@click.argument('experiment_tag', default="")
+def train(config_file_path, seed, gpuid, model_description, experiment_tag):
     config, logger = config_utils.load_config(config_file_path, seed, gpuid)
     if "training" not in config:
         print("Training parameters not in the config file!")
@@ -50,6 +50,7 @@ def train(config_file_path, seed, gpuid):
         with open(path_to_train) as f:
             training_dataset += json.load(f,  object_hook=sentence_object_hook)
     logger.info(f"Train: {len(training_dataset)}")
+    dataset_name = config['training']["path_to_dataset"][0].split("/")[-1].split(".")[0]
 
     if "path_to_validation" not in config['training']:
         config['training']["path_to_validation"] = config['training']["path_to_dataset"][-1]
@@ -123,6 +124,7 @@ def train(config_file_path, seed, gpuid):
         optimizer="Adam",
         logger=logger,
         init_model_weights=True,
+        description=model_description,
         **config['training']
     )
 
@@ -144,6 +146,29 @@ def train(config_file_path, seed, gpuid):
     _, predictions = torch.topk(predictions, 1, dim=-1)
     print(f"Acc: {results['acc']}, F1: {results['f1']}")
     print(f"Predictions head: {predictions.data[:10].view(1,-1)}")
+
+    model_name = container._save_model_to.name
+    model_gated = container._model._gnn.hp_gated if model_type == "GNNModel" else False
+    # Print out the model path for the evaluation script to pick up
+    if "add.results.to" in config['training']:
+        print(f"Adding training results to {config['training']['add.results.to']}")
+        with open(config['training']["add.results.to"], 'a+') as results_out:
+            results_out.write(",".join([model_name,
+                                        model_type,
+                                        "Gated" if model_gated else "Simple",
+                                        model_description,
+                                        str(seed),
+                                        dataset_name,
+                                        f"{training_samples[0].shape[0]}/{len(training_dataset)}",
+                                        f"{val_samples[0].shape[0]}/{len(val_dataset)}",
+                                        str(len(log_history)),
+                                        str(results['acc']),
+                                        str(results['f1']),
+                                        experiment_tag
+                                        ])
+                              )
+            results_out.write("\n")
+    # Print out the model path for the evaluation script to pick up
     print(container._save_model_to)
 
 

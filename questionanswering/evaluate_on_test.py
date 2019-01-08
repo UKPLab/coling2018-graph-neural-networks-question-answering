@@ -25,7 +25,8 @@ from questionanswering import models
 @click.argument('config_file_path', default="default_config.yaml")
 @click.argument('seed', default=-1)
 @click.argument('gpuid', default=-1)
-def generate(path_to_model, config_file_path, seed, gpuid):
+@click.argument('experiment_tag', default="")
+def generate(path_to_model, config_file_path, seed, gpuid, experiment_tag):
     config, logger = config_utils.load_config(config_file_path, gpuid=gpuid, seed=seed)
     if "evaluation" not in config:
         print("Evaluation parameters not in the config file!")
@@ -180,11 +181,13 @@ def generate(path_to_model, config_file_path, seed, gpuid):
                     results_out.write(",".join([model_name,
                                                 model_type,
                                                 "Gated" if model_gated else "Simple",
+                                                container.description,
                                                 str(seed),
                                                 dataset_name,
                                                 str(i),
                                                 "EntityList" if freebase_entity_set else "NoEntityList"]
-                                               + [str(el) for el in results_by_hops[i]])
+                                               + [str(el) for el in results_by_hops[i]]
+                                               + [experiment_tag])
                                       )
                     results_out.write("\n")
 
