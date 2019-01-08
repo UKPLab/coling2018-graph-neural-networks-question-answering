@@ -105,11 +105,12 @@ You can this subset in the format accepted by our evaluation script [here](https
 
 ### Running the full experiments (training and testing):
 
-* Make sure you have a local Wikidata endpoint in place and the rest of the requirements are satisfied.
+* Make sure you have a local Wikidata endpoint in place (you need it for the evaluation) and the rest of the requirements are satisfied.
 * Download the training and evaluation data sets.
 * Use config files from `configs/train_*` to specify which model to train with the training script.
 * Use config files from `configs/*_eval_config.yaml` to specify which data set to use for the evaluation. 
-* `GPU_id` is always a integer that is the number of the GPU to use (The default value is 0). See PyTorch documentation for more info.  
+* In the evaluation config file, specify the location of the Wikidata endpoint.
+* `GPU_id` is always an integer that is the number of the GPU to use (The default value is 0). See PyTorch documentation for more info.  
 
 #### Training and testing multiple models
 1. Use the `train_random_models.sh` script to train a set of random models and test each of them in the WebQSP-WD data set. 
@@ -119,7 +120,7 @@ You can this subset in the format accepted by our evaluation script [here](https
 1.  Run `python -m questionanswering.train_model [config_file_path] [random_seed] [GPU_id]`
 2.  Run `python -m questionanswering.evaluate_on_test [model_file_path] configs/webqsp_eval_config.yaml [random_seed] [GPU_id]` to test on WebQSP-WD 
 
-* The model output on test data is saved in `data/output/webqsp/[modeltype]/`, the aggregate macro-scores are saved into 
+* The model output on test data is saved in `data/output/webqsp/[modeltype]/`, the aggregated macro-scores are saved into 
 `data/output/webqsp/qa_experiments.csv`.
 
 ### Using the pre-trained model to reproduce the results from the paper:
@@ -151,7 +152,7 @@ Model file names corresponding to the reported results.
 </table>
 
 
-### Generating training data (weak supervision) 
+### Generating training data (with weak supervision) 
 
 [coming soon]
 
