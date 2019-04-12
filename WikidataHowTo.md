@@ -45,6 +45,8 @@ rdf-snap/wikidata-sitelinks.nt.gz
 rdf-snap/wikidata-statements.nt.gz
 rdf-snap/wikidata-terms.nt.gz
 ```
+##### Use the pre-processed dump
+We make available the pre-processed Wikidata files for the dump that we used in our experiments. Download [here (17.4Gb!)](https://public.ukp.informatik.tu-darmstadt.de/wikidata-dump/wikidata-rdf-snap-2017.zip). Or see below for the download of the complete Virtuoso dump. 
 
 #### 2. Install Virtuosos opensource
 Install the opensource version of [Virtuoso](http://vos.openlinksw.com/owiki/wiki/VOS/VOSDownload) database server. We used the 7.2.4.2 version. If the installation was successful, you should be able to start an instance with 
@@ -77,6 +79,12 @@ Start the loader (you can go home now, this will take a while):
 ```sql
 SQL> rdf_loader_run();
 ```
+
+##### Use an existing dump
+
+We provide the complete dump of Wikidata for Virtuoso. This is the copy of the database that was used in all our experiments. Download [here (39.9Gb!)](https://public.ukp.informatik.tu-darmstadt.de/wikidata-dump/wikidata-virtuoso-dump-2017.zip) and extract into `virtuoso-opensource-install-7.2.4.2/var/lib/virtuoso/db/`. Modify the `virtuoso.ini` (change paths and possible the amount of the available memory). (Re-)Start the Virtuoso as described above. 
+
+#### 4. Check the installation
 
 Open the SPARQL Query Editor in the browser `http://localhost:8890/sparql` and post the following query:
 ```SQL
