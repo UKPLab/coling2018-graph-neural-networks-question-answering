@@ -85,6 +85,7 @@ If you have any questions regarding the code, please, don't hesitate to contact 
     * `wikidata-access` ([zip](https://public.ukp.informatik.tu-darmstadt.de/coling2018-graph-neural-networks-question-answering/wikidata-access-master.zip)) for sending queries to a local Wikidata endpoint
     * `fackel` ([zip](https://public.ukp.informatik.tu-darmstadt.de/coling2018-graph-neural-networks-question-answering/fackel-master.zip)) for running the provided PyTorch models 
 * A local copy of the Wikidata knowledge base in RDF format. See [here](WikidataHowTo.md) for more info on the Wikidata installation. (This step takes a lot of time!)
+* A running instance of the Stanford CoreNLP server (https://stanfordnlp.github.io/CoreNLP/corenlp-server.html) for tokenisation and NE recognition. Do not forget to download English model. Test your CoreNLP server before starting the experiments. Replace the addres [here](https://github.com/UKPLab/coling2018-graph-neural-networks-question-answering/blob/06f406fd1a4a7e10902ea484e0707c8810e5e3e5/questionanswering/_utils.py#L24) with URL of your CoreNLP instance.
 
 ### Data sets:
 
