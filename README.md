@@ -43,7 +43,7 @@ Please, refer to the paper for more the model description and training details.
  
 ### Contacts:
 If you have any questions regarding the code, please, don't hesitate to contact the authors or report an issue.
-  * Daniil Sorokin, \<lastname\>@ukp.informatik.tu-darmstadt.de
+  * Daniil Sorokin, [personal page](https://daniilsorokin.github.io)
   * https://www.informatik.tu-darmstadt.de/ukp/ukp_home/
   * https://www.tu-darmstadt.de
  
